@@ -28,7 +28,7 @@ export const EasyScaleLogoLarge: React.FC<EasyScaleLogoLargeProps> = ({
           {/* Company logo image */}
           <div className={`relative ${currentSize.image}`}>
             <Image
-              src="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751663753020-y59b2eo6q.jpeg"
+              src="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
               alt="EasyScale Logo"
               fill
               className="object-contain rounded-xl"
