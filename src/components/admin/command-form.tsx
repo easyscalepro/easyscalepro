@@ -64,7 +64,12 @@ export const CommandForm: React.FC<CommandFormProps> = ({ commandId, mode }) => 
     'Estratégia',
     'Operações',
     'Tecnologia',
-    'Jurídico'
+    'Jurídico',
+    'Produção',
+    'Logística',
+    'Qualidade',
+    'Inovação',
+    'Sustentabilidade'
   ];
 
   const levels = ['iniciante', 'intermediário', 'avançado'];
@@ -264,7 +269,7 @@ Resultado esperado:
                   <SelectTrigger className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]">
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {categories.map((category) => (
                       <SelectItem key={category} value={category}>
                         {category}

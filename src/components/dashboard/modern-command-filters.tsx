@@ -31,7 +31,14 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
     'Atendimento',
     'Recursos Humanos',
     'Estratégia',
-    'Operações'
+    'Operações',
+    'Tecnologia',
+    'Jurídico',
+    'Produção',
+    'Logística',
+    'Qualidade',
+    'Inovação',
+    'Sustentabilidade'
   ];
 
   const levels = [
@@ -45,7 +52,9 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
     { name: 'Marketing Digital', icon: TrendingUp, color: 'from-blue-500 to-blue-600' },
     { name: 'Vendas', icon: Target, color: 'from-emerald-500 to-emerald-600' },
     { name: 'Gestão', icon: Star, color: 'from-purple-500 to-purple-600' },
-    { name: 'Finanças', icon: Zap, color: 'from-amber-500 to-amber-600' }
+    { name: 'Finanças', icon: Zap, color: 'from-amber-500 to-amber-600' },
+    { name: 'Tecnologia', icon: Sparkles, color: 'from-indigo-500 to-indigo-600' },
+    { name: 'Estratégia', icon: Target, color: 'from-rose-500 to-rose-600' }
   ];
 
   return (
@@ -120,7 +129,7 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
               <SelectTrigger className="h-14 border-2 border-gray-200/80 dark:border-gray-700/80 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-400/20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl font-medium transition-all duration-300 hover:border-emerald-300 dark:hover:border-emerald-600">
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
-              <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/60 dark:border-gray-700/60 rounded-xl shadow-xl">
+              <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/60 dark:border-gray-700/60 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                 {categories.map((category) => (
                   <SelectItem key={category} value={category} className="hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg">
                     <div className="flex items-center gap-3">

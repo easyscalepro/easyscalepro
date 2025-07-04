@@ -28,7 +28,14 @@ import {
   Lightbulb,
   Headphones,
   Award,
-  Activity
+  Activity,
+  Code,
+  Scale,
+  Package,
+  Truck,
+  CheckCircle,
+  Rocket,
+  Leaf
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
@@ -101,7 +108,14 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
       'Estratégia': 'from-indigo-500 to-purple-600',
       'Atendimento': 'from-pink-500 to-rose-600',
       'Recursos Humanos': 'from-teal-500 to-cyan-600',
-      'Operações': 'from-cyan-500 to-blue-500'
+      'Operações': 'from-cyan-500 to-blue-500',
+      'Tecnologia': 'from-slate-500 to-gray-600',
+      'Jurídico': 'from-amber-600 to-yellow-600',
+      'Produção': 'from-red-600 to-orange-600',
+      'Logística': 'from-blue-600 to-indigo-600',
+      'Qualidade': 'from-emerald-600 to-green-600',
+      'Inovação': 'from-violet-500 to-purple-500',
+      'Sustentabilidade': 'from-green-600 to-emerald-700'
     };
     return colors[category as keyof typeof colors] || 'from-gray-500 to-gray-600';
   };
@@ -115,7 +129,14 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
       'Estratégia': Lightbulb,
       'Atendimento': Headphones,
       'Recursos Humanos': Award,
-      'Operações': Activity
+      'Operações': Activity,
+      'Tecnologia': Code,
+      'Jurídico': Scale,
+      'Produção': Package,
+      'Logística': Truck,
+      'Qualidade': CheckCircle,
+      'Inovação': Rocket,
+      'Sustentabilidade': Leaf
     };
     return icons[category as keyof typeof icons] || Target;
   };
