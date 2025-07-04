@@ -45,18 +45,18 @@ export const DashboardStats: React.FC = () => {
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 backdrop-blur-sm">
+          <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.gradient} shadow-lg`}>
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-xs text-gray-500 font-medium">{stat.change}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{stat.change}</div>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-gray-600">{stat.title}</h3>
+              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</h3>
             </CardContent>
           </Card>
         );
