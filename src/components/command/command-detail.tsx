@@ -5,24 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Copy, ArrowLeft, Share2, Bookmark } from 'lucide-react';
+import { Copy, ArrowLeft, Share2, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useCommands, type Command } from '@/contexts/commands-context';
 
 interface CommandDetailProps {
-  command: {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    level: 'iniciante' | 'intermediário' | 'avançado';
-    prompt: string;
-    usage: string;
-    tags: string[];
-    createdAt: string;
-    views: number;
-    copies: number;
-  };
+  command: Command;
   relatedCommands: Array<{
     id: string;
     title: string;
@@ -33,10 +22,13 @@ interface CommandDetailProps {
 
 export const CommandDetail: React.FC<CommandDetailProps> = ({ command, relatedCommands }) => {
   const router = useRouter();
+  const { favorites, toggleFavorite, incrementCopies } = useCommands();
+  const isFavorite = favorites.includes(command.id);
 
   const handleCopyPrompt = async () => {
     try {
       await navigator.clipboard.writeText(command.prompt);
+      incrementCopies(command.id);
       toast.success('Prompt copiado para a área de transferência!');
     } catch (error) {
       toast.error('Erro ao copiar prompt');
@@ -51,12 +43,13 @@ export const CommandDetail: React.FC<CommandDetailProps> = ({ command, relatedCo
         url: window.location.href,
       });
     } catch (error) {
-      toast.info('Link copiado para compartilhamento');
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copiado para compartilhamento');
     }
   };
 
-  const handleBookmark = () => {
-    toast.success('Comando salvo nos favoritos!');
+  const handleFavorite = () => {
+    toggleFavorite(command.id);
   };
 
   const getLevelColor = (level: string) => {
@@ -108,12 +101,14 @@ export const CommandDetail: React.FC<CommandDetailProps> = ({ command, relatedCo
                       <Share2 className="h-4 w-4" />
                     </Button>
                     <Button
-                      onClick={handleBookmark}
+                      onClick={handleFavorite}
                       size="sm"
                       variant="outline"
-                      className="border-gray-300"
+                      className={`border-gray-300 ${
+                        isFavorite ? 'bg-red-50 text-red-600 border-red-300' : ''
+                      }`}
                     >
-                      <Bookmark className="h-4 w-4" />
+                      <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
                 </div>

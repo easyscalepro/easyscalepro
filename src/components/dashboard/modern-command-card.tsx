@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, Eye, Clock, TrendingUp, Heart } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCommands } from '@/contexts/commands-context';
 
 interface ModernCommandCardProps {
   id: string;
@@ -32,10 +33,14 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   estimatedTime = '5 min',
   onViewDetails,
 }) => {
+  const { favorites, toggleFavorite, incrementCopies } = useCommands();
+  const isFavorite = favorites.includes(id);
+
   const handleCopyPrompt = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(prompt);
+      incrementCopies(id);
       toast.success('Prompt copiado!', {
         description: 'O comando foi copiado para sua área de transferência'
       });
@@ -46,7 +51,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 
   const handleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.success('Adicionado aos favoritos!');
+    toggleFavorite(id);
   };
 
   const getLevelColor = (level: string) => {
@@ -54,7 +59,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
       case 'iniciante':
         return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
       case 'intermediário':
-        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200  dark:border-amber-800';
       case 'avançado':
         return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
       default:
@@ -76,7 +81,6 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     return colors[category as keyof typeof colors] || 'bg-gray-500';
   };
 
-  // Garantir que tags é sempre um array
   const safeTags = Array.isArray(tags) ? tags : [];
 
   return (
@@ -89,7 +93,11 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
             onClick={handleFavorite}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
           >
-            <Heart className="h-4 w-4 text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors" />
+            <Heart className={`h-4 w-4 transition-colors ${
+              isFavorite 
+                ? 'text-red-500 fill-current' 
+                : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
+            }`} />
           </button>
         </div>
 

@@ -8,50 +8,25 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, Search, Copy, Eye, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useCommands } from '@/contexts/commands-context';
 
 export const FavoritesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
+  const { commands, favorites, toggleFavorite, incrementCopies } = useCommands();
 
-  // Mock data para favoritos
-  const favorites = [
-    {
-      id: '1',
-      title: 'Estratégia de Marketing Digital',
-      description: 'Crie uma estratégia completa de marketing digital para sua empresa',
-      category: 'Marketing',
-      level: 'intermediário',
-      addedAt: '2024-01-15',
-      prompt: 'Crie uma estratégia de marketing digital completa...'
-    },
-    {
-      id: '3',
-      title: 'Gestão de Equipe Remota',
-      description: 'Melhore a produtividade da sua equipe remota',
-      category: 'Gestão',
-      level: 'iniciante',
-      addedAt: '2024-01-12',
-      prompt: 'Desenvolva um plano de gestão para equipe remota...'
-    },
-    {
-      id: '5',
-      title: 'Análise de Concorrência',
-      description: 'Faça uma análise detalhada dos seus concorrentes',
-      category: 'Estratégia',
-      level: 'avançado',
-      addedAt: '2024-01-10',
-      prompt: 'Analise a concorrência do setor [SETOR]...'
-    }
-  ];
-
-  const filteredFavorites = favorites.filter(fav =>
+  // Filtrar comandos favoritos
+  const favoriteCommands = commands.filter(cmd => favorites.includes(cmd.id));
+  
+  const filteredFavorites = favoriteCommands.filter(fav =>
     fav.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     fav.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCopyPrompt = async (prompt: string) => {
+  const handleCopyPrompt = async (prompt: string, id: string) => {
     try {
       await navigator.clipboard.writeText(prompt);
+      incrementCopies(id);
       toast.success('Prompt copiado para a área de transferência!');
     } catch (error) {
       toast.error('Erro ao copiar prompt');
@@ -59,7 +34,7 @@ export const FavoritesPage: React.FC = () => {
   };
 
   const handleRemoveFavorite = (id: string, title: string) => {
-    toast.success(`"${title}" removido dos favoritos`);
+    toggleFavorite(id);
   };
 
   const handleViewDetails = (id: string) => {
@@ -86,7 +61,7 @@ export const FavoritesPage: React.FC = () => {
         <Heart className="h-6 w-6 text-red-500 fill-current" />
         <h1 className="text-2xl font-bold text-[#0F1115]">Meus Favoritos</h1>
         <Badge variant="secondary" className="bg-[#2563EB] text-white">
-          {favorites.length} comandos
+          {favoriteCommands.length} comandos
         </Badge>
       </div>
 
@@ -130,7 +105,7 @@ export const FavoritesPage: React.FC = () => {
                             {favorite.level}
                           </Badge>
                           <span className="text-xs text-gray-500">
-                            Adicionado em {favorite.addedAt}
+                            Adicionado em {favorite.createdAt}
                           </span>
                         </div>
                       </div>
@@ -139,7 +114,7 @@ export const FavoritesPage: React.FC = () => {
                   
                   <div className="flex gap-2 flex-shrink-0">
                     <Button
-                      onClick={() => handleCopyPrompt(favorite.prompt)}
+                      onClick={() => handleCopyPrompt(favorite.prompt, favorite.id)}
                       size="sm"
                       className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
                     >

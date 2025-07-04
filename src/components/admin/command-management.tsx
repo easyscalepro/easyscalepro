@@ -8,40 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Edit, Trash2, Search, Plus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useCommands } from '@/contexts/commands-context';
 
 export const CommandManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Mock data para demonstração
-  const commands = [
-    {
-      id: '1',
-      title: 'Estratégia de Marketing Digital',
-      category: 'Marketing',
-      level: 'intermediário',
-      createdAt: '2024-01-15',
-      views: 245,
-      copies: 89
-    },
-    {
-      id: '2',
-      title: 'Análise Financeira Mensal',
-      category: 'Finanças',
-      level: 'avançado',
-      createdAt: '2024-01-10',
-      views: 189,
-      copies: 67
-    },
-    {
-      id: '3',
-      title: 'Gestão de Equipe Remota',
-      category: 'Gestão',
-      level: 'iniciante',
-      createdAt: '2024-01-08',
-      views: 156,
-      copies: 45
-    }
-  ];
+  const router = useRouter();
+  const { commands, deleteCommand } = useCommands();
 
   const filteredCommands = commands.filter(command =>
     command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,11 +22,13 @@ export const CommandManagement: React.FC = () => {
   );
 
   const handleEdit = (id: string) => {
-    toast.info(`Editando comando ${id}`);
+    router.push(`/admin/commands/edit/${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    toast.success(`Comando ${id} excluído com sucesso`);
+  const handleDelete = (id: string, title: string) => {
+    if (confirm(`Tem certeza que deseja excluir o comando "${title}"?`)) {
+      deleteCommand(id);
+    }
   };
 
   const handleUploadCSV = () => {
@@ -78,7 +53,7 @@ export const CommandManagement: React.FC = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold text-[#0F1115]">
-            Gerenciar Comandos
+            Gerenciar Comandos ({commands.length} total)
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -89,7 +64,10 @@ export const CommandManagement: React.FC = () => {
               <Upload className="h-4 w-4 mr-2" />
               Upload CSV
             </Button>
-            <Button className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]">
+            <Button 
+              onClick={() => router.push('/admin/commands/new')}
+              className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Novo Comando
             </Button>
@@ -124,7 +102,11 @@ export const CommandManagement: React.FC = () => {
           <TableBody>
             {filteredCommands.map((command) => (
               <TableRow key={command.id}>
-                <TableCell className="font-medium">{command.title}</TableCell>
+                <TableCell className="font-medium max-w-xs">
+                  <div className="truncate" title={command.title}>
+                    {command.title}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="bg-[#2563EB] text-white">
                     {command.category}
@@ -149,7 +131,7 @@ export const CommandManagement: React.FC = () => {
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
-                      onClick={() => handleDelete(command.id)}
+                      onClick={() => handleDelete(command.id, command.title)}
                       size="sm"
                       variant="outline"
                       className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
@@ -162,6 +144,14 @@ export const CommandManagement: React.FC = () => {
             ))}
           </TableBody>
         </Table>
+
+        {filteredCommands.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">
+              {searchTerm ? 'Nenhum comando encontrado com esse termo.' : 'Nenhum comando cadastrado ainda.'}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

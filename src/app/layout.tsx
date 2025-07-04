@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { CommandsProvider } from "@/contexts/commands-context";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -37,8 +38,10 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <AuthProvider>
-            {children}
-            <Toaster />
+            <CommandsProvider>
+              {children}
+              <Toaster />
+            </CommandsProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

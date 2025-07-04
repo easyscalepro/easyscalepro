@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
+import { useCommands } from '@/contexts/commands-context';
 import { useRouter } from 'next/navigation';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
@@ -9,83 +10,14 @@ import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
 import { DashboardStats } from '@/components/dashboard/dashboard-stats';
 import { Search, Sparkles, TrendingUp } from 'lucide-react';
 
-// Dados mockados para demonstração
-const mockCommands = [
-  {
-    id: '1',
-    title: 'Estratégia de Marketing Digital',
-    description: 'Desenvolva uma estratégia completa de marketing digital para impulsionar o crescimento da sua empresa',
-    category: 'Marketing',
-    level: 'intermediário' as const,
-    prompt: 'Crie uma estratégia de marketing digital completa para uma empresa de [SETOR] que quer aumentar suas vendas online em 50% nos próximos 6 meses...',
-    tags: ['marketing', 'digital', 'estratégia', 'vendas'],
-    popularity: 95,
-    estimatedTime: '15 min'
-  },
-  {
-    id: '2',
-    title: 'Análise Financeira Mensal',
-    description: 'Gere relatórios financeiros detalhados com insights acionáveis para tomada de decisão estratégica',
-    category: 'Finanças',
-    level: 'avançado' as const,
-    prompt: 'Analise os dados financeiros da empresa e crie um relatório mensal com insights acionáveis...',
-    tags: ['finanças', 'relatórios', 'análise', 'kpis'],
-    popularity: 88,
-    estimatedTime: '20 min'
-  },
-  {
-    id: '3',
-    title: 'Gestão de Equipe Remota',
-    description: 'Otimize a produtividade e engajamento da sua equipe remota com metodologias comprovadas',
-    category: 'Gestão',
-    level: 'iniciante' as const,
-    prompt: 'Desenvolva um plano de gestão para equipe remota focado em produtividade e engajamento...',
-    tags: ['gestão', 'remoto', 'produtividade', 'equipe'],
-    popularity: 92,
-    estimatedTime: '10 min'
-  },
-  {
-    id: '4',
-    title: 'Script de Vendas Persuasivo',
-    description: 'Crie scripts de vendas altamente eficazes que convertem prospects em clientes fiéis',
-    category: 'Vendas',
-    level: 'intermediário' as const,
-    prompt: 'Desenvolva um script de vendas persuasivo para [PRODUTO/SERVIÇO] focado em objeções comuns...',
-    tags: ['vendas', 'conversão', 'persuasão', 'script'],
-    popularity: 90,
-    estimatedTime: '12 min'
-  },
-  {
-    id: '5',
-    title: 'Plano de Conteúdo para Redes Sociais',
-    description: 'Desenvolva um calendário editorial estratégico para maximizar o engajamento nas redes sociais',
-    category: 'Marketing',
-    level: 'iniciante' as const,
-    prompt: 'Crie um plano de conteúdo para redes sociais com foco em engajamento e conversão...',
-    tags: ['social media', 'conteúdo', 'engajamento', 'calendário'],
-    popularity: 85,
-    estimatedTime: '8 min'
-  },
-  {
-    id: '6',
-    title: 'Análise de Concorrência Completa',
-    description: 'Realize uma análise profunda dos concorrentes para identificar oportunidades de mercado',
-    category: 'Estratégia',
-    level: 'avançado' as const,
-    prompt: 'Faça uma análise detalhada da concorrência incluindo pontos fortes, fracos e oportunidades...',
-    tags: ['concorrência', 'análise', 'mercado', 'oportunidades'],
-    popularity: 87,
-    estimatedTime: '25 min'
-  }
-];
-
 export default function DashboardPage() {
   const { user, loading } = useAuth();
+  const { commands, incrementViews } = useCommands();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedLevel, setSelectedLevel] = useState('Todos');
-  const [filteredCommands, setFilteredCommands] = useState(mockCommands);
+  const [filteredCommands, setFilteredCommands] = useState(commands);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -94,7 +26,7 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    let filtered = mockCommands;
+    let filtered = commands;
 
     if (searchTerm) {
       filtered = filtered.filter(command =>
@@ -113,9 +45,10 @@ export default function DashboardPage() {
     }
 
     setFilteredCommands(filtered);
-  }, [searchTerm, selectedCategory, selectedLevel]);
+  }, [searchTerm, selectedCategory, selectedLevel, commands]);
 
   const handleViewDetails = (id: string) => {
+    incrementViews(id);
     router.push(`/command/${id}`);
   };
 
@@ -143,7 +76,7 @@ export default function DashboardPage() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
             <Sparkles className="h-4 w-4" />
-            Mais de 1.000 comandos especializados
+            Mais de {commands.length} comandos especializados
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-tight">
             Comandos ChatGPT para
