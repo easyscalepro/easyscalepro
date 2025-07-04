@@ -1,12 +1,18 @@
 {
   "framework": "nextjs",
-  "buildCommand": "next build",
-  "devCommand": "next dev",
-  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install --no-package-lock --legacy-peer-deps",
   "regions": ["iad1"],
   "functions": {
     "app/**/*.{js,ts,jsx,tsx}": {
       "maxDuration": 30
+    }
+  },
+  "build": {
+    "env": {
+      "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+      "NPM_CONFIG_PACKAGE_LOCK": "false"
     }
   }
 }

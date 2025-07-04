@@ -1,6 +1,9 @@
 # Dependencies
 node_modules
 .pnpm-store
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Build outputs
 .next
@@ -62,3 +65,7 @@ __tests__/
 # Development files
 .eslintcache
 .stylelintcache
+
+# Cache directories
+.npm
+.cache
