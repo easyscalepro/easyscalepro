@@ -5,10 +5,10 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { useCommands } from '@/contexts/commands-context';
 import { useRouter } from 'next/navigation';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
-import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
-import { DashboardStats } from '@/components/dashboard/dashboard-stats';
-import { Search, Sparkles, TrendingUp, Zap, Star, ArrowRight } from 'lucide-react';
+import { ProfessionalCommandFilters } from '@/components/dashboard/professional-command-filters';
+import { ProfessionalCommandCard } from '@/components/dashboard/professional-command-card';
+import { ProfessionalStats } from '@/components/dashboard/professional-stats';
+import { Search, TrendingUp, Filter } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -54,18 +54,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900/20 dark:to-indigo-900/30 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-spin"></div>
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-          </div>
-          <p className="mt-6 text-gray-600 dark:text-gray-300 font-medium text-lg">Preparando sua experiência...</p>
-          <div className="mt-2 flex items-center justify-center gap-1">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300 font-medium">Carregando plataforma...</p>
         </div>
       </div>
     );
@@ -76,60 +68,35 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-blue-900/20 dark:to-indigo-900/30 transition-all duration-500">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <DashboardHeader />
       
       <main className="container mx-auto px-6 py-8 max-w-7xl">
-        {/* Hero Section com animação */}
-        <div className="text-center mb-16 relative">
-          {/* Background decorativo */}
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-10 left-1/4 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute top-20 right-1/4 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        {/* Hero Section Profissional */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-lg text-sm font-medium mb-6 border border-blue-200 dark:border-blue-800">
+            <TrendingUp className="h-4 w-4" />
+            Mais de {commands.length} comandos especializados para PMEs
           </div>
           
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-            <Sparkles className="h-5 w-5 animate-pulse" />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Mais de {commands.length} comandos especializados
-            </span>
-            <Star className="h-4 w-4 text-yellow-500 animate-spin" style={{ animationDuration: '3s' }} />
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-gray-100 mb-6 leading-tight">
-            <span className="block">Comandos</span>
-            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">
-              ChatGPT
-            </span>
-            <span className="block text-4xl md:text-5xl mt-2 text-gray-700 dark:text-gray-300">para PMEs</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4 leading-tight">
+            Comandos ChatGPT
+            <span className="block text-blue-600 dark:text-blue-400">para Empresários</span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
-            🚀 Acelere seu negócio com prompts profissionais testados e otimizados para 
-            <span className="font-semibold text-blue-600 dark:text-blue-400"> resultados reais</span>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed mb-8">
+            Acelere seu negócio com prompts profissionais testados e otimizados para resultados práticos e mensuráveis
           </p>
-
-          {/* CTA Button */}
-          <div className="flex items-center justify-center gap-4">
-            <button 
-              onClick={() => setSearchTerm('marketing')}
-              className="group inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-            >
-              <Zap className="h-5 w-5 group-hover:animate-pulse" />
-              Explorar Comandos
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
         </div>
 
-        {/* Stats com animação melhorada */}
-        <div className="mb-16">
-          <DashboardStats />
-        </div>
-
-        {/* Filters com design melhorado */}
+        {/* Estatísticas Profissionais */}
         <div className="mb-12">
-          <ModernCommandFilters
+          <ProfessionalStats />
+        </div>
+
+        {/* Filtros Profissionais */}
+        <div className="mb-8">
+          <ProfessionalCommandFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             selectedCategory={selectedCategory}
@@ -139,41 +106,41 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Results Header com melhor visual */}
-        <div className="flex items-center justify-between mb-10 p-6 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
-              <TrendingUp className="h-6 w-6 text-white" />
+        {/* Header de Resultados */}
+        <div className="flex items-center justify-between mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 {filteredCommands.length} comandos encontrados
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Prontos para impulsionar seu negócio
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Selecionados para impulsionar seu negócio
               </p>
             </div>
           </div>
           {searchTerm && (
-            <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-xl text-sm font-medium border border-blue-200 dark:border-blue-700">
-              Resultados para "{searchTerm}"
+            <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-md text-sm font-medium border border-blue-200 dark:border-blue-800">
+              "{searchTerm}"
             </div>
           )}
         </div>
 
-        {/* Commands Grid com animação staggered */}
+        {/* Grid de Comandos */}
         {filteredCommands.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCommands.map((command, index) => (
               <div
                 key={command.id}
-                className="animate-fade-in-up"
+                className="opacity-0 animate-fade-in"
                 style={{ 
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: 'both'
+                  animationDelay: `${index * 0.05}s`,
+                  animationFillMode: 'forwards'
                 }}
               >
-                <ModernCommandCard
+                <ProfessionalCommandCard
                   {...command}
                   onViewDetails={handleViewDetails}
                 />
@@ -181,20 +148,15 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20">
-            <div className="relative mb-8">
-              <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto shadow-xl">
-                <Search className="h-16 w-16 text-gray-400 dark:text-gray-500" />
-              </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                <span className="text-lg">🔍</span>
-              </div>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Nenhum comando encontrado
             </h3>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-md mx-auto">
-              Tente ajustar seus filtros ou buscar por outros termos para encontrar o comando perfeito
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              Ajuste os filtros ou termos de busca para encontrar comandos relevantes para seu negócio
             </p>
             <button
               onClick={() => {
@@ -202,39 +164,27 @@ export default function DashboardPage() {
                 setSelectedCategory('Todas');
                 setSelectedLevel('Todos');
               }}
-              className="group inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >
-              <Sparkles className="h-5 w-5 group-hover:animate-pulse" />
               Limpar Filtros
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         )}
-
-        {/* Floating Action Button */}
-        <div className="fixed bottom-8 right-8 z-50">
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="group w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-110 flex items-center justify-center"
-          >
-            <ArrowRight className="h-6 w-6 -rotate-90 group-hover:animate-bounce" />
-          </button>
-        </div>
       </main>
 
       <style jsx>{`
-        @keyframes fade-in-up {
+        @keyframes fade-in {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(20px);
           }
           to {
             opacity: 1;
             transform: translateY(0);
           }
         }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
+        .animate-fade-in {
+          animation: fade-in 0.4s ease-out;
         }
       `}</style>
     </div>
