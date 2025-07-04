@@ -39,7 +39,7 @@ export const LoginForm: React.FC = () => {
     } catch (error: any) {
       console.error('Erro de autenticação:', error);
       if (error.message === 'Credenciais inválidas') {
-        toast.error('Email ou senha incorretos. Use: julionavyy@gmail.com / 123456');
+        toast.error('Email ou senha incorretos.');
       } else {
         toast.error('Erro ao fazer login');
       }
@@ -49,7 +49,7 @@ export const LoginForm: React.FC = () => {
   };
 
   const handleForgotPassword = () => {
-    toast.info('Use as credenciais: julionavyy@gmail.com / 123456');
+    toast.info('Funcionalidade de recuperação de senha em desenvolvimento');
   };
 
   return (
@@ -85,7 +85,7 @@ export const LoginForm: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="julionavyy@gmail.com"
+                  placeholder="seu@email.com"
                   className="pl-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
                   required
                 />
@@ -103,7 +103,7 @@ export const LoginForm: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="123456"
+                  placeholder="••••••••"
                   className="pl-10 pr-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
                   required
                 />
@@ -148,13 +148,6 @@ export const LoginForm: React.FC = () => {
               </button>
             </div>
           </form>
-
-          {/* Credenciais de demo */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800 font-medium mb-2">Credenciais de Demo:</p>
-            <p className="text-xs text-blue-600">Email: julionavyy@gmail.com</p>
-            <p className="text-xs text-blue-600">Senha: 123456</p>
-          </div>
         </CardContent>
       </Card>
     </div>
