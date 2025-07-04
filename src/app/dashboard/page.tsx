@@ -8,11 +8,11 @@ import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
 import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
 import { DashboardStats } from '@/components/dashboard/dashboard-stats';
-import { Search, Sparkles, TrendingUp, Zap, Star, Rocket, Target } from 'lucide-react';
+import { Search, Sparkles, TrendingUp, Zap, Star, Rocket, Target, Clock, BookOpen, Filter } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
-  const { commands, incrementViews } = useCommands();
+  const { commands, incrementViews, favorites } = useCommands();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
@@ -57,6 +57,19 @@ export default function DashboardPage() {
     router.push(`/command/${id}`);
   };
 
+  // Calcular estatísticas do usuário
+  const userStats = {
+    totalCommands: commands.length,
+    favoriteCount: favorites.length,
+    categoriesUsed: new Set(commands.map(cmd => cmd.category)).size,
+    recentlyAdded: commands.filter(cmd => {
+      const createdDate = new Date(cmd.createdAt);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return createdDate >= weekAgo;
+    }).length
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -88,64 +101,86 @@ export default function DashboardPage() {
           <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
         </div>
 
-        {/* Enhanced Hero Section */}
-        <div className="relative text-center mb-20">
-          {/* Animated badge */}
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
+        {/* Enhanced Welcome Section */}
+        <div className="relative text-center mb-16">
+          {/* Welcome message */}
+          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-full text-sm font-semibold mb-6 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
             <div className="relative">
               <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
               <div className="absolute inset-0 bg-blue-400 rounded-full blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
             </div>
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-bold">
-              Mais de {commands.length} comandos especializados
+              Bem-vindo de volta! Pronto para ser mais produtivo?
             </span>
-            <div className="flex gap-1">
-              {[...Array(3)].map((_, i) => (
-                <Star key={i} className="h-3 w-3 text-amber-400 fill-current animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
-              ))}
-            </div>
           </div>
 
           {/* Main title with enhanced typography */}
-          <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-gray-100 mb-6 leading-tight tracking-tight">
-            <span className="block">Comandos ChatGPT para</span>
+          <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-gray-100 mb-6 leading-tight tracking-tight">
+            <span className="block">Seus Comandos</span>
             <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-400 dark:via-purple-400 dark:to-blue-600 bg-clip-text text-transparent animate-gradient bg-300% relative">
-              PMEs
+              Inteligentes
               {/* Underline decoration */}
               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"></div>
             </span>
           </h1>
 
           {/* Enhanced description */}
-          <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8 font-medium">
-            Acelere seu negócio com prompts profissionais 
-            <span className="text-blue-600 dark:text-blue-400 font-semibold"> testados e otimizados </span>
-            para resultados reais
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed mb-8 font-medium">
+            Encontre rapidamente o comando perfeito para sua tarefa.
+            <span className="text-blue-600 dark:text-blue-400 font-semibold"> Otimize seu tempo </span>
+            e alcance resultados excepcionais.
           </p>
 
-          {/* Feature highlights */}
-          <div className="flex flex-wrap justify-center gap-6 mb-12">
-            {[
-              { icon: Rocket, text: 'Resultados Imediatos', color: 'from-blue-500 to-blue-600' },
-              { icon: Target, text: 'Focado em PMEs', color: 'from-emerald-500 to-emerald-600' },
-              { icon: Zap, text: 'Fácil de Usar', color: 'from-amber-500 to-amber-600' }
-            ].map((feature, index) => (
-              <div key={index} className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-                <div className={`p-2 rounded-full bg-gradient-to-r ${feature.color} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{feature.text}</span>
+          {/* User stats highlights */}
+          <div className="flex flex-wrap justify-center gap-6 mb-8">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <BookOpen className="h-4 w-4 text-white" />
               </div>
-            ))}
-          </div>
-
-          {/* Animated scroll indicator */}
-          <div className="flex justify-center">
-            <div className="animate-bounce">
-              <div className="w-6 h-10 border-2 border-gray-300 dark:border-gray-600 rounded-full flex justify-center">
-                <div className="w-1 h-3 bg-gray-400 dark:bg-gray-500 rounded-full mt-2 animate-pulse"></div>
+              <div className="text-left">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.totalCommands}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Comandos disponíveis</div>
               </div>
             </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="p-2 rounded-full bg-gradient-to-r from-red-500 to-pink-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <Star className="h-4 w-4 text-white fill-current" />
+              </div>
+              <div className="text-left">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.favoriteCount}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Seus favoritos</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <Target className="h-4 w-4 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.categoriesUsed}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Categorias</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick action buttons */}
+          <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => setSearchTerm('')}
+              className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <Search className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+              Explorar Comandos
+            </button>
+            
+            <button
+              onClick={() => router.push('/favorites')}
+              className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <Star className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+              Meus Favoritos
+            </button>
           </div>
         </div>
 
@@ -165,7 +200,7 @@ export default function DashboardPage() {
         {/* Results Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {filteredCommands.length} comandos encontrados
             </h2>
