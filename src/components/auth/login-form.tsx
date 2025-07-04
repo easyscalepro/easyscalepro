@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,17 +23,17 @@ export const LoginForm: React.FC = () => {
     setLoading(true);
 
     try {
+      // Simular login/cadastro
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
         toast.success('Conta criada com sucesso!');
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
         toast.success('Login realizado com sucesso!');
       }
       router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Erro de autenticação:', error);
-      toast.error(error.message || 'Erro ao fazer login');
+    } catch (error) {
+      toast.error('Erro ao fazer login');
     } finally {
       setLoading(false);
     }

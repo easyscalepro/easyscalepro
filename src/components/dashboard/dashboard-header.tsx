@@ -3,8 +3,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { EasyScaleLogo } from '@/components/easyscale-logo';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/auth-provider';
 import { LogOut, User, Heart, LayoutDashboard, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,7 +15,6 @@ export const DashboardHeader: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
@@ -77,7 +74,7 @@ export const DashboardHeader: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[#0F1115]">
             <User className="h-4 w-4" />
-            <span className="text-sm font-medium">{user?.email}</span>
+            <span className="text-sm font-medium">demo@easyscale.com</span>
           </div>
           
           <Button

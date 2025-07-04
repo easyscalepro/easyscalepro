@@ -8,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, UserCheck, UserX, Mail } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,7 +19,7 @@ export const UserManagement: React.FC = () => {
       email: 'joao@empresa.com',
       name: 'João Silva',
       status: 'ativo',
-      lastAccess: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
+      lastAccess: '30 min atrás',
       commandsUsed: 45,
       joinedAt: '2024-01-10'
     },
@@ -30,7 +28,7 @@ export const UserManagement: React.FC = () => {
       email: 'maria@startup.com',
       name: 'Maria Santos',
       status: 'ativo',
-      lastAccess: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+      lastAccess: '2 horas atrás',
       commandsUsed: 78,
       joinedAt: '2024-01-08'
     },
@@ -39,7 +37,7 @@ export const UserManagement: React.FC = () => {
       email: 'pedro@pme.com',
       name: 'Pedro Costa',
       status: 'inativo',
-      lastAccess: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 1 week ago
+      lastAccess: '1 semana atrás',
       commandsUsed: 23,
       joinedAt: '2024-01-05'
     }
@@ -108,12 +106,7 @@ export const UserManagement: React.FC = () => {
                 <TableCell>
                   {getStatusBadge(user.status)}
                 </TableCell>
-                <TableCell>
-                  {formatDistanceToNow(user.lastAccess, { 
-                    addSuffix: true, 
-                    locale: ptBR 
-                  })}
-                </TableCell>
+                <TableCell>{user.lastAccess}</TableCell>
                 <TableCell>{user.commandsUsed}</TableCell>
                 <TableCell>{user.joinedAt}</TableCell>
                 <TableCell>

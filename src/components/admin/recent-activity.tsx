@@ -3,8 +3,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export const RecentActivity: React.FC = () => {
   const activities = [
@@ -13,28 +11,28 @@ export const RecentActivity: React.FC = () => {
       type: 'copy',
       user: 'joão@empresa.com',
       command: 'Estratégia de Marketing Digital',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15) // 15 min ago
+      timestamp: '15 min atrás'
     },
     {
       id: '2',
       type: 'view',
       user: 'maria@startup.com',
       command: 'Análise Financeira Mensal',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30) // 30 min ago
+      timestamp: '30 min atrás'
     },
     {
       id: '3',
       type: 'copy',
       user: 'pedro@pme.com',
       command: 'Script de Vendas Persuasivo',
-      timestamp: new Date(Date.now() - 1000 * 60 * 45) // 45 min ago
+      timestamp: '45 min atrás'
     },
     {
       id: '4',
       type: 'view',
       user: 'ana@negocio.com',
       command: 'Gestão de Equipe Remota',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60) // 1 hour ago
+      timestamp: '1 hora atrás'
     }
   ];
 
@@ -72,10 +70,7 @@ export const RecentActivity: React.FC = () => {
                 </p>
               </div>
               <span className="text-xs text-gray-500">
-                {formatDistanceToNow(activity.timestamp, { 
-                  addSuffix: true, 
-                  locale: ptBR 
-                })}
+                {activity.timestamp}
               </span>
             </div>
           ))}
