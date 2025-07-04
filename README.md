@@ -14,14 +14,15 @@ Este template inclui otimizações específicas para evitar erros comuns de depl
 
 ### ✅ **Configurações de Build Otimizadas**
 
-- **TypeScript configurado** para excluir Supabase functions
-- **Webpack configurado** para ignorar conflitos Deno/Node.js
+- **TypeScript configurado** para builds otimizados
+- **Webpack configurado** para melhor performance
 - **`.vercelignore`** para otimizar o processo de build
 
 ### ✅ **Componentes Atualizados**
 
 - **Calendar component** compatível com react-day-picker v9
 - **UI components** do Shadcn/UI nas versões mais recentes
+- **Theme system** com modo claro/escuro
 
 ---
 
@@ -53,19 +54,12 @@ Você pode começar editando a página modificando `app/page.tsx`. A página atu
 - **Icons**: Lucide React
 - **Forms**: React Hook Form + Zod
 - **UI Components**: Radix UI primitives
+- **Theme**: next-themes para modo claro/escuro
+- **Notifications**: Sonner para toasts
 
 ---
 
 ## 🔧 Deploy na Vercel
-
-### **Variáveis de Ambiente**
-
-Se você estiver usando Supabase, configure estas variáveis na Vercel:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima
-```
 
 ### **Deploy Automático**
 

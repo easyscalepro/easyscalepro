@@ -58,18 +58,18 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header do perfil */}
-      <Card>
+      <Card className="dark:bg-gray-800">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-gradient-to-br from-[#2563EB] to-[#FBBF24] rounded-full flex items-center justify-center">
               <User className="h-8 w-8 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-[#0F1115]">{profile.name}</h1>
-              <p className="text-gray-600">{profile.position} • {profile.company}</p>
+              <h1 className="text-2xl font-bold text-[#0F1115] dark:text-gray-100">{profile.name}</h1>
+              <p className="text-gray-600 dark:text-gray-300">{profile.position} • {profile.company}</p>
               <div className="flex items-center gap-2 mt-2">
                 <Calendar className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   Membro desde {profile.joinedAt}
                 </span>
               </div>
@@ -88,7 +88,7 @@ export const ProfilePage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Informações do perfil */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
+          <Card className="dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-[#2563EB]" />
@@ -112,7 +112,7 @@ export const ProfilePage: React.FC = () => {
                     id="email"
                     value={profile.email}
                     disabled
-                    className="bg-gray-50"
+                    className="bg-gray-50 dark:bg-gray-700"
                   />
                 </div>
               </div>
@@ -153,7 +153,7 @@ export const ProfilePage: React.FC = () => {
           </Card>
 
           {/* Atividade recente */}
-          <Card>
+          <Card className="dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-[#2563EB]" />
@@ -163,13 +163,13 @@ export const ProfilePage: React.FC = () => {
             <CardContent>
               <div className="space-y-4">
                 {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     {getActionIcon(activity.action)}
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-[#0F1115]">
+                      <p className="text-sm font-medium text-[#0F1115] dark:text-gray-100">
                         {activity.action} "{activity.command}"
                       </p>
-                      <p className="text-xs text-gray-500">{activity.date}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{activity.date}</p>
                     </div>
                   </div>
                 ))}
@@ -180,7 +180,7 @@ export const ProfilePage: React.FC = () => {
 
         {/* Estatísticas */}
         <div className="space-y-6">
-          <Card>
+          <Card className="dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-[#2563EB]" />
@@ -197,22 +197,22 @@ export const ProfilePage: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Favoritos</span>
-                  <Badge variant="secondary" className="bg-red-100 text-red-800">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Favoritos</span>
+                  <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                     {stats.favoriteCommands}
                   </Badge>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Visualizações</span>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Visualizações</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                     {stats.totalViews}
                   </Badge>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Sequência</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Sequência</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                     {stats.streak} dias
                   </Badge>
                 </div>
@@ -221,7 +221,7 @@ export const ProfilePage: React.FC = () => {
           </Card>
 
           {/* Conquistas */}
-          <Card>
+          <Card className="dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-[#FBBF24]" />
@@ -229,19 +229,19 @@ export const ProfilePage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <Trophy className="h-6 w-6 text-[#FBBF24]" />
                 <div>
-                  <p className="text-sm font-medium text-[#0F1115]">Primeiro Comando</p>
-                  <p className="text-xs text-gray-600">Copiou seu primeiro comando</p>
+                  <p className="text-sm font-medium text-[#0F1115] dark:text-gray-100">Primeiro Comando</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Copiou seu primeiro comando</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <Trophy className="h-6 w-6 text-[#2563EB]" />
                 <div>
-                  <p className="text-sm font-medium text-[#0F1115]">Explorador</p>
-                  <p className="text-xs text-gray-600">Visualizou 50+ comandos</p>
+                  <p className="text-sm font-medium text-[#0F1115] dark:text-gray-100">Explorador</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Visualizou 50+ comandos</p>
                 </div>
               </div>
             </CardContent>
