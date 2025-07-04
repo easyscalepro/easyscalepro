@@ -103,17 +103,6 @@ export default function DashboardPage() {
 
         {/* Enhanced Welcome Section */}
         <div className="relative text-center mb-16">
-          {/* Welcome message */}
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 dark:from-blue-900/30 dark:via-purple-900/30 dark:to-blue-900/30 border border-blue-200/50 dark:border-blue-700/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-full text-sm font-semibold mb-6 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
-            <div className="relative">
-              <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
-              <div className="absolute inset-0 bg-blue-400 rounded-full blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
-            </div>
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-bold">
-              Bem-vindo de volta! Pronto para ser mais produtivo?
-            </span>
-          </div>
-
           {/* Main title with enhanced typography */}
           <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-gray-100 mb-6 leading-tight tracking-tight">
             <span className="block">Seus Comandos</span>
