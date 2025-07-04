@@ -101,25 +101,8 @@ export default function DashboardPage() {
           <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
         </div>
 
-        {/* Enhanced Welcome Section */}
+        {/* User stats and actions section */}
         <div className="relative text-center mb-16">
-          {/* Main title with enhanced typography */}
-          <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-gray-100 mb-6 leading-tight tracking-tight">
-            <span className="block">Seus Comandos</span>
-            <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-400 dark:via-purple-400 dark:to-blue-600 bg-clip-text text-transparent animate-gradient bg-300% relative">
-              Inteligentes
-              {/* Underline decoration */}
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"></div>
-            </span>
-          </h1>
-
-          {/* Enhanced description */}
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed mb-8 font-medium">
-            Encontre rapidamente o comando perfeito para sua tarefa.
-            <span className="text-blue-600 dark:text-blue-400 font-semibold"> Otimize seu tempo </span>
-            e alcance resultados excepcionais.
-          </p>
-
           {/* User stats highlights */}
           <div className="flex flex-wrap justify-center gap-6 mb-8">
             <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
