@@ -9,6 +9,7 @@ import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useAuth } from '@/components/auth/auth-provider';
 
 export const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,30 +18,38 @@ export const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Simular login/cadastro
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (isSignUp) {
-        toast.success('Conta criada com sucesso!');
+        // Para cadastro, simular criação de conta
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        toast.success('Conta criada com sucesso! Faça login para continuar.');
+        setIsSignUp(false);
       } else {
+        // Para login, usar o AuthProvider
+        await login(email, password);
         toast.success('Login realizado com sucesso!');
+        router.push('/dashboard');
       }
-      router.push('/dashboard');
-    } catch (error) {
-      toast.error('Erro ao fazer login');
+    } catch (error: any) {
+      console.error('Erro de autenticação:', error);
+      if (error.message === 'Credenciais inválidas') {
+        toast.error('Email ou senha incorretos. Use: julionavyy@gmail.com / 123456');
+      } else {
+        toast.error('Erro ao fazer login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    toast.info('Funcionalidade em desenvolvimento');
+    toast.info('Use as credenciais: julionavyy@gmail.com / 123456');
   };
 
   return (
@@ -76,7 +85,7 @@ export const LoginForm: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder="julionavyy@gmail.com"
                   className="pl-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
                   required
                 />
@@ -94,7 +103,7 @@ export const LoginForm: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="123456"
                   className="pl-10 pr-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
                   required
                 />
@@ -139,6 +148,13 @@ export const LoginForm: React.FC = () => {
               </button>
             </div>
           </form>
+
+          {/* Credenciais de demo */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800 font-medium mb-2">Credenciais de Demo:</p>
+            <p className="text-xs text-blue-600">Email: julionavyy@gmail.com</p>
+            <p className="text-xs text-blue-600">Senha: 123456</p>
+          </div>
         </CardContent>
       </Card>
     </div>

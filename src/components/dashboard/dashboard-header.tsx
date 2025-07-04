@@ -9,12 +9,13 @@ import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 
 export const DashboardHeader: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   const handleLogout = async () => {
     try {
+      logout();
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
@@ -74,7 +75,7 @@ export const DashboardHeader: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[#0F1115]">
             <User className="h-4 w-4" />
-            <span className="text-sm font-medium">demo@easyscale.com</span>
+            <span className="text-sm font-medium">{user?.email}</span>
           </div>
           
           <Button
