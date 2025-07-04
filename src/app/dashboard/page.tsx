@@ -100,7 +100,7 @@ export default function DashboardPage() {
       filtered = filtered.filter(command =>
         command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         command.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        command.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        (command.tags && command.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 

@@ -14,9 +14,9 @@ interface ModernCommandCardProps {
   category: string;
   level: 'iniciante' | 'intermediário' | 'avançado';
   prompt: string;
-  tags: string[];
-  popularity: number;
-  estimatedTime: string;
+  tags?: string[];
+  popularity?: number;
+  estimatedTime?: string;
   onViewDetails: (id: string) => void;
 }
 
@@ -27,9 +27,9 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   category,
   level,
   prompt,
-  tags,
-  popularity,
-  estimatedTime,
+  tags = [],
+  popularity = 0,
+  estimatedTime = '5 min',
   onViewDetails,
 }) => {
   const handleCopyPrompt = async (e: React.MouseEvent) => {
@@ -76,6 +76,9 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     return colors[category as keyof typeof colors] || 'bg-gray-500';
   };
 
+  // Garantir que tags é sempre um array
+  const safeTags = Array.isArray(tags) ? tags : [];
+
   return (
     <Card className="group cursor-pointer border-0 shadow-sm hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm hover:bg-white hover:-translate-y-1">
       <CardContent className="p-6">
@@ -101,21 +104,23 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
         </div>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {tags.slice(0, 3).map((tag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md font-medium"
-            >
-              {tag}
-            </span>
-          ))}
-          {tags.length > 3 && (
-            <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
-              +{tags.length - 3}
-            </span>
-          )}
-        </div>
+        {safeTags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {safeTags.slice(0, 3).map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md font-medium"
+              >
+                {tag}
+              </span>
+            ))}
+            {safeTags.length > 3 && (
+              <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
+                +{safeTags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Meta Info */}
         <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
@@ -123,10 +128,12 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
             <Clock className="h-3 w-3" />
             {estimatedTime}
           </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            {popularity}% popular
-          </div>
+          {popularity > 0 && (
+            <div className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              {popularity}% popular
+            </div>
+          )}
         </div>
 
         {/* Badges */}
