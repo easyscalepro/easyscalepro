@@ -57,19 +57,6 @@ export default function DashboardPage() {
     router.push(`/command/${id}`);
   };
 
-  // Calcular estatísticas do usuário
-  const userStats = {
-    totalCommands: commands.length,
-    favoriteCount: favorites.length,
-    categoriesUsed: new Set(commands.map(cmd => cmd.category)).size,
-    recentlyAdded: commands.filter(cmd => {
-      const createdDate = new Date(cmd.createdAt);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return createdDate >= weekAgo;
-    }).length
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -99,61 +86,6 @@ export default function DashboardPage() {
           
           {/* Grid pattern */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
-        </div>
-
-        {/* User stats and actions section */}
-        <div className="relative text-center mb-16">
-          {/* User stats highlights */}
-          <div className="flex flex-wrap justify-center gap-6 mb-8">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-              <div className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <BookOpen className="h-4 w-4 text-white" />
-              </div>
-              <div className="text-left">
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.totalCommands}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Comandos disponíveis</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-              <div className="p-2 rounded-full bg-gradient-to-r from-red-500 to-pink-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <Star className="h-4 w-4 text-white fill-current" />
-              </div>
-              <div className="text-left">
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.favoriteCount}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Seus favoritos</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-              <div className="p-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <Target className="h-4 w-4 text-white" />
-              </div>
-              <div className="text-left">
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{userStats.categoriesUsed}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Categorias</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick action buttons */}
-          <div className="flex flex-wrap justify-center gap-4">
-            <button
-              onClick={() => setSearchTerm('')}
-              className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <Search className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-              Explorar Comandos
-            </button>
-            
-            <button
-              onClick={() => router.push('/favorites')}
-              className="group flex items-center gap-2 px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <Star className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-              Meus Favoritos
-            </button>
-          </div>
         </div>
 
         {/* Stats */}
