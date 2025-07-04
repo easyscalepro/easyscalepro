@@ -5,10 +5,10 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { useCommands } from '@/contexts/commands-context';
 import { useRouter } from 'next/navigation';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
-import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
-import { ModernStats } from '@/components/dashboard/modern-stats';
-import { Search, TrendingUp, Filter, Sparkles } from 'lucide-react';
+import { MinimalCommandFilters } from '@/components/dashboard/minimal-command-filters';
+import { MinimalCommandCard } from '@/components/dashboard/minimal-command-card';
+import { MinimalStats } from '@/components/dashboard/minimal-stats';
+import { Search, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -54,19 +54,10 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-gray-900 dark:via-blue-950/20 dark:to-indigo-950/30 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="relative mb-8">
-            <div className="w-16 h-16 border-4 border-blue-100 dark:border-blue-900/50 rounded-full animate-spin"></div>
-            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-            <div className="absolute inset-0 w-16 h-16 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-full animate-pulse"></div>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Preparando sua experiência
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Carregando comandos especializados...
-          </p>
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Carregando...</p>
         </div>
       </div>
     );
@@ -77,58 +68,35 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-gray-900 dark:via-blue-950/20 dark:to-indigo-950/30">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <DashboardHeader />
       
-      <main className="container mx-auto px-6 py-12 max-w-7xl">
-        {/* Hero Section Moderno */}
-        <div className="text-center mb-16 relative">
-          {/* Background decorativo sutil */}
-          <div className="absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-400/5 to-indigo-400/5 rounded-full blur-3xl"></div>
-            <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-gradient-to-r from-indigo-400/5 to-purple-400/5 rounded-full blur-3xl"></div>
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Hero Section Minimalista */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-sm mb-6">
+            <TrendingUp className="h-3 w-3" />
+            {commands.length} comandos disponíveis
           </div>
           
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 backdrop-blur-sm border border-blue-200/50 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 px-6 py-3 rounded-full text-sm font-medium mb-8 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <span>Mais de {commands.length} comandos especializados para PMEs</span>
-            <Sparkles className="h-4 w-4" />
-          </div>
-          
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-gray-100 mb-6 leading-tight">
-            <span className="block">Comandos</span>
-            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              ChatGPT
-            </span>
-            <span className="block text-3xl md:text-4xl mt-2 text-gray-700 dark:text-gray-300 font-medium">
-              para Empresários
-            </span>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Comandos ChatGPT
+            <span className="block text-blue-600 dark:text-blue-400 mt-1">para sua empresa</span>
           </h1>
           
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed mb-10">
-            Acelere seu negócio com prompts profissionais testados e otimizados para 
-            <span className="font-semibold text-blue-600 dark:text-blue-400"> resultados mensuráveis</span>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
+            Prompts profissionais para acelerar seu negócio e aumentar a produtividade
           </p>
-
-          {/* CTA elegante */}
-          <button 
-            onClick={() => setSearchTerm('marketing')}
-            className="group inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-2xl font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-          >
-            <TrendingUp className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-            Explorar Comandos
-            <div className="w-2 h-2 bg-white/50 rounded-full group-hover:animate-ping"></div>
-          </button>
         </div>
 
-        {/* Stats modernos */}
-        <div className="mb-16">
-          <ModernStats />
+        {/* Estatísticas Minimalistas */}
+        <div className="mb-10">
+          <MinimalStats />
         </div>
 
-        {/* Filtros elegantes */}
-        <div className="mb-12">
-          <ModernCommandFilters
+        {/* Filtros Simples */}
+        <div className="mb-8">
+          <MinimalCommandFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             selectedCategory={selectedCategory}
@@ -138,62 +106,39 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Results Header moderno */}
-        <div className="flex items-center justify-between mb-10 p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Filter className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {filteredCommands.length} comandos encontrados
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Prontos para impulsionar seu negócio
-              </p>
-            </div>
-          </div>
+        {/* Header de Resultados */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            {filteredCommands.length} comandos encontrados
+          </h2>
           {searchTerm && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-xl text-sm font-medium border border-blue-200/50 dark:border-blue-700/50">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Resultados para "{searchTerm}"
-            </div>
+            </span>
           )}
         </div>
 
-        {/* Commands Grid com animação elegante */}
+        {/* Grid de Comandos */}
         {filteredCommands.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCommands.map((command, index) => (
-              <div
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCommands.map((command) => (
+              <MinimalCommandCard
                 key={command.id}
-                className="animate-fade-in-up"
-                style={{ 
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: 'both'
-                }}
-              >
-                <ModernCommandCard
-                  {...command}
-                  onViewDetails={handleViewDetails}
-                />
-              </div>
+                {...command}
+                onViewDetails={handleViewDetails}
+              />
             ))}
           </div>
         ) : (
-          <div className="text-center py-20">
-            <div className="relative mb-8">
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-2xl flex items-center justify-center mx-auto shadow-xl">
-                <Search className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-              </div>
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              </div>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               Nenhum comando encontrado
             </h3>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
-              Ajuste os filtros ou termos de busca para encontrar comandos relevantes
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Tente ajustar os filtros ou usar outros termos de busca
             </p>
             <button
               onClick={() => {
@@ -201,30 +146,13 @@ export default function DashboardPage() {
                 setSelectedCategory('Todas');
                 setSelectedLevel('Todos');
               }}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
-              <TrendingUp className="h-4 w-4" />
               Limpar Filtros
             </button>
           </div>
         )}
       </main>
-
-      <style jsx>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
