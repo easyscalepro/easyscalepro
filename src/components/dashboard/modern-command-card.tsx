@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Eye, Clock, TrendingUp, Heart, Sparkles, Zap } from 'lucide-react';
+import { Copy, Eye, Clock, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
 
@@ -16,7 +16,6 @@ interface ModernCommandCardProps {
   level: 'iniciante' | 'intermediário' | 'avançado';
   prompt: string;
   tags?: string[];
-  popularity?: number;
   estimatedTime?: string;
   onViewDetails: (id: string) => void;
 }
@@ -29,7 +28,6 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   level,
   prompt,
   tags = [],
-  popularity = 0,
   estimatedTime = '5 min',
   onViewDetails,
 }) => {
@@ -41,9 +39,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     try {
       await navigator.clipboard.writeText(prompt);
       incrementCopies(id);
-      toast.success('Prompt copiado!', {
-        description: 'O comando foi copiado para sua área de transferência'
-      });
+      toast.success('Prompt copiado!');
     } catch (error) {
       toast.error('Erro ao copiar prompt');
     }
@@ -54,137 +50,95 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     toggleFavorite(id);
   };
 
-  const getLevelConfig = (level: string) => {
+  const getLevelColor = (level: string) => {
     switch (level) {
       case 'iniciante':
-        return {
-          color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-          gradient: 'from-emerald-500 to-green-500',
-          icon: '🌱'
-        };
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'intermediário':
-        return {
-          color: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-          gradient: 'from-amber-500 to-orange-500',
-          icon: '⚡'
-        };
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
       case 'avançado':
-        return {
-          color: 'bg-red-500/10 text-red-400 border-red-500/30',
-          gradient: 'from-red-500 to-pink-500',
-          icon: '🚀'
-        };
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       default:
-        return {
-          color: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
-          gradient: 'from-slate-500 to-gray-500',
-          icon: '📝'
-        };
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
-  const getCategoryConfig = (category: string) => {
-    const configs = {
-      'Marketing': { gradient: 'from-blue-500 to-cyan-500', icon: '📈' },
-      'Finanças': { gradient: 'from-green-500 to-emerald-500', icon: '💰' },
-      'Gestão': { gradient: 'from-purple-500 to-violet-500', icon: '👥' },
-      'Vendas': { gradient: 'from-orange-500 to-red-500', icon: '🎯' },
-      'Estratégia': { gradient: 'from-indigo-500 to-blue-500', icon: '🧠' },
-      'Atendimento': { gradient: 'from-pink-500 to-rose-500', icon: '💬' },
-      'Recursos Humanos': { gradient: 'from-teal-500 to-cyan-500', icon: '👤' },
-      'Operações': { gradient: 'from-cyan-500 to-blue-500', icon: '⚙️' }
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      'Marketing': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      'Finanças': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'Gestão': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      'Vendas': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+      'Estratégia': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+      'Atendimento': 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300',
+      'Recursos Humanos': 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+      'Operações': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
     };
-    return configs[category as keyof typeof configs] || { gradient: 'from-slate-500 to-gray-500', icon: '📄' };
+    return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   };
 
-  const levelConfig = getLevelConfig(level);
-  const categoryConfig = getCategoryConfig(category);
   const safeTags = Array.isArray(tags) ? tags : [];
 
   return (
-    <Card className="group cursor-pointer border border-slate-700/50 bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm hover:from-slate-800/80 hover:to-slate-900/80 hover:border-slate-600/50 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/20 relative overflow-hidden">
-      {/* Gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      
-      {/* Animated border */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
-      
-      <CardContent className="relative p-6 z-10">
+    <Card className="h-full hover:shadow-lg transition-shadow duration-200 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <CardContent className="p-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${categoryConfig.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-              <span className="text-xl">{categoryConfig.icon}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">{category}</span>
-              <div className="flex items-center gap-1 mt-1">
-                <span className="text-xs">{levelConfig.icon}</span>
-                <span className="text-xs text-slate-300 font-medium">{level}</span>
-              </div>
-            </div>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+              {title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 mb-4">
+              {description}
+            </p>
           </div>
-          
           <button
             onClick={handleFavorite}
-            className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 hover:bg-slate-700/50 rounded-full hover:scale-110"
+            className="ml-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
           >
-            <Heart className={`h-5 w-5 transition-all duration-300 ${
+            <Heart className={`h-5 w-5 ${
               isFavorite 
-                ? 'text-red-400 fill-current scale-110' 
-                : 'text-slate-400 hover:text-red-400'
+                ? 'text-red-500 fill-current' 
+                : 'text-gray-400 hover:text-red-500'
             }`} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="mb-6">
-          <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 group-hover:text-blue-400 transition-colors duration-300 leading-tight">
-            {title}
-          </h3>
-          <p className="text-slate-300 text-sm line-clamp-3 leading-relaxed">
-            {description}
-          </p>
-        </div>
-
         {/* Tags */}
         {safeTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             {safeTags.slice(0, 3).map((tag, index) => (
               <span
                 key={index}
-                className="px-3 py-1 bg-slate-700/50 text-slate-300 text-xs rounded-full font-medium border border-slate-600/30 hover:bg-slate-600/50 transition-colors"
+                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-md"
               >
                 #{tag}
               </span>
             ))}
             {safeTags.length > 3 && (
-              <span className="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30 font-medium">
-                +{safeTags.length - 3} mais
+              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-md">
+                +{safeTags.length - 3}
               </span>
             )}
           </div>
         )}
 
         {/* Meta Info */}
-        <div className="flex items-center justify-between mb-6 text-xs">
-          <div className="flex items-center gap-4 text-slate-400">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>{estimatedTime}</span>
-            </div>
-            {popularity > 0 && (
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
-                <span>{popularity}% popular</span>
-              </div>
-            )}
-          </div>
-          
+        <div className="flex items-center gap-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-yellow-400" />
-            <span className="text-yellow-400 font-medium">Premium</span>
+            <Clock className="h-3 w-3" />
+            {estimatedTime}
           </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-2 mb-6">
+          <Badge className={`text-xs ${getCategoryColor(category)}`}>
+            {category}
+          </Badge>
+          <Badge className={`text-xs ${getLevelColor(level)}`}>
+            {level}
+          </Badge>
         </div>
 
         {/* Actions */}
@@ -192,9 +146,9 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           <Button
             onClick={handleCopyPrompt}
             size="sm"
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-blue-500/30 transition-all duration-300 group/btn"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Copy className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            <Copy className="h-4 w-4 mr-2" />
             Copiar
           </Button>
           
@@ -202,20 +156,12 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
             onClick={() => onViewDetails(id)}
             size="sm"
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white font-semibold hover:border-slate-500 transition-all duration-300 group/btn"
+            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            <Eye className="h-4 w-4 mr-2" />
             Ver
           </Button>
         </div>
-
-        {/* Popularity indicator */}
-        {popularity > 80 && (
-          <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Zap className="h-3 w-3" />
-            HOT
-          </div>
-        )}
       </CardContent>
     </Card>
   );
