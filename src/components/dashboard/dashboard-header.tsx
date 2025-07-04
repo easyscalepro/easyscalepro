@@ -6,13 +6,14 @@ import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/auth-provider';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Heart, LayoutDashboard, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export const DashboardHeader: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     try {
@@ -27,7 +28,51 @@ export const DashboardHeader: React.FC = () => {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        <EasyScaleLogo />
+        <div className="flex items-center gap-6">
+          <EasyScaleLogo />
+          
+          {/* Navegação */}
+          <nav className="hidden md:flex items-center gap-4">
+            <Button
+              onClick={() => router.push('/dashboard')}
+              variant={pathname === '/dashboard' ? 'default' : 'ghost'}
+              size="sm"
+              className={pathname === '/dashboard' 
+                ? 'bg-[#2563EB] text-white' 
+                : 'text-gray-600 hover:text-[#2563EB]'
+              }
+            >
+              <LayoutDashboard className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+            
+            <Button
+              onClick={() => router.push('/favorites')}
+              variant={pathname === '/favorites' ? 'default' : 'ghost'}
+              size="sm"
+              className={pathname === '/favorites' 
+                ? 'bg-[#2563EB] text-white' 
+                : 'text-gray-600 hover:text-[#2563EB]'
+              }
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Favoritos
+            </Button>
+
+            <Button
+              onClick={() => router.push('/profile')}
+              variant={pathname === '/profile' ? 'default' : 'ghost'}
+              size="sm"
+              className={pathname === '/profile' 
+                ? 'bg-[#2563EB] text-white' 
+                : 'text-gray-600 hover:text-[#2563EB]'
+              }
+            >
+              <UserCircle className="h-4 w-4 mr-2" />
+              Perfil
+            </Button>
+          </nav>
+        </div>
         
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[#0F1115]">
