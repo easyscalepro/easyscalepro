@@ -1,20 +1,28 @@
 import React from 'react';
 import { Sparkles, Zap } from 'lucide-react';
+import Image from 'next/image';
 
 export const EasyScaleLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
   return (
     <div className={`flex items-center gap-3 ${className} group`}>
-      {/* Enhanced logo icon */}
+      {/* Enhanced logo icon with company logo */}
       <div className="relative">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
-          {/* Main logo content */}
-          <div className="relative">
-            <span className="text-white font-black text-lg tracking-tight">ES</span>
-            
-            {/* Decorative elements */}
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-white/40 rounded-full"></div>
-            <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-white/30 rounded-full"></div>
+        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 overflow-hidden">
+          {/* Company logo image */}
+          <div className="relative w-8 h-8">
+            <Image
+              src="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751663753020-y59b2eo6q.jpeg"
+              alt="EasyScale Logo"
+              fill
+              className="object-contain rounded-lg"
+              sizes="32px"
+              priority
+            />
           </div>
+          
+          {/* Decorative elements */}
+          <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full"></div>
+          <div className="absolute bottom-1 left-1 w-1.5 h-1.5 bg-white/30 rounded-full"></div>
           
           {/* Glow effect */}
           <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300"></div>

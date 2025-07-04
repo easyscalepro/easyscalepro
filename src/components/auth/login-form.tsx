@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { EasyScaleLogo } from '@/components/easyscale-logo';
+import { EasyScaleLogoLarge } from '@/components/easyscale-logo-large';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -63,7 +63,7 @@ export const LoginForm: React.FC = () => {
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white dark:bg-gray-800">
         <CardHeader className="text-center space-y-4 pb-8">
           <div className="flex justify-center">
-            <EasyScaleLogo />
+            <EasyScaleLogoLarge size="lg" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold text-[#0F1115] dark:text-gray-100">
