@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/admin-layout';
-import { UserManagement } from '@/components/admin/user-management';
+import { EnhancedUserManagement } from '@/components/admin/enhanced-user-management';
 
 export default function AdminUsersPage() {
   const { user, loading } = useAuth();
@@ -43,7 +43,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <UserManagement />
+        <EnhancedUserManagement />
       </div>
     </AdminLayout>
   );

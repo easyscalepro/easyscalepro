@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { CommandsProvider } from "@/contexts/commands-context";
+import { UsersProvider } from "@/contexts/users-context";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -39,8 +40,10 @@ export default function RootLayout({
         >
           <AuthProvider>
             <CommandsProvider>
-              {children}
-              <Toaster />
+              <UsersProvider>
+                {children}
+                <Toaster />
+              </UsersProvider>
             </CommandsProvider>
           </AuthProvider>
         </ThemeProvider>
