@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [selectedLevel, setSelectedLevel] = useState('Todos');
   const [filteredCommands, setFilteredCommands] = useState(commands);
+  const [isGridVisible, setIsGridVisible] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -45,6 +46,10 @@ export default function DashboardPage() {
     }
 
     setFilteredCommands(filtered);
+    
+    // Trigger grid animation when commands change
+    setIsGridVisible(false);
+    setTimeout(() => setIsGridVisible(true), 100);
   }, [searchTerm, selectedCategory, selectedLevel, commands]);
 
   const handleViewDetails = (id: string) => {
@@ -172,20 +177,32 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Commands Grid */}
+        {/* Enhanced Commands Grid */}
         {filteredCommands.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCommands.map((command) => (
-              <ModernCommandCard
+            {filteredCommands.map((command, index) => (
+              <div
                 key={command.id}
-                {...command}
-                onViewDetails={handleViewDetails}
-              />
+                className={`transform transition-all duration-700 ${
+                  isGridVisible 
+                    ? 'translate-y-0 opacity-100' 
+                    : 'translate-y-8 opacity-0'
+                }`}
+                style={{ 
+                  transitionDelay: `${index * 100}ms`,
+                  animationFillMode: 'both'
+                }}
+              >
+                <ModernCommandCard
+                  {...command}
+                  onViewDetails={handleViewDetails}
+                />
+              </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-20">
-            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
               <Search className="h-12 w-12 text-gray-400 dark:text-gray-500" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -200,7 +217,7 @@ export default function DashboardPage() {
                 setSelectedCategory('Todas');
                 setSelectedLevel('Todos');
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
             >
               Limpar Filtros
             </button>
