@@ -23,20 +23,53 @@ export const CommandManagement: React.FC = () => {
   );
 
   const handleEdit = (id: string) => {
-    router.push(`/admin/commands/edit/${id}`);
+    console.log('Editando comando:', id);
+    try {
+      router.push(`/admin/commands/edit/${id}`);
+      toast.success('Abrindo editor de comando');
+    } catch (error) {
+      console.error('Erro ao editar:', error);
+      toast.error('Erro ao abrir editor');
+    }
   };
 
   const handleView = (id: string) => {
-    router.push(`/command/${id}`);
+    console.log('Visualizando comando:', id);
+    try {
+      router.push(`/command/${id}`);
+      toast.success('Abrindo visualização do comando');
+    } catch (error) {
+      console.error('Erro ao visualizar:', error);
+      toast.error('Erro ao abrir visualização');
+    }
   };
 
   const handleDelete = (id: string, title: string) => {
+    console.log('Deletando comando:', id, title);
     if (confirm(`Tem certeza que deseja excluir o comando "${title}"?\n\nEsta ação não pode ser desfeita.`)) {
-      deleteCommand(id);
+      try {
+        deleteCommand(id);
+        toast.success('Comando excluído com sucesso!');
+      } catch (error) {
+        console.error('Erro ao deletar:', error);
+        toast.error('Erro ao excluir comando');
+      }
+    }
+  };
+
+  const handleNewCommand = () => {
+    console.log('Criando novo comando');
+    try {
+      router.push('/admin/commands/new');
+      toast.success('Abrindo formulário de novo comando');
+    } catch (error) {
+      console.error('Erro ao criar comando:', error);
+      toast.error('Erro ao abrir formulário');
     }
   };
 
   const handleUploadCSV = () => {
+    console.log('Upload CSV');
     toast.info('Funcionalidade de upload em massa será implementada em breve');
   };
 
@@ -68,7 +101,7 @@ export const CommandManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative z-10">
       {/* Header com estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-gray-200">
@@ -114,14 +147,16 @@ export const CommandManagement: React.FC = () => {
               <Button
                 onClick={handleUploadCSV}
                 variant="outline"
-                className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
+                type="button"
+                className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all duration-200 hover:scale-105 relative z-20"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload CSV
               </Button>
               <Button 
-                onClick={() => router.push('/admin/commands/new')}
-                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+                onClick={handleNewCommand}
+                type="button"
+                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium transition-all duration-200 hover:scale-105 relative z-20"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Comando
@@ -198,7 +233,8 @@ export const CommandManagement: React.FC = () => {
                           onClick={() => handleView(command.id)}
                           size="sm"
                           variant="outline"
-                          className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                          type="button"
+                          className="border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200 hover:scale-105 relative z-20"
                           title="Visualizar"
                         >
                           <Eye className="h-4 w-4" />
@@ -207,7 +243,8 @@ export const CommandManagement: React.FC = () => {
                           onClick={() => handleEdit(command.id)}
                           size="sm"
                           variant="outline"
-                          className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
+                          type="button"
+                          className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all duration-200 hover:scale-105 relative z-20"
                           title="Editar"
                         >
                           <Edit className="h-4 w-4" />
@@ -216,7 +253,8 @@ export const CommandManagement: React.FC = () => {
                           onClick={() => handleDelete(command.id, command.title)}
                           size="sm"
                           variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                          type="button"
+                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-all duration-200 hover:scale-105 relative z-20"
                           title="Excluir"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -245,8 +283,9 @@ export const CommandManagement: React.FC = () => {
               </p>
               {!searchTerm && (
                 <Button 
-                  onClick={() => router.push('/admin/commands/new')}
-                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
+                  onClick={handleNewCommand}
+                  type="button"
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] transition-all duration-200 hover:scale-105 relative z-20"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Criar Primeiro Comando

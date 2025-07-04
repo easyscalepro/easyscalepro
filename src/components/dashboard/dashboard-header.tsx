@@ -28,12 +28,25 @@ export const DashboardHeader: React.FC = () => {
   const pathname = usePathname();
 
   const handleLogout = async () => {
+    console.log('Fazendo logout do header');
     try {
       logout();
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
+      console.error('Erro no logout:', error);
       toast.error('Erro ao fazer logout');
+    }
+  };
+
+  const handleNavigation = (path: string, label: string) => {
+    console.log('Navegando para:', path, label);
+    try {
+      router.push(path);
+      toast.success(`Navegando para ${label}`);
+    } catch (error) {
+      console.error('Erro na navegação:', error);
+      toast.error(`Erro ao navegar para ${label}`);
     }
   };
 
@@ -76,7 +89,7 @@ export const DashboardHeader: React.FC = () => {
         <div className="absolute top-0 right-1/4 w-24 h-24 bg-gradient-to-br from-emerald-400/5 to-teal-400/5 rounded-full blur-xl"></div>
       </div>
 
-      <div className="container mx-auto px-6 py-4 relative">
+      <div className="container mx-auto px-6 py-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             {/* Enhanced Logo */}
@@ -94,10 +107,11 @@ export const DashboardHeader: React.FC = () => {
                 return (
                   <div key={item.path} className="relative group">
                     <Button
-                      onClick={() => router.push(item.path)}
+                      onClick={() => handleNavigation(item.path, item.label)}
                       variant="ghost"
                       size="sm"
-                      className={`relative px-4 py-3 rounded-xl transition-all duration-300 group-hover:scale-105 ${
+                      type="button"
+                      className={`relative px-4 py-3 rounded-xl transition-all duration-300 group-hover:scale-105 z-20 ${
                         isActive 
                           ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-700 dark:text-blue-300 shadow-lg border border-blue-200/50 dark:border-blue-700/50' 
                           : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 dark:hover:from-gray-800 dark:hover:to-blue-900/20'
@@ -124,7 +138,7 @@ export const DashboardHeader: React.FC = () => {
                     </Button>
                     
                     {/* Tooltip */}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-30">
                       {item.description}
                       <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
                     </div>
@@ -146,7 +160,8 @@ export const DashboardHeader: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative p-3 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-300 group-hover:scale-105"
+                type="button"
+                className="relative p-3 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-300 group-hover:scale-105 z-20"
               >
                 <div className="relative">
                   <Bell className="h-5 w-5" />
@@ -196,7 +211,8 @@ export const DashboardHeader: React.FC = () => {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-900/20 dark:hover:to-pink-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-300 rounded-xl px-4 py-2 font-semibold group-hover:scale-105"
+                type="button"
+                className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-900/20 dark:hover:to-pink-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-300 rounded-xl px-4 py-2 font-semibold group-hover:scale-105 z-20"
               >
                 <LogOut className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
                 Sair

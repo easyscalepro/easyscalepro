@@ -29,18 +29,42 @@ export const AdminSidebar: React.FC = () => {
     { icon: Settings, label: 'Configurações', path: '/admin/settings' },
   ];
 
+  const handleNavigation = (path: string) => {
+    console.log('Navegando para:', path);
+    try {
+      router.push(path);
+      toast.success(`Navegando para ${path}`);
+    } catch (error) {
+      console.error('Erro na navegação:', error);
+      toast.error('Erro ao navegar');
+    }
+  };
+
+  const handleNewCommand = () => {
+    console.log('Criando novo comando');
+    try {
+      router.push('/admin/commands/new');
+      toast.success('Abrindo formulário de novo comando');
+    } catch (error) {
+      console.error('Erro ao criar comando:', error);
+      toast.error('Erro ao abrir formulário');
+    }
+  };
+
   const handleLogout = async () => {
+    console.log('Fazendo logout');
     try {
       logout();
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
+      console.error('Erro no logout:', error);
       toast.error('Erro ao fazer logout');
     }
   };
 
   return (
-    <div className="w-64 bg-[#0F1115] text-white h-screen flex flex-col">
+    <div className="w-64 bg-[#0F1115] text-white h-screen flex flex-col relative z-10">
       <div className="p-6 border-b border-gray-700">
         <EasyScaleLogo className="text-white" />
         <p className="text-sm text-gray-400 mt-2">Painel Administrativo</p>
@@ -48,8 +72,9 @@ export const AdminSidebar: React.FC = () => {
 
       <div className="flex-1 p-4">
         <Button
-          onClick={() => router.push('/admin/commands/new')}
-          className="w-full mb-6 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+          onClick={handleNewCommand}
+          className="w-full mb-6 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium transition-all duration-200 hover:scale-105 relative z-20"
+          type="button"
         >
           <Plus className="h-4 w-4 mr-2" />
           Novo Comando
@@ -63,9 +88,10 @@ export const AdminSidebar: React.FC = () => {
             return (
               <Button
                 key={item.path}
-                onClick={() => router.push(item.path)}
+                onClick={() => handleNavigation(item.path)}
                 variant="ghost"
-                className={`w-full justify-start text-left ${
+                type="button"
+                className={`w-full justify-start text-left transition-all duration-200 hover:scale-105 relative z-20 ${
                   isActive 
                     ? 'bg-[#2563EB] text-white hover:bg-[#1d4ed8]' 
                     : 'text-gray-300 hover:text-white hover:bg-gray-800'
@@ -83,7 +109,8 @@ export const AdminSidebar: React.FC = () => {
         <Button
           onClick={handleLogout}
           variant="ghost"
-          className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+          type="button"
+          className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 hover:scale-105 relative z-20"
         >
           <LogOut className="h-4 w-4 mr-3" />
           Sair
