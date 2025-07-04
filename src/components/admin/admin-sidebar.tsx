@@ -13,13 +13,13 @@ import {
   LogOut,
   Plus
 } from 'lucide-react';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/components/auth/auth-provider';
 import { toast } from 'sonner';
 
 export const AdminSidebar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -31,7 +31,7 @@ export const AdminSidebar: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      logout();
       toast.success('Logout realizado com sucesso!');
       router.push('/login');
     } catch (error) {
