@@ -3,12 +3,18 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Users, Eye, Copy } from 'lucide-react';
+import { useCommands } from '@/contexts/commands-context';
 
 export const DashboardStats: React.FC = () => {
+  const { commands } = useCommands();
+  
+  const totalViews = commands.reduce((sum, cmd) => sum + cmd.views, 0);
+  const totalCopies = commands.reduce((sum, cmd) => sum + cmd.copies, 0);
+  
   const stats = [
     {
       title: 'Total de Prompts',
-      value: '1,247',
+      value: commands.length.toString(),
       icon: FileText,
       change: '+12%',
       changeType: 'positive' as const
@@ -21,15 +27,15 @@ export const DashboardStats: React.FC = () => {
       changeType: 'positive' as const
     },
     {
-      title: 'Visualizações Hoje',
-      value: '2,847',
+      title: 'Visualizações Total',
+      value: totalViews.toString(),
       icon: Eye,
       change: '+23%',
       changeType: 'positive' as const
     },
     {
       title: 'Prompts Copiados',
-      value: '1,523',
+      value: totalCopies.toString(),
       icon: Copy,
       change: '+15%',
       changeType: 'positive' as const

@@ -3,38 +3,23 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useCommands } from '@/contexts/commands-context';
 
 export const RecentActivity: React.FC = () => {
-  const activities = [
-    {
-      id: '1',
-      type: 'copy',
-      user: 'joão@empresa.com',
-      command: 'Estratégia de Marketing Digital',
-      timestamp: '15 min atrás'
-    },
-    {
-      id: '2',
-      type: 'view',
-      user: 'maria@startup.com',
-      command: 'Análise Financeira Mensal',
-      timestamp: '30 min atrás'
-    },
-    {
-      id: '3',
-      type: 'copy',
-      user: 'pedro@pme.com',
-      command: 'Script de Vendas Persuasivo',
-      timestamp: '45 min atrás'
-    },
-    {
-      id: '4',
-      type: 'view',
-      user: 'ana@negocio.com',
-      command: 'Gestão de Equipe Remota',
-      timestamp: '1 hora atrás'
-    }
-  ];
+  const { commands } = useCommands();
+  
+  // Pegar os comandos mais recentes baseado na data de criação
+  const recentCommands = commands
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
+
+  const activities = recentCommands.map((cmd, index) => ({
+    id: cmd.id,
+    type: index % 2 === 0 ? 'copy' : 'view',
+    user: `usuario${index + 1}@empresa.com`,
+    command: cmd.title,
+    timestamp: `${(index + 1) * 15} min atrás`
+  }));
 
   const getActivityBadge = (type: string) => {
     switch (type) {

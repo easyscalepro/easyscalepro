@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { useAuth } from '@/components/auth/auth-provider';
-import { LogOut, User, Heart, LayoutDashboard, UserCircle, Bell } from 'lucide-react';
+import { LogOut, User, Heart, LayoutDashboard, UserCircle, Bell, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -28,6 +28,7 @@ export const DashboardHeader: React.FC = () => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Heart, label: 'Favoritos', path: '/favorites' },
     { icon: UserCircle, label: 'Perfil', path: '/profile' },
+    { icon: Settings, label: 'Admin', path: '/admin' },
   ];
 
   return (
@@ -86,7 +87,7 @@ export const DashboardHeader: React.FC = () => {
                 <User className="h-4 w-4 text-white" />
               </div>
               <div className="text-sm">
-                <div className="font-medium text-gray-900 dark:text-gray-100">Olá, Julio!</div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">Olá, Admin!</div>
                 <div className="text-gray-500 dark:text-gray-400 text-xs">{user?.email}</div>
               </div>
             </div>

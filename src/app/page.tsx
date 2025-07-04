@@ -11,8 +11,10 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
+        // Se o usuário está logado, redirecionar para dashboard
         router.push('/dashboard');
       } else {
+        // Se não está logado, redirecionar para login
         router.push('/login');
       }
     }
