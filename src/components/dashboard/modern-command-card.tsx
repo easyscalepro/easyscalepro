@@ -4,7 +4,32 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Eye, Clock, TrendingUp, Heart, Sparkles, Zap, Star } from 'lucide-react';
+import { 
+  Copy, 
+  Eye, 
+  Clock, 
+  TrendingUp, 
+  Heart, 
+  Sparkles, 
+  Zap, 
+  Star,
+  BarChart3,
+  DollarSign,
+  Users,
+  ShoppingCart,
+  Compass,
+  MessageCircle,
+  UserCheck,
+  Settings,
+  Target,
+  PieChart,
+  Crown,
+  Trophy,
+  Lightbulb,
+  Headphones,
+  Award,
+  Activity
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
 
@@ -81,7 +106,22 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     return colors[category as keyof typeof colors] || 'from-gray-500 to-gray-600';
   };
 
+  const getCategoryIcon = (category: string) => {
+    const icons = {
+      'Marketing': BarChart3,
+      'Finanças': DollarSign,
+      'Gestão': Crown,
+      'Vendas': Trophy,
+      'Estratégia': Lightbulb,
+      'Atendimento': Headphones,
+      'Recursos Humanos': Award,
+      'Operações': Activity
+    };
+    return icons[category as keyof typeof icons] || Target;
+  };
+
   const safeTags = Array.isArray(tags) ? tags : [];
+  const CategoryIcon = getCategoryIcon(category);
 
   return (
     <Card className="group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-2 hover:scale-[1.02] overflow-hidden relative">
@@ -103,13 +143,21 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
             <Sparkles className="h-4 w-4 text-gray-400 dark:text-gray-500 animate-pulse" />
           </div>
 
-          {/* Top row with icon and actions */}
+          {/* Top row with enhanced icon and actions */}
           <div className="flex items-start justify-between">
-            <div className={`relative p-3 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}>
-              <div className="w-4 h-4 bg-white/90 rounded-full"></div>
+            <div className={`relative p-4 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+              {/* Main category icon */}
+              <CategoryIcon className="h-6 w-6 text-white drop-shadow-lg relative z-10" />
+              
+              {/* Decorative elements */}
+              <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full"></div>
+              <div className="absolute bottom-1 left-1 w-1.5 h-1.5 bg-white/30 rounded-full"></div>
               
               {/* Glow effect */}
-              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-40 blur-xl transition-opacity duration-300`}></div>
+              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300`}></div>
+              
+              {/* Pulse ring */}
+              <div className={`absolute inset-0 rounded-2xl border-2 border-white/20 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`}></div>
             </div>
             
             <div className="flex items-center gap-2">
