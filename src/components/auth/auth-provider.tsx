@@ -1,24 +1,19 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-interface User {
-  email: string;
-  uid: string;
-}
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export const useAuth = () => {
@@ -34,35 +29,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se há usuário salvo no localStorage
-    const savedUser = localStorage.getItem('easyscale_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simular validação de credenciais
-    if (email === 'julionavyy@gmail.com' && password === '123456') {
-      const userData = {
-        email: email,
-        uid: 'demo-user-123'
-      };
-      setUser(userData);
-      localStorage.setItem('easyscale_user', JSON.stringify(userData));
-    } else {
-      throw new Error('Credenciais inválidas');
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      throw error;
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('easyscale_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

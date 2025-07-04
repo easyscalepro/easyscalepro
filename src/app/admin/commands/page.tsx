@@ -39,7 +39,7 @@ export default function AdminCommandsPage() {
             Gerenciar Comandos
           </h1>
           <p className="text-gray-600">
-            Adicione, edite e organize os comandos da plataforma
+            Crie, edite e organize todos os comandos da plataforma
           </p>
         </div>
 
