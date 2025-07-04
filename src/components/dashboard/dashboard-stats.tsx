@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Users, TrendingUp, Zap } from 'lucide-react';
+import { FileText, Users, TrendingUp, Zap, Target, Rocket, Star, Clock } from 'lucide-react';
 
 export const DashboardStats: React.FC = () => {
   const stats = [
@@ -11,32 +11,36 @@ export const DashboardStats: React.FC = () => {
       value: '1,247',
       change: '+12 esta semana',
       icon: FileText,
-      color: 'blue',
-      gradient: 'from-blue-500 to-blue-600'
+      gradient: 'from-[#2563EB] to-[#1d4ed8]',
+      bgGradient: 'from-blue-500/10 to-blue-600/10',
+      borderColor: 'border-blue-500/20'
     },
     {
       title: 'Usuários Ativos',
       value: '2,847',
       change: '+23% este mês',
       icon: Users,
-      color: 'green',
-      gradient: 'from-green-500 to-green-600'
+      gradient: 'from-[#10B981] to-[#059669]',
+      bgGradient: 'from-green-500/10 to-green-600/10',
+      borderColor: 'border-green-500/20'
     },
     {
       title: 'Taxa de Sucesso',
       value: '94.2%',
       change: '+5.2% melhoria',
-      icon: TrendingUp,
-      color: 'purple',
-      gradient: 'from-purple-500 to-purple-600'
+      icon: Target,
+      gradient: 'from-[#FBBF24] to-[#F59E0B]',
+      bgGradient: 'from-yellow-500/10 to-yellow-600/10',
+      borderColor: 'border-yellow-500/20'
     },
     {
       title: 'Tempo Economizado',
       value: '156h',
       change: 'por usuário/mês',
-      icon: Zap,
-      color: 'orange',
-      gradient: 'from-orange-500 to-orange-600'
+      icon: Clock,
+      gradient: 'from-[#8B5CF6] to-[#7C3AED]',
+      bgGradient: 'from-purple-500/10 to-purple-600/10',
+      borderColor: 'border-purple-500/20'
     }
   ];
 
@@ -45,18 +49,32 @@ export const DashboardStats: React.FC = () => {
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-all duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-            <CardContent className="p-6">
+          <Card 
+            key={index} 
+            className={`group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-gradient-to-br ${stat.bgGradient} backdrop-blur-sm border ${stat.borderColor}`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-sm"></div>
+            <CardContent className="relative p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.gradient} shadow-lg`}>
-                  <Icon className="h-6 w-6 text-white" />
+                <div className={`p-4 rounded-2xl bg-gradient-to-r ${stat.gradient} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className="h-8 w-8 text-white" />
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">{stat.change}</div>
+                  <div className="text-3xl font-bold text-[#0F1115] group-hover:scale-105 transition-transform duration-300">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium mt-1">
+                    {stat.change}
+                  </div>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.title}</h3>
+              <h3 className="text-sm font-semibold text-gray-700 group-hover:text-[#0F1115] transition-colors duration-300">
+                {stat.title}
+              </h3>
+              
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-white/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
             </CardContent>
           </Card>
         );
