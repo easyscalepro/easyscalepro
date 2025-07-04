@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { useAuth } from '@/components/auth/auth-provider';
-import { LogOut, User, Heart, LayoutDashboard, UserCircle, Bell, Settings, Sparkles } from 'lucide-react';
+import { LogOut, User, Heart, LayoutDashboard, UserCircle, Bell, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -32,20 +32,14 @@ export const DashboardHeader: React.FC = () => {
   ];
 
   return (
-    <header className="relative bg-white/10 backdrop-blur-xl border-b border-white/20 sticky top-0 z-50">
-      <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-white/10"></div>
-      
-      <div className="relative container mx-auto px-6 py-4">
+    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-colors">
+      <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-gray-900 font-bold text-lg">ES</span>
-              </div>
-              <span className="text-2xl font-bold text-white">EasyScale</span>
-            </div>
+            <EasyScaleLogo />
             
-            <nav className="hidden md:flex items-center gap-2">
+            {/* Navegação */}
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.path;
@@ -56,16 +50,16 @@ export const DashboardHeader: React.FC = () => {
                     onClick={() => router.push(item.path)}
                     variant="ghost"
                     size="sm"
-                    className={`relative px-4 py-2 rounded-xl transition-all duration-300 ${
+                    className={`relative px-4 py-2 rounded-lg transition-all duration-200 ${
                       isActive 
-                        ? 'bg-gradient-to-r from-yellow-400/20 to-yellow-500/20 text-yellow-400 shadow-lg backdrop-blur-sm border border-yellow-400/30' 
-                        : 'text-white/80 hover:text-yellow-400 hover:bg-white/10'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     <Icon className="h-4 w-4 mr-2" />
                     {item.label}
                     {isActive && (
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-yellow-400 rounded-full shadow-lg"></div>
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
                     )}
                   </Button>
                 );
@@ -74,27 +68,27 @@ export const DashboardHeader: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
             <ThemeToggle />
 
+            {/* Notifications */}
             <Button
               variant="ghost"
               size="sm"
-              className="relative p-2 text-white/80 hover:text-yellow-400 hover:bg-white/10 rounded-xl transition-all duration-300"
+              className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
             >
               <Bell className="h-5 w-5" />
-              <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full shadow-lg animate-pulse"></div>
+              <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
             </Button>
 
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-yellow-400 rounded-full flex items-center justify-center shadow-lg">
+            {/* User Info */}
+            <div className="hidden md:flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <User className="h-4 w-4 text-white" />
               </div>
               <div className="text-sm">
-                <div className="font-semibold text-white flex items-center gap-1">
-                  Olá, Admin!
-                  <Sparkles className="h-3 w-3 text-yellow-400" />
-                </div>
-                <div className="text-white/70 text-xs">{user?.email}</div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">Olá, Admin!</div>
+                <div className="text-gray-500 dark:text-gray-400 text-xs">{user?.email}</div>
               </div>
             </div>
             
@@ -102,7 +96,7 @@ export const DashboardHeader: React.FC = () => {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="border-white/30 text-white hover:bg-red-500/20 hover:text-red-300 hover:border-red-400/50 transition-all duration-300 rounded-xl backdrop-blur-sm"
+              className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-colors"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sair
