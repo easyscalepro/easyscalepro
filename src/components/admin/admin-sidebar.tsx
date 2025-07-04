@@ -11,7 +11,8 @@ import {
   BarChart3, 
   Settings,
   LogOut,
-  Plus
+  Plus,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ export const AdminSidebar: React.FC = () => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
     { icon: FileText, label: 'Comandos', path: '/admin/commands' },
     { icon: Users, label: 'Usuários', path: '/admin/users' },
+    { icon: Zap, label: 'Integrações', path: '/admin/integrations' },
     { icon: BarChart3, label: 'Relatórios', path: '/admin/reports' },
     { icon: Settings, label: 'Configurações', path: '/admin/settings' },
   ];
