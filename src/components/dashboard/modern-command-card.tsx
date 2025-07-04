@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Eye, Clock, TrendingUp, Heart, Sparkles, Zap } from 'lucide-react';
+import { Copy, Eye, Clock, TrendingUp, Heart, Sparkles, Zap, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
 
@@ -94,118 +94,137 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent dark:via-gray-300/5 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
       </div>
 
-      <CardContent className="p-6 relative">
-        {/* Header with enhanced design */}
-        <div className="flex items-start justify-between mb-4">
-          <div className={`relative p-3 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}>
-            <div className="w-4 h-4 bg-white/90 rounded-full"></div>
-            
-            {/* Glow effect */}
-            <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-40 blur-xl transition-opacity duration-300`}></div>
+      <CardContent className="p-0 relative">
+        {/* Enhanced Header Section */}
+        <div className="flex flex-col space-y-4 p-6 relative bg-gradient-to-br from-gray-50/50 via-white/30 to-transparent dark:from-gray-700/30 dark:via-gray-800/20 dark:to-transparent border-b border-gray-100/50 dark:border-gray-700/50">
+          {/* Decorative elements for header */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200/50 dark:via-gray-600/50 to-transparent"></div>
+          <div className="absolute top-2 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
+            <Sparkles className="h-4 w-4 text-gray-400 dark:text-gray-500 animate-pulse" />
           </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Popularity indicator */}
-            {popularity > 80 && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold">
-                <Sparkles className="h-3 w-3" />
-                <span>Popular</span>
-              </div>
-            )}
-            
-            <button
-              onClick={handleFavorite}
-              className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:scale-110"
-            >
-              <Heart className={`h-4 w-4 transition-colors ${
-                isFavorite 
-                  ? 'text-red-500 fill-current' 
-                  : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
-              }`} />
-            </button>
-          </div>
-        </div>
 
-        {/* Content with enhanced typography */}
-        <div className="mb-6">
-          <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 mb-3 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight tracking-tight">
-            {title}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 leading-relaxed font-medium">
-            {description}
-          </p>
-        </div>
-
-        {/* Enhanced tags section */}
-        {safeTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {safeTags.slice(0, 3).map((tag, index) => (
-              <span
-                key={index}
-                className="px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded-full font-semibold border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
-              >
-                #{tag}
-              </span>
-            ))}
-            {safeTags.length > 3 && (
-              <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full font-semibold">
-                +{safeTags.length - 3} mais
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Enhanced meta info */}
-        <div className="flex items-center justify-between mb-6 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span className="font-medium">{estimatedTime}</span>
+          {/* Top row with icon and actions */}
+          <div className="flex items-start justify-between">
+            <div className={`relative p-3 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}>
+              <div className="w-4 h-4 bg-white/90 rounded-full"></div>
+              
+              {/* Glow effect */}
+              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-40 blur-xl transition-opacity duration-300`}></div>
             </div>
-            {popularity > 0 && (
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
-                <span className="font-medium">{popularity}%</span>
+            
+            <div className="flex items-center gap-2">
+              {/* Popularity indicator */}
+              {popularity > 80 && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold border border-amber-200/50 dark:border-amber-700/50 shadow-sm">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span>Popular</span>
+                </div>
+              )}
+              
+              <button
+                onClick={handleFavorite}
+                className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:scale-110 relative"
+              >
+                <Heart className={`h-4 w-4 transition-colors ${
+                  isFavorite 
+                    ? 'text-red-500 fill-current' 
+                    : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
+                }`} />
+                {isFavorite && (
+                  <div className="absolute inset-0 bg-red-500/20 rounded-full blur-md"></div>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Title and description with enhanced typography */}
+          <div className="space-y-3">
+            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight tracking-tight relative">
+              {title}
+              {/* Subtle underline decoration */}
+              <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-500"></div>
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 leading-relaxed font-medium">
+              {description}
+            </p>
+          </div>
+
+          {/* Category and level badges */}
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className={`text-xs font-bold border-2 text-white bg-gradient-to-r ${getCategoryColor(category)} shadow-sm hover:shadow-md transition-shadow duration-300`}>
+              {category}
+            </Badge>
+            <Badge variant="outline" className={`text-xs font-bold border ${getLevelColor(level)} hover:scale-105 transition-transform duration-300`}>
+              {level}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="p-6 space-y-4">
+          {/* Enhanced tags section */}
+          {safeTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {safeTags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded-full font-semibold border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300 hover:scale-105"
+                >
+                  #{tag}
+                </span>
+              ))}
+              {safeTags.length > 3 && (
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full font-semibold border border-blue-200/50 dark:border-blue-700/50">
+                  +{safeTags.length - 3} mais
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Enhanced meta info */}
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-full">
+                <Clock className="h-3 w-3" />
+                <span className="font-medium">{estimatedTime}</span>
               </div>
-            )}
+              {popularity > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-full">
+                  <TrendingUp className="h-3 w-3" />
+                  <span className="font-medium">{popularity}%</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-full border border-amber-200/50 dark:border-amber-700/50">
+              <Zap className="h-3 w-3 text-amber-500" />
+              <span className="font-medium text-amber-600 dark:text-amber-400">IA Ready</span>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-1">
-            <Zap className="h-3 w-3 text-amber-500" />
-            <span className="font-medium text-amber-600 dark:text-amber-400">IA Ready</span>
+
+          {/* Enhanced action buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={handleCopyPrompt}
+              size="sm"
+              className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 hover:from-blue-700 hover:via-blue-800 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden"
+            >
+              {/* Button shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+              <Copy className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform duration-300 relative z-10" />
+              <span className="relative z-10">Copiar</span>
+            </Button>
+            
+            <Button
+              onClick={() => onViewDetails(id)}
+              size="sm"
+              variant="outline"
+              className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600 font-bold transition-all duration-300 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 group/btn relative overflow-hidden"
+            >
+              <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
+              Ver
+            </Button>
           </div>
-        </div>
-
-        {/* Enhanced badges */}
-        <div className="flex items-center gap-3 mb-6">
-          <Badge variant="outline" className={`text-xs font-bold border-2 ${getCategoryColor(category).replace('from-', 'border-').replace(' to-blue-600', '').replace(' to-emerald-600', '').replace(' to-violet-600', '').replace(' to-red-500', '').replace(' to-purple-600', '').replace(' to-rose-600', '').replace(' to-cyan-600', '').replace(' to-blue-500', '')} text-white bg-gradient-to-r ${getCategoryColor(category)} shadow-sm`}>
-            {category}
-          </Badge>
-          <Badge variant="outline" className={`text-xs font-bold border ${getLevelColor(level)}`}>
-            {level}
-          </Badge>
-        </div>
-
-        {/* Enhanced action buttons */}
-        <div className="flex gap-3">
-          <Button
-            onClick={handleCopyPrompt}
-            size="sm"
-            className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 hover:from-blue-700 hover:via-blue-800 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/btn"
-          >
-            <Copy className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform duration-300" />
-            Copiar
-          </Button>
-          
-          <Button
-            onClick={() => onViewDetails(id)}
-            size="sm"
-            variant="outline"
-            className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600 font-bold transition-all duration-300 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 group/btn"
-          >
-            <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
-            Ver
-          </Button>
         </div>
 
         {/* Bottom accent line */}
