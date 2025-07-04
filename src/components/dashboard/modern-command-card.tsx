@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Eye, Clock, TrendingUp, Heart, Zap, Star } from 'lucide-react';
+import { Copy, Eye, Clock, Heart, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
 
@@ -102,15 +102,11 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 
   return (
     <Card className="group relative overflow-hidden cursor-pointer border-0 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white/90 backdrop-blur-sm">
-      {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/80 to-gray-50/80"></div>
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%232563EB" fill-opacity="0.02"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
       
-      {/* Gradient Border Effect */}
       <div className={`absolute inset-0 bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-20 transition-opacity duration-500 rounded-2xl`}></div>
       
       <CardContent className="relative p-6">
-        {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:scale-125 transition-transform duration-300`}></div>
           <button
@@ -125,9 +121,8 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </button>
         </div>
 
-        {/* Content */}
         <div className="mb-6">
-          <h3 className="text-xl font-bold text-[#0F1115] mb-3 line-clamp-2 group-hover:text-[#2563EB] transition-colors duration-300">
+          <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300">
             {title}
           </h3>
           <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
@@ -135,7 +130,6 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </p>
         </div>
 
-        {/* Tags */}
         {safeTags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {safeTags.slice(0, 3).map((tag, index) => (
@@ -147,14 +141,13 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
               </span>
             ))}
             {safeTags.length > 3 && (
-              <span className="px-3 py-1 bg-gradient-to-r from-[#2563EB]/10 to-[#FBBF24]/10 text-[#2563EB] text-xs rounded-full font-medium border border-[#2563EB]/20">
+              <span className="px-3 py-1 bg-gradient-to-r from-blue-600/10 to-yellow-400/10 text-blue-600 text-xs rounded-full font-medium border border-blue-600/20">
                 +{safeTags.length - 3}
               </span>
             )}
           </div>
         )}
 
-        {/* Meta Info */}
         <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -162,13 +155,12 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </div>
           {popularity > 0 && (
             <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-[#FBBF24]" />
+              <Star className="h-3 w-3 text-yellow-400" />
               {popularity}% popular
             </div>
           )}
         </div>
 
-        {/* Badges */}
         <div className="flex items-center gap-3 mb-6">
           <Badge className={`text-xs font-semibold px-3 py-1 bg-gradient-to-r ${getCategoryColor(category)} text-white border-0 shadow-lg`}>
             {category}
@@ -178,12 +170,11 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </Badge>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
           <Button
             onClick={handleCopyPrompt}
             size="sm"
-            className="flex-1 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] hover:from-[#F59E0B] hover:to-[#FBBF24] text-[#0F1115] font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-gray-900 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Copy className="h-4 w-4 mr-2" />
             Copiar
@@ -192,16 +183,15 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           <Button
             onClick={() => onViewDetails(id)}
             size="sm"
-            className="flex-1 bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] hover:from-[#1d4ed8] hover:to-[#2563EB] text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Eye className="h-4 w-4 mr-2" />
             Ver
           </Button>
         </div>
 
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#FBBF24]/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-[#2563EB]/10 to-transparent rounded-full translate-y-8 -translate-x-8 group-hover:scale-150 transition-transform duration-500"></div>
+        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-400/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-500"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-blue-600/10 to-transparent rounded-full translate-y-8 -translate-x-8 group-hover:scale-150 transition-transform duration-500"></div>
       </CardContent>
     </Card>
   );

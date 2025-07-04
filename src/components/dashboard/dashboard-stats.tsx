@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Users, TrendingUp, Zap, Target, Rocket, Star, Clock } from 'lucide-react';
+import { FileText, Users, Target, Clock } from 'lucide-react';
 
 export const DashboardStats: React.FC = () => {
   const stats = [
@@ -11,7 +11,7 @@ export const DashboardStats: React.FC = () => {
       value: '1,247',
       change: '+12 esta semana',
       icon: FileText,
-      gradient: 'from-[#2563EB] to-[#1d4ed8]',
+      gradient: 'from-blue-600 to-blue-700',
       bgGradient: 'from-blue-500/10 to-blue-600/10',
       borderColor: 'border-blue-500/20'
     },
@@ -20,7 +20,7 @@ export const DashboardStats: React.FC = () => {
       value: '2,847',
       change: '+23% este mês',
       icon: Users,
-      gradient: 'from-[#10B981] to-[#059669]',
+      gradient: 'from-green-600 to-green-700',
       bgGradient: 'from-green-500/10 to-green-600/10',
       borderColor: 'border-green-500/20'
     },
@@ -29,7 +29,7 @@ export const DashboardStats: React.FC = () => {
       value: '94.2%',
       change: '+5.2% melhoria',
       icon: Target,
-      gradient: 'from-[#FBBF24] to-[#F59E0B]',
+      gradient: 'from-yellow-500 to-yellow-600',
       bgGradient: 'from-yellow-500/10 to-yellow-600/10',
       borderColor: 'border-yellow-500/20'
     },
@@ -38,7 +38,7 @@ export const DashboardStats: React.FC = () => {
       value: '156h',
       change: 'por usuário/mês',
       icon: Clock,
-      gradient: 'from-[#8B5CF6] to-[#7C3AED]',
+      gradient: 'from-purple-600 to-purple-700',
       bgGradient: 'from-purple-500/10 to-purple-600/10',
       borderColor: 'border-purple-500/20'
     }
@@ -60,7 +60,7 @@ export const DashboardStats: React.FC = () => {
                   <Icon className="h-8 w-8 text-white" />
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-[#0F1115] group-hover:scale-105 transition-transform duration-300">
+                  <div className="text-3xl font-bold text-gray-900 group-hover:scale-105 transition-transform duration-300">
                     {stat.value}
                   </div>
                   <div className="text-xs text-gray-600 font-medium mt-1">
@@ -68,11 +68,10 @@ export const DashboardStats: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <h3 className="text-sm font-semibold text-gray-700 group-hover:text-[#0F1115] transition-colors duration-300">
+              <h3 className="text-sm font-semibold text-gray-700 group-hover:text-gray-900 transition-colors duration-300">
                 {stat.title}
               </h3>
               
-              {/* Decorative elements */}
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/20 to-transparent rounded-full -translate-y-10 translate-x-10"></div>
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-white/10 to-transparent rounded-full translate-y-8 -translate-x-8"></div>
             </CardContent>
