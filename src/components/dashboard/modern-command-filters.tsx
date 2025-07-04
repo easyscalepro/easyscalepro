@@ -3,7 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Sparkles } from 'lucide-react';
 
 interface ModernCommandFiltersProps {
   searchTerm: string;
@@ -42,26 +42,28 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
   ];
 
   return (
-    <div className="mb-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="h-5 w-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filtros</h2>
+    <div className="mb-12">
+      <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Encontre o comando perfeito</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Search */}
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Buscar
+              Buscar comandos
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder="Digite palavras-chave..."
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="pl-12 h-12 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm"
               />
             </div>
           </div>
@@ -72,13 +74,18 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
               Categoria
             </label>
             <Select value={selectedCategory} onValueChange={onCategoryChange}>
-              <SelectTrigger className="h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <SelectValue placeholder="Selecione" />
+              <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <SelectContent>
                 {categories.map((category) => (
-                  <SelectItem key={category} value={category} className="text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    {category}
+                  <SelectItem key={category} value={category}>
+                    <div className="flex items-center gap-2">
+                      {category !== 'Todas' && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      )}
+                      {category}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -88,16 +95,21 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
           {/* Level */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nível
+              Nível de complexidade
             </label>
             <Select value={selectedLevel} onValueChange={onLevelChange}>
-              <SelectTrigger className="h-11 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <SelectValue placeholder="Selecione" />
+              <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                <SelectValue placeholder="Selecione o nível" />
               </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <SelectContent>
                 {levels.map((level) => (
-                  <SelectItem key={level} value={level} className="text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    {level === 'Todos' ? level : level.charAt(0).toUpperCase() + level.slice(1)}
+                  <SelectItem key={level} value={level}>
+                    <div className="flex items-center gap-2">
+                      {level !== 'Todos' && (
+                        <Sparkles className="w-3 h-3 text-amber-500" />
+                      )}
+                      {level}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -106,14 +118,14 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
         </div>
 
         {/* Quick filters */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Filtros rápidos:</p>
           <div className="flex flex-wrap gap-2">
             {['Marketing Digital', 'Vendas', 'Gestão', 'Finanças'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => onSearchChange(filter)}
-                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm rounded-full transition-colors border border-gray-200 dark:border-gray-600"
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm rounded-full transition-colors"
               >
                 {filter}
               </button>
