@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Eye, Clock, Heart, Star, Zap, Award, TrendingUp } from 'lucide-react';
+import { Copy, Eye, Clock, Heart, Star, Zap, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCommands } from '@/contexts/commands-context';
 
@@ -61,29 +61,25 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
         return {
           color: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white',
           bgGradient: 'from-emerald-500/20 to-emerald-600/20',
-          borderColor: 'border-emerald-500/30',
-          shadowColor: 'shadow-emerald-500/25'
+          borderColor: 'border-emerald-500/30'
         };
       case 'intermediário':
         return {
           color: 'bg-gradient-to-r from-amber-500 to-amber-600 text-white',
           bgGradient: 'from-amber-500/20 to-amber-600/20',
-          borderColor: 'border-amber-500/30',
-          shadowColor: 'shadow-amber-500/25'
+          borderColor: 'border-amber-500/30'
         };
       case 'avançado':
         return {
           color: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
           bgGradient: 'from-red-500/20 to-red-600/20',
-          borderColor: 'border-red-500/30',
-          shadowColor: 'shadow-red-500/25'
+          borderColor: 'border-red-500/30'
         };
       default:
         return {
           color: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white',
           bgGradient: 'from-gray-500/20 to-gray-600/20',
-          borderColor: 'border-gray-500/30',
-          shadowColor: 'shadow-gray-500/25'
+          borderColor: 'border-gray-500/30'
         };
     }
   };
@@ -108,21 +104,18 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 
   return (
     <Card className="group relative overflow-hidden cursor-pointer border-0 shadow-2xl hover:shadow-3xl transition-all duration-700 transform hover:-translate-y-6 hover:rotate-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-2 border-white/20">
-      {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm"></div>
       <div className={`absolute inset-0 bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-20 transition-opacity duration-700 rounded-2xl`}></div>
       
-      {/* Floating Elements */}
-      <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-[#FBBF24]/20 to-transparent rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-      <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-tr from-[#2563EB]/20 to-transparent rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+      <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+      <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-tr from-blue-600/20 to-transparent rounded-full group-hover:scale-150 transition-transform duration-700"></div>
       
       <CardContent className="relative p-8">
-        {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className={`w-6 h-6 rounded-full bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:scale-125 transition-transform duration-500`}></div>
             {isPopular && (
-              <div className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-[#0F1115] px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+              <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 POPULAR
               </div>
@@ -140,9 +133,8 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </button>
         </div>
 
-        {/* Content */}
         <div className="mb-8">
-          <h3 className="text-2xl font-black text-white mb-4 line-clamp-2 group-hover:text-[#FBBF24] transition-colors duration-500">
+          <h3 className="text-2xl font-black text-white mb-4 line-clamp-2 group-hover:text-yellow-400 transition-colors duration-500">
             {title}
           </h3>
           <p className="text-gray-300 text-base line-clamp-3 leading-relaxed">
@@ -150,7 +142,6 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </p>
         </div>
 
-        {/* Tags */}
         {safeTags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {safeTags.slice(0, 3).map((tag, index) => (
@@ -162,34 +153,32 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
               </span>
             ))}
             {safeTags.length > 3 && (
-              <span className="px-3 py-2 bg-gradient-to-r from-[#2563EB]/20 to-[#FBBF24]/20 text-[#FBBF24] text-xs rounded-full font-bold border border-[#FBBF24]/30">
+              <span className="px-3 py-2 bg-gradient-to-r from-blue-600/20 to-yellow-400/20 text-yellow-400 text-xs rounded-full font-bold border border-yellow-400/30">
                 +{safeTags.length - 3} mais
               </span>
             )}
           </div>
         )}
 
-        {/* Meta Info */}
         <div className="flex items-center justify-between mb-6 text-sm text-gray-300">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-[#FBBF24]" />
+              <Clock className="h-4 w-4 text-yellow-400" />
               <span className="font-semibold">{estimatedTime}</span>
             </div>
             {popularity > 0 && (
               <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-[#FBBF24]" />
+                <Star className="h-4 w-4 text-yellow-400" />
                 <span className="font-semibold">{popularity}%</span>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Award className="h-4 w-4 text-[#FBBF24]" />
+            <Zap className="h-4 w-4 text-yellow-400" />
             <span className="font-semibold">Premium</span>
           </div>
         </div>
 
-        {/* Badges */}
         <div className="flex items-center gap-4 mb-8">
           <Badge className={`text-sm font-bold px-4 py-2 bg-gradient-to-r ${getCategoryColor(category)} text-white border-0 shadow-lg`}>
             {category}
@@ -199,12 +188,11 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </Badge>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-4">
           <Button
             onClick={handleCopyPrompt}
             size="lg"
-            className="flex-1 bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] hover:from-[#F59E0B] hover:to-[#FBBF24] text-[#0F1115] font-black shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 text-base py-6"
+            className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-gray-900 font-black shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 text-base py-6"
           >
             <Copy className="h-5 w-5 mr-2" />
             Copiar
@@ -213,16 +201,15 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           <Button
             onClick={() => onViewDetails(id)}
             size="lg"
-            className="flex-1 bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] hover:from-[#1d4ed8] hover:to-[#2563EB] text-white font-black shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 text-base py-6"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-600 text-white font-black shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 text-base py-6"
           >
             <Eye className="h-5 w-5 mr-2" />
             Detalhes
           </Button>
         </div>
 
-        {/* Premium Indicator */}
         <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <div className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-[#0F1115] px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
             <Zap className="h-3 w-3" />
             PREMIUM
           </div>

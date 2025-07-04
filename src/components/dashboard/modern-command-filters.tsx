@@ -3,7 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Sparkles, Zap, Target, Rocket, Star, Award } from 'lucide-react';
+import { Search, Filter, Sparkles, Zap, Target, Rocket, Star } from 'lucide-react';
 
 interface ModernCommandFiltersProps {
   searchTerm: string;
@@ -51,19 +51,16 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
   return (
     <div className="mb-16">
       <div className="relative overflow-hidden bg-white/10 backdrop-blur-2xl rounded-3xl border-2 border-white/20 shadow-2xl">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#2563EB]/10 via-transparent to-[#FBBF24]/10"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23FBBF24" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-transparent to-yellow-400/10"></div>
         
         <div className="relative p-10">
-          {/* Header */}
           <div className="flex items-center gap-6 mb-10">
             <div className="relative">
-              <div className="p-4 bg-gradient-to-r from-[#2563EB] to-[#FBBF24] rounded-3xl shadow-2xl">
+              <div className="p-4 bg-gradient-to-r from-blue-600 to-yellow-400 rounded-3xl shadow-2xl">
                 <Filter className="h-8 w-8 text-white" />
               </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#FBBF24] rounded-full flex items-center justify-center">
-                <Star className="h-3 w-3 text-[#0F1115]" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                <Star className="h-3 w-3 text-gray-900" />
               </div>
             </div>
             <div>
@@ -72,42 +69,39 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
             </div>
           </div>
 
-          {/* Main Filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-            {/* Search */}
             <div className="md:col-span-1">
               <label className="block text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Search className="h-5 w-5 text-[#FBBF24]" />
+                <Search className="h-5 w-5 text-yellow-400" />
                 Buscar comandos
               </label>
               <div className="relative group">
-                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-focus-within:text-[#FBBF24] transition-colors duration-300" />
+                <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 group-focus-within:text-yellow-400 transition-colors duration-300" />
                 <Input
                   placeholder="Digite palavras-chave..."
                   value={searchTerm}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-14 h-16 border-2 border-white/20 focus:border-[#FBBF24] focus:ring-[#FBBF24] bg-white/10 backdrop-blur-sm rounded-2xl text-white font-semibold placeholder:text-gray-400 transition-all duration-300 text-lg"
+                  className="pl-14 h-16 border-2 border-white/20 focus:border-yellow-400 focus:ring-yellow-400 bg-white/10 backdrop-blur-sm rounded-2xl text-white font-semibold placeholder:text-gray-400 transition-all duration-300 text-lg"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#FBBF24]/10 to-[#2563EB]/10 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/10 to-blue-600/10 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
             </div>
 
-            {/* Category */}
             <div>
               <label className="block text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Target className="h-5 w-5 text-[#FBBF24]" />
+                <Target className="h-5 w-5 text-yellow-400" />
                 Categoria
               </label>
               <Select value={selectedCategory} onValueChange={onCategoryChange}>
-                <SelectTrigger className="h-16 border-2 border-white/20 focus:border-[#FBBF24] focus:ring-[#FBBF24] bg-white/10 backdrop-blur-sm rounded-2xl font-semibold text-white text-lg">
+                <SelectTrigger className="h-16 border-2 border-white/20 focus:border-yellow-400 focus:ring-yellow-400 bg-white/10 backdrop-blur-sm rounded-2xl font-semibold text-white text-lg">
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-2 bg-[#0F1115]/95 backdrop-blur-xl">
+                <SelectContent className="rounded-2xl border-2 bg-gray-900/95 backdrop-blur-xl">
                   {categories.map((category) => (
-                    <SelectItem key={category} value={category} className="font-semibold text-white hover:bg-[#FBBF24]/20">
+                    <SelectItem key={category} value={category} className="font-semibold text-white hover:bg-yellow-400/20">
                       <div className="flex items-center gap-3">
                         {category !== 'Todas' && (
-                          <div className="w-3 h-3 bg-gradient-to-r from-[#2563EB] to-[#FBBF24] rounded-full"></div>
+                          <div className="w-3 h-3 bg-gradient-to-r from-blue-600 to-yellow-400 rounded-full"></div>
                         )}
                         {category}
                       </div>
@@ -117,22 +111,21 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
               </Select>
             </div>
 
-            {/* Level */}
             <div>
               <label className="block text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Award className="h-5 w-5 text-[#FBBF24]" />
+                <Sparkles className="h-5 w-5 text-yellow-400" />
                 Nível de complexidade
               </label>
               <Select value={selectedLevel} onValueChange={onLevelChange}>
-                <SelectTrigger className="h-16 border-2 border-white/20 focus:border-[#FBBF24] focus:ring-[#FBBF24] bg-white/10 backdrop-blur-sm rounded-2xl font-semibold text-white text-lg">
+                <SelectTrigger className="h-16 border-2 border-white/20 focus:border-yellow-400 focus:ring-yellow-400 bg-white/10 backdrop-blur-sm rounded-2xl font-semibold text-white text-lg">
                   <SelectValue placeholder="Selecione o nível" />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl border-2 bg-[#0F1115]/95 backdrop-blur-xl">
+                <SelectContent className="rounded-2xl border-2 bg-gray-900/95 backdrop-blur-xl">
                   {levels.map((level) => (
-                    <SelectItem key={level} value={level} className="font-semibold text-white hover:bg-[#FBBF24]/20">
+                    <SelectItem key={level} value={level} className="font-semibold text-white hover:bg-yellow-400/20">
                       <div className="flex items-center gap-3">
                         {level !== 'Todos' && (
-                          <Sparkles className="w-4 h-4 text-[#FBBF24]" />
+                          <Sparkles className="w-4 h-4 text-yellow-400" />
                         )}
                         {level}
                       </div>
@@ -143,10 +136,9 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
             </div>
           </div>
 
-          {/* Quick Filters */}
           <div className="pt-8 border-t border-white/20">
             <div className="flex items-center gap-4 mb-6">
-              <Zap className="h-6 w-6 text-[#FBBF24]" />
+              <Zap className="h-6 w-6 text-yellow-400" />
               <p className="text-lg font-bold text-white">Filtros Populares:</p>
             </div>
             <div className="flex flex-wrap gap-4">
@@ -162,8 +154,8 @@ export const ModernCommandFilters: React.FC<ModernCommandFiltersProps> = ({
                     <Icon className="h-5 w-5 group-hover:animate-pulse relative z-10" />
                     <span className="relative z-10">{filter.name}</span>
                     {filter.popular && (
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#FBBF24] rounded-full flex items-center justify-center">
-                        <Star className="h-3 w-3 text-[#0F1115]" />
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                        <Star className="h-3 w-3 text-gray-900" />
                       </div>
                     )}
                   </button>
