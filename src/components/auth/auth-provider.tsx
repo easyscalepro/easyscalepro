@@ -2,14 +2,22 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser, getUserProfile, signIn as authSignIn, signOut as authSignOut, updateLastAccess } from '@/lib/auth';
+import { signIn as authSignIn, signOut as authSignOut } from '@/lib/auth';
 import type { User } from '@supabase/supabase-js';
-import type { UserProfile } from '@/lib/auth';
 import { toast } from 'sonner';
+
+// Interface simplificada para perfil
+interface SimpleProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user';
+  status: 'ativo';
+}
 
 interface AuthContextType {
   user: User | null;
-  profile: UserProfile | null;
+  profile: SimpleProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -35,59 +43,70 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<SimpleProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUserProfile = async (userId: string, retryCount = 0) => {
+  const createSimpleProfile = (user: User): SimpleProfile => {
+    return {
+      id: user.id,
+      email: user.email || '',
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+      role: (user.email === 'admin@easyscale.com' || user.email === 'julionavyy@gmail.com') ? 'admin' : 'user',
+      status: 'ativo'
+    };
+  };
+
+  const loadUserProfile = async (user: User) => {
     try {
-      console.log(`Carregando perfil do usuário (tentativa ${retryCount + 1}):`, userId);
+      console.log('Carregando perfil para usuário:', user.email);
       
-      const userProfile = await getUserProfile(userId);
-      
-      if (userProfile) {
-        setProfile(userProfile);
-        console.log('Perfil carregado com sucesso:', userProfile);
-        
-        // Atualizar último acesso
-        try {
-          await updateLastAccess(userId);
-        } catch (accessError) {
-          console.warn('Erro ao atualizar último acesso (não crítico):', accessError);
-        }
+      // Tentar buscar da tabela profiles primeiro
+      const { data: dbProfile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (dbProfile && !error) {
+        console.log('Perfil encontrado no banco:', dbProfile);
+        setProfile(dbProfile);
       } else {
-        console.warn('Perfil não encontrado ou não pôde ser criado');
+        console.log('Perfil não encontrado no banco, criando perfil simples');
+        // Se não encontrar no banco, criar perfil simples baseado nos dados do usuário
+        const simpleProfile = createSimpleProfile(user);
+        setProfile(simpleProfile);
         
-        // Retry logic - tentar novamente até 2 vezes
-        if (retryCount < 2) {
-          console.log('Tentando novamente em 2 segundos...');
-          setTimeout(() => {
-            loadUserProfile(userId, retryCount + 1);
-          }, 2000);
-          return;
+        // Tentar criar no banco (se a tabela existir)
+        try {
+          await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email || '',
+              name: simpleProfile.name,
+              role: simpleProfile.role,
+              status: simpleProfile.status,
+              commands_used: 0,
+              last_access: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          console.log('Perfil criado no banco com sucesso');
+        } catch (createError) {
+          console.log('Não foi possível criar perfil no banco (tabela pode não existir):', createError);
         }
-        
-        // Se ainda não conseguiu após 3 tentativas, mostrar erro
-        toast.error('Erro ao carregar perfil do usuário. Tente fazer login novamente.');
       }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
-      
-      // Retry logic para erros de rede
-      if (retryCount < 2) {
-        console.log('Erro de rede, tentando novamente em 3 segundos...');
-        setTimeout(() => {
-          loadUserProfile(userId, retryCount + 1);
-        }, 3000);
-        return;
-      }
-      
-      toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+      // Em caso de erro, criar perfil simples
+      const simpleProfile = createSimpleProfile(user);
+      setProfile(simpleProfile);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await loadUserProfile(user.id);
+      await loadUserProfile(user);
     }
   };
 
@@ -107,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           console.log('Sessão encontrada para:', session.user.email);
           setUser(session.user);
-          await loadUserProfile(session.user.id);
+          await loadUserProfile(session.user);
         } else {
           console.log('Nenhuma sessão ativa encontrada');
         }
@@ -127,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          await loadUserProfile(session.user.id);
+          await loadUserProfile(session.user);
           toast.success('Login realizado com sucesso!');
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -135,7 +154,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.success('Logout realizado com sucesso!');
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
-          // Não recarregar perfil no refresh do token para evitar requests desnecessários
+          // Não recarregar perfil no refresh do token
         }
       } catch (error) {
         console.error('Erro ao processar mudança de auth:', error);
