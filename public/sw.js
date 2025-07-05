@@ -6,8 +6,7 @@ const urlsToCache = [
   '/profile',
   '/login',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png'
 ];
 
 // Install event
@@ -68,8 +67,8 @@ function doBackgroundSync() {
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'Nova notificação do EasyScale',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    icon: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
+    badge: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -79,12 +78,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'explore',
         title: 'Ver comandos',
-        icon: '/icons/icon-96x96.png'
+        icon: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png'
       },
       {
         action: 'close',
         title: 'Fechar',
-        icon: '/icons/icon-96x96.png'
+        icon: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png'
       }
     ]
   };

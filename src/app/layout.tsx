@@ -70,16 +70,48 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '32x32', 
+        type: 'image/png' 
+      },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '16x16', 
+        type: 'image/png' 
+      },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '192x192', 
+        type: 'image/png' 
+      },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '512x512', 
+        type: 'image/png' 
+      },
     ],
     apple: [
-      { url: '/icons/icon-180x180.png', sizes: '180x180', type: 'image/png' },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '180x180', 
+        type: 'image/png' 
+      },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '152x152', 
+        type: 'image/png' 
+      },
+      { 
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png', 
+        sizes: '144x144', 
+        type: 'image/png' 
+      },
     ],
     other: [
       {
         rel: 'mask-icon',
-        url: '/icons/safari-pinned-tab.svg',
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
         color: '#2563EB',
       },
     ],
@@ -88,6 +120,20 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'default',
     title: 'EasyScale',
+    startupImage: [
+      {
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
+        media: '(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)',
+      },
+      {
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
+        media: '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)',
+      },
+      {
+        url: 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
+        media: '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)',
+      },
+    ],
   },
   other: {
     'mobile-web-app-capable': 'yes',
@@ -96,6 +142,7 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-title': 'EasyScale',
     'application-name': 'EasyScale',
     'msapplication-TileColor': '#2563EB',
+    'msapplication-TileImage': 'https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png',
     'msapplication-config': '/browserconfig.xml',
     'theme-color': '#2563EB',
   },
@@ -124,21 +171,130 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* Favicon personalizado com logo da empresa */}
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="32x32" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="16x16" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="shortcut icon" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        
+        {/* Apple Touch Icons */}
+        <link 
+          rel="apple-touch-icon" 
+          sizes="180x180" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="152x152" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="144x144" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="120x120" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="114x114" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="76x76" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="72x72" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="60x60" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="apple-touch-icon" 
+          sizes="57x57" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        
+        {/* Android Chrome Icons */}
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="192x192" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="512x512" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        
+        {/* Windows Tiles */}
+        <meta 
+          name="msapplication-TileImage" 
+          content="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+        />
+        <meta name="msapplication-TileColor" content="#2563EB" />
+        
+        {/* PWA Meta Tags */}
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="EasyScale" />
         <meta name="application-name" content="EasyScale" />
-        <meta name="msapplication-TileColor" content="#2563EB" />
         <meta name="theme-color" content="#2563EB" />
         
-        {/* PWA iOS specific */}
-        <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+        {/* Apple Startup Images */}
+        <link 
+          rel="apple-touch-startup-image" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
+          media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link 
+          rel="apple-touch-startup-image" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
+          media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link 
+          rel="apple-touch-startup-image" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
+          media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+        />
+        <link 
+          rel="apple-touch-startup-image" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
+          media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+        />
         
         {/* Preload critical resources */}
-        <link rel="preload" href="/icons/icon-192x192.png" as="image" />
+        <link 
+          rel="preload" 
+          href="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png" 
+          as="image" 
+        />
         
         {/* Service Worker Registration */}
         <script
