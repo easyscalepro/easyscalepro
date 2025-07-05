@@ -35,81 +35,232 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">EasyScale Dashboard</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Bem-vindo, Admin!</span>
-              <a href="/login" className="text-blue-600 hover:text-blue-800 text-sm">
-                Sair
-              </a>
-            </div>
+      <header style={{
+        backgroundColor: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h1 style={{
+            fontSize: '1.5rem',
+            fontWeight: 'bold',
+            color: '#1f2937',
+            margin: 0
+          }}>
+            EasyScale Dashboard
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              Bem-vindo, Admin!
+            </span>
+            <a 
+              href="/login" 
+              style={{
+                color: '#2563eb',
+                fontSize: '0.875rem',
+                textDecoration: 'none'
+              }}
+            >
+              Sair
+            </a>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main style={{
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '32px 16px'
+      }}>
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Total de Comandos</h3>
-            <p className="text-3xl font-bold text-blue-600">{commands.length}</p>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '24px',
+          marginBottom: '32px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 8px 0'
+            }}>
+              Total de Comandos
+            </h3>
+            <p style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
+              color: '#2563eb',
+              margin: 0
+            }}>
+              {commands.length}
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Usuários Ativos</h3>
-            <p className="text-3xl font-bold text-green-600">1,247</p>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 8px 0'
+            }}>
+              Usuários Ativos
+            </h3>
+            <p style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
+              color: '#10b981',
+              margin: 0
+            }}>
+              1,247
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900">Taxa de Sucesso</h3>
-            <p className="text-3xl font-bold text-purple-600">94.2%</p>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '24px',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 8px 0'
+            }}>
+              Taxa de Sucesso
+            </h3>
+            <p style={{
+              fontSize: '1.875rem',
+              fontWeight: 'bold',
+              color: '#7c3aed',
+              margin: 0
+            }}>
+              94.2%
+            </p>
           </div>
         </div>
 
         {/* Search */}
-        <div className="mb-6">
+        <div style={{ marginBottom: '24px' }}>
           <input
             type="text"
             placeholder="Buscar comandos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              padding: '8px 16px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '16px',
+              outline: 'none'
+            }}
           />
         </div>
 
         {/* Commands Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '24px'
+        }}>
           {filteredCommands.map((command) => (
-            <div key={command.id} className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {command.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-3">
-                    {command.description}
-                  </p>
-                </div>
+            <div 
+              key={command.id} 
+              style={{
+                backgroundColor: 'white',
+                padding: '24px',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                transition: 'box-shadow 0.2s'
+              }}
+            >
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{
+                  fontSize: '1.125rem',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: '0 0 8px 0'
+                }}>
+                  {command.title}
+                </h3>
+                <p style={{
+                  color: '#6b7280',
+                  fontSize: '0.875rem',
+                  margin: '0 0 12px 0'
+                }}>
+                  {command.description}
+                </p>
               </div>
               
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <span style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#dbeafe',
+                    color: '#1e40af',
+                    fontSize: '0.75rem',
+                    borderRadius: '9999px'
+                  }}>
                     {command.category}
                   </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                  <span style={{
+                    padding: '4px 8px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#1f2937',
+                    fontSize: '0.75rem',
+                    borderRadius: '9999px'
+                  }}>
                     {command.level}
                   </span>
                 </div>
                 
-                <div className="flex gap-2">
-                  <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button style={{
+                    padding: '4px 12px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    fontSize: '0.875rem',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}>
                     Copiar
                   </button>
-                  <button className="px-3 py-1 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50 transition-colors">
+                  <button style={{
+                    padding: '4px 12px',
+                    border: '1px solid #d1d5db',
+                    color: '#374151',
+                    fontSize: '0.875rem',
+                    borderRadius: '4px',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}>
                     Ver
                   </button>
                 </div>
@@ -119,8 +270,11 @@ export default function DashboardPage() {
         </div>
 
         {filteredCommands.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Nenhum comando encontrado</p>
+          <div style={{
+            textAlign: 'center',
+            padding: '48px 0'
+          }}>
+            <p style={{ color: '#6b7280' }}>Nenhum comando encontrado</p>
           </div>
         )}
       </main>
