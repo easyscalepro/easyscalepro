@@ -23,15 +23,13 @@ import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
 
 export const DashboardHeader: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    console.log('Fazendo logout do header');
     try {
-      logout();
-      toast.success('Logout realizado com sucesso!');
+      await signOut();
       router.push('/login');
     } catch (error) {
       console.error('Erro no logout:', error);
@@ -40,7 +38,6 @@ export const DashboardHeader: React.FC = () => {
   };
 
   const handleNavigation = (path: string, label: string) => {
-    console.log('Navegando para:', path, label);
     try {
       router.push(path);
       toast.success(`Navegando para ${label}`);
@@ -72,14 +69,18 @@ export const DashboardHeader: React.FC = () => {
       color: 'from-purple-500 to-violet-600',
       description: 'Minha conta'
     },
-    { 
+  ];
+
+  // Adicionar item admin se o usuário for admin
+  if (profile?.role === 'admin') {
+    navItems.push({ 
       icon: Shield, 
       label: 'Admin', 
       path: '/admin',
       color: 'from-amber-500 to-orange-600',
       description: 'Painel administrativo'
-    },
-  ];
+    });
+  }
 
   return (
     <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-colors relative overflow-hidden">
@@ -195,8 +196,8 @@ export const DashboardHeader: React.FC = () => {
               
               <div className="text-sm">
                 <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1">
-                  Olá, Admin!
-                  <Crown className="h-3 w-3 text-amber-500" />
+                  Olá, {profile?.name || user?.email?.split('@')[0] || 'Usuário'}!
+                  {profile?.role === 'admin' && <Crown className="h-3 w-3 text-amber-500" />}
                 </div>
                 <div className="text-gray-500 dark:text-gray-400 text-xs flex items-center gap-1">
                   <Zap className="h-3 w-3 text-blue-500" />
