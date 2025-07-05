@@ -32,6 +32,7 @@ import { useUsers } from '@/contexts/users-context';
 import { UserFormModal } from './user-form-modal';
 import { UserSyncButton } from './user-sync-button';
 import { ManualUserSync } from './manual-user-sync';
+import { UserCreationTest } from './user-creation-test';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -198,6 +199,9 @@ export const EnhancedUserManagement: React.FC = () => {
     <div className="space-y-6">
       {/* Componente de sincronização manual */}
       <ManualUserSync />
+
+      {/* Componente de teste de criação */}
+      {profile?.role === 'admin' && <UserCreationTest />}
 
       {/* Alerta de sincronização se necessário */}
       {syncStatus?.needsSync && syncStatus.hasAdminAccess && (
