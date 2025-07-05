@@ -67,7 +67,7 @@ export const DashboardHeader: React.FC = () => {
       label: 'Perfil', 
       path: '/profile',
       color: 'from-purple-500 to-violet-600',
-      description: 'Minha conta'
+      description: '  conta'
     },
   ];
 
@@ -83,7 +83,7 @@ export const DashboardHeader: React.FC = () => {
   }
 
   return (
-    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-colors relative overflow-hidden">
+    <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-40 transition-colors relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-32 h-32 bg-gradient-to-br from-blue-400/5 to-purple-400/5 rounded-full blur-2xl"></div>
@@ -151,9 +151,9 @@ export const DashboardHeader: React.FC = () => {
           
           <div className="flex items-center gap-4">
             {/* Enhanced Theme Toggle */}
-            <div className="relative group">
+            <div className="relative group z-50">
               <ThemeToggle />
-              <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+              <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10"></div>
             </div>
 
             {/* Enhanced Notifications */}

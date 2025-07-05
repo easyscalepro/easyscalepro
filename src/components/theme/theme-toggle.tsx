@@ -19,6 +19,11 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
+  const handleThemeChange = (newTheme: string) => {
+    console.log('Mudando tema para:', newTheme);
+    setTheme(newTheme);
+  };
+
   if (!mounted) {
     return (
       <Button 
@@ -38,7 +43,8 @@ export function ThemeToggle() {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative group"
+          className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
+          onClick={() => console.log('Theme toggle clicked')}
         >
           {resolvedTheme === 'dark' ? (
             <Moon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" />
@@ -48,30 +54,37 @@ export function ThemeToggle() {
           <span className="sr-only">Alternar tema</span>
           
           {/* Glow effect */}
-          <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+          <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10"></div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <DropdownMenuContent 
+        align="end" 
+        className="w-40"
+        onOpenChange={(open) => console.log('Dropdown open state:', open)}
+      >
         <DropdownMenuItem 
-          onClick={() => setTheme("light")}
-          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          onClick={() => handleThemeChange("light")}
+          className="cursor-pointer flex items-center gap-2 px-3 py-2"
         >
-          <Sun className="mr-2 h-4 w-4" />
+          <Sun className="h-4 w-4" />
           <span>Claro</span>
+          {theme === 'light' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => setTheme("dark")}
-          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          onClick={() => handleThemeChange("dark")}
+          className="cursor-pointer flex items-center gap-2 px-3 py-2"
         >
-          <Moon className="mr-2 h-4 w-4" />
+          <Moon className="h-4 w-4" />
           <span>Escuro</span>
+          {theme === 'dark' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => setTheme("system")}
-          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          onClick={() => handleThemeChange("system")}
+          className="cursor-pointer flex items-center gap-2 px-3 py-2"
         >
-          <Monitor className="mr-2 h-4 w-4" />
+          <Monitor className="h-4 w-4" />
           <span>Sistema</span>
+          {theme === 'system' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
