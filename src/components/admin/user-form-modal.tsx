@@ -103,91 +103,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
-  const createUserInDatabase = async (userData: any, authUserId?: string) => {
-    try {
-      const profileData = {
-        id: authUserId || `local_${Date.now()}`,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        status: userData.status,
-        phone: userData.phone || null,
-        company: userData.company || null,
-        commands_used: 0,
-        last_access: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      // Tentar inserir na tabela profiles
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert(profileData)
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('Erro ao inserir no banco:', error);
-        // Se falhar, adicionar apenas localmente
-        addUser(userData);
-        return { success: true, local: true };
-      }
-
-      console.log('Usuário salvo no banco:', data);
-      // Adicionar também ao contexto local para sincronização
-      addUser({
-        ...userData,
-        id: data.id
-      });
-
-      return { success: true, local: false, data };
-    } catch (error) {
-      console.error('Erro ao salvar no banco:', error);
-      // Fallback: salvar apenas localmente
-      addUser(userData);
-      return { success: true, local: true };
-    }
-  };
-
-  const updateUserInDatabase = async (userId: string, userData: any) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          name: userData.name,
-          role: userData.role,
-          status: userData.status,
-          phone: userData.phone || null,
-          company: userData.company || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) {
-        console.warn('Erro ao atualizar no banco:', error);
-        // Se falhar, atualizar apenas localmente
-        updateUser(userId, userData);
-        return { success: true, local: true };
-      }
-
-      console.log('Usuário atualizado no banco:', data);
-      // Atualizar também no contexto local
-      updateUser(userId, userData);
-
-      return { success: true, local: false, data };
-    } catch (error) {
-      console.error('Erro ao atualizar no banco:', error);
-      // Fallback: atualizar apenas localmente
-      updateUser(userId, userData);
-      return { success: true, local: true };
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    console.log('Iniciando processo de salvamento...', { mode, formData });
 
     try {
       // Validações básicas
@@ -206,7 +126,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         return;
       }
 
-      // Validação simples de senha para novos usuários
+      // Validação de senha para novos usuários
       if (mode === 'create') {
         if (!formData.password) {
           toast.error('A senha é obrigatória para novos usuários');
@@ -224,7 +144,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         }
       }
 
-      // Validação simples de senha para edição (se fornecida)
+      // Validação de senha para edição (se fornecida)
       if (mode === 'edit' && formData.password) {
         if (formData.password.length < 6) {
           toast.error('A senha deve ter pelo menos 6 caracteres');
@@ -238,18 +158,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       }
 
       if (mode === 'create') {
+        console.log('Criando novo usuário...');
+
         // Verificar se o usuário atual é admin
         if (profile?.role !== 'admin') {
           toast.error('Apenas administradores podem criar usuários');
           return;
         }
 
-        console.log('Criando novo usuário:', formData.email);
-
         let authUserId = null;
+        let authSuccess = false;
 
+        // Tentar criar usuário no Supabase Auth
         try {
-          // Tentar criar usuário no Supabase Auth primeiro
+          console.log('Criando usuário no Supabase Auth...');
           const { data: authData, error: authError } = await supabase.auth.admin.createUser({
             email: formData.email,
             password: formData.password,
@@ -258,89 +180,185 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               company: formData.company,
               phone: formData.phone
             },
-            email_confirm: true // Confirmar email automaticamente
+            email_confirm: true
           });
 
           if (authError) {
-            console.warn('Erro ao criar usuário no Supabase Auth:', authError);
-            toast.warning('Usuário criado localmente (sem autenticação Supabase)');
-          } else {
-            authUserId = authData.user?.id;
-            console.log('Usuário criado no Supabase Auth:', authUserId);
-            toast.success('Usuário criado no sistema de autenticação!');
+            console.error('Erro no Supabase Auth:', authError);
+            throw authError;
           }
-        } catch (authError) {
-          console.warn('Erro na criação do usuário Auth:', authError);
+
+          authUserId = authData.user?.id;
+          authSuccess = true;
+          console.log('Usuário criado no Supabase Auth com ID:', authUserId);
+        } catch (authError: any) {
+          console.error('Falha na criação do usuário Auth:', authError);
+          toast.warning('Continuando com criação local...');
         }
 
-        // Criar usuário no banco de dados (profiles)
-        const result = await createUserInDatabase({
-          name: formData.name,
-          email: formData.email,
-          status: formData.status,
-          role: formData.role,
-          phone: formData.phone,
-          company: formData.company
-        }, authUserId);
+        // Criar perfil na tabela profiles (com ou sem ID do Auth)
+        try {
+          console.log('Salvando perfil na tabela profiles...');
+          
+          const profileData = {
+            id: authUserId || `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            email: formData.email,
+            name: formData.name,
+            role: formData.role,
+            status: formData.status,
+            phone: formData.phone || null,
+            company: formData.company || null,
+            commands_used: 0,
+            last_access: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
 
-        if (result.success) {
-          if (result.local) {
-            toast.success('Usuário criado localmente com sucesso!');
-          } else {
-            toast.success('Usuário criado e salvo no banco de dados!');
+          console.log('Dados do perfil a serem inseridos:', profileData);
+
+          const { data: profileResult, error: profileError } = await supabase
+            .from('profiles')
+            .insert(profileData)
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error('Erro ao inserir perfil:', profileError);
+            throw profileError;
           }
+
+          console.log('Perfil salvo com sucesso:', profileResult);
+
+          // Adicionar ao contexto local
+          addUser({
+            id: profileResult.id,
+            name: profileResult.name,
+            email: profileResult.email,
+            status: profileResult.status,
+            role: profileResult.role,
+            phone: profileResult.phone,
+            company: profileResult.company,
+            commandsUsed: profileResult.commands_used,
+            lastAccess: 'Agora',
+            joinedAt: new Date().toISOString().split('T')[0]
+          });
+
+          if (authSuccess) {
+            toast.success('Usuário criado com sucesso no sistema!');
+          } else {
+            toast.success('Usuário criado localmente com sucesso!');
+          }
+
+        } catch (profileError: any) {
+          console.error('Erro ao salvar perfil:', profileError);
+          
+          // Fallback: adicionar apenas ao contexto local
+          console.log('Usando fallback: salvamento apenas local');
+          addUser({
+            id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: formData.name,
+            email: formData.email,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company,
+            commandsUsed: 0,
+            lastAccess: 'Agora',
+            joinedAt: new Date().toISOString().split('T')[0]
+          });
+
+          toast.success('Usuário criado localmente (fallback)');
         }
 
       } else if (mode === 'edit' && user) {
+        console.log('Atualizando usuário existente...');
+
         // Verificar permissões para edição
         if (profile?.role !== 'admin' && currentUser?.id !== user.id) {
           toast.error('Você só pode editar seu próprio perfil');
           return;
         }
 
-        console.log('Atualizando usuário:', user.id);
-
-        try {
-          // Tentar atualizar senha no Supabase se fornecida
-          if (formData.password && profile?.role === 'admin') {
+        // Tentar atualizar senha no Supabase se fornecida
+        if (formData.password && profile?.role === 'admin') {
+          try {
+            console.log('Atualizando senha no Supabase...');
             const { error: passwordError } = await supabase.auth.admin.updateUserById(
               user.id,
               { password: formData.password }
             );
 
             if (passwordError) {
-              console.warn('Erro ao atualizar senha no Supabase:', passwordError);
+              console.warn('Erro ao atualizar senha:', passwordError);
               toast.warning('Senha não foi atualizada no sistema de autenticação');
             } else {
               toast.success('Senha atualizada no sistema de autenticação');
             }
+          } catch (error) {
+            console.warn('Erro ao atualizar senha:', error);
           }
-        } catch (error) {
-          console.warn('Erro ao atualizar senha:', error);
         }
 
-        // Atualizar usuário no banco de dados
-        const result = await updateUserInDatabase(user.id, {
-          name: formData.name,
-          email: formData.email,
-          status: formData.status,
-          role: formData.role,
-          phone: formData.phone,
-          company: formData.company
-        });
+        // Atualizar perfil na tabela profiles
+        try {
+          console.log('Atualizando perfil na tabela profiles...');
+          
+          const { data: profileResult, error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              name: formData.name,
+              role: formData.role,
+              status: formData.status,
+              phone: formData.phone || null,
+              company: formData.company || null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id)
+            .select()
+            .single();
 
-        if (result.success) {
-          if (result.local) {
-            toast.success('Usuário atualizado localmente!');
-          } else {
-            toast.success('Usuário atualizado no banco de dados!');
+          if (profileError) {
+            console.error('Erro ao atualizar perfil:', profileError);
+            throw profileError;
           }
+
+          console.log('Perfil atualizado com sucesso:', profileResult);
+
+          // Atualizar no contexto local
+          updateUser(user.id, {
+            name: formData.name,
+            email: formData.email,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company
+          });
+
+          toast.success('Usuário atualizado com sucesso!');
+
+        } catch (profileError: any) {
+          console.error('Erro ao atualizar perfil:', profileError);
+          
+          // Fallback: atualizar apenas no contexto local
+          console.log('Usando fallback: atualização apenas local');
+          updateUser(user.id, {
+            name: formData.name,
+            email: formData.email,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company
+          });
+
+          toast.success('Usuário atualizado localmente (fallback)');
         }
       }
       
+      console.log('Processo de salvamento concluído com sucesso');
       onClose();
+      
     } catch (error: any) {
-      console.error('Erro ao salvar usuário:', error);
+      console.error('Erro geral no salvamento:', error);
       toast.error('Erro ao salvar usuário: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsSubmitting(false);
@@ -439,7 +457,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             />
           </div>
 
-          {/* Seção de Senha Simplificada */}
+          {/* Seção de Senha */}
           <div className="border-t pt-4 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Key className="h-4 w-4 text-[#2563EB]" />
@@ -538,7 +556,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </button>
               </div>
               
-              {/* Indicador simples de confirmação */}
+              {/* Indicador de confirmação */}
               {formData.confirmPassword && (
                 <div className="flex items-center gap-1 text-xs">
                   {formData.password === formData.confirmPassword ? (
