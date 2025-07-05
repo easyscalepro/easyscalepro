@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,12 +21,16 @@ import {
   Activity,
   Filter,
   Download,
-  Upload
+  Upload,
+  AlertTriangle,
+  CheckCircle,
+  Database
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
 import { UserFormModal } from './user-form-modal';
 import { UserSyncButton } from './user-sync-button';
+import { supabase } from '@/integrations/supabase/client';
 
 export const EnhancedUserManagement: React.FC = () => {
   const { users, deleteUser, toggleUserStatus } = useUsers();
@@ -36,6 +40,34 @@ export const EnhancedUserManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedUser, setSelectedUser] = useState(undefined);
+  const [syncStatus, setSyncStatus] = useState<{
+    authUsers: number;
+    profiles: number;
+    needsSync: boolean;
+  } | null>(null);
+
+  // Verificar status de sincronização ao carregar
+  useEffect(() => {
+    checkSyncStatus();
+  }, []);
+
+  const checkSyncStatus = async () => {
+    try {
+      const { data: authResponse } = await supabase.auth.admin.listUsers();
+      const { data: profiles } = await supabase.from('profiles').select('id');
+      
+      const authCount = authResponse?.users?.length || 0;
+      const profileCount = profiles?.length || 0;
+      
+      setSyncStatus({
+        authUsers: authCount,
+        profiles: profileCount,
+        needsSync: authCount > profileCount
+      });
+    } catch (error) {
+      console.warn('Não foi possível verificar status de sincronização:', error);
+    }
+  };
 
   // Filtrar usuários
   const filteredUsers = users.filter(user => {
@@ -139,6 +171,49 @@ export const EnhancedUserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Alerta de sincronização se necessário */}
+      {syncStatus?.needsSync && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">
+                Usuários não sincronizados detectados
+              </h4>
+              <p className="text-amber-700 dark:text-amber-300 text-sm">
+                Existem {syncStatus.authUsers - syncStatus.profiles} usuários no sistema de autenticação 
+                que não estão na tabela de perfis. Use o botão "Sincronizar Usuários" para importá-los.
+              </p>
+            </div>
+            <UserSyncButton />
+          </div>
+        </div>
+      )}
+
+      {/* Status de sincronização */}
+      {syncStatus && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <Database className="h-5 w-5 text-blue-600" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                Status de Sincronização
+              </h4>
+              <div className="flex items-center gap-4 text-sm text-blue-700 dark:text-blue-300 mt-1">
+                <span>Auth: {syncStatus.authUsers} usuários</span>
+                <span>Perfis: {syncStatus.profiles} usuários</span>
+                {!syncStatus.needsSync && (
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Sincronizado</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-gray-200">
