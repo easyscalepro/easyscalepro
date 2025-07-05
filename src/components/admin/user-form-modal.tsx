@@ -103,6 +103,88 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
+  const createUserInDatabase = async (userData: any, authUserId?: string) => {
+    try {
+      const profileData = {
+        id: authUserId || `local_${Date.now()}`,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        status: userData.status,
+        phone: userData.phone || null,
+        company: userData.company || null,
+        commands_used: 0,
+        last_access: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Tentar inserir na tabela profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Erro ao inserir no banco:', error);
+        // Se falhar, adicionar apenas localmente
+        addUser(userData);
+        return { success: true, local: true };
+      }
+
+      console.log('Usuário salvo no banco:', data);
+      // Adicionar também ao contexto local para sincronização
+      addUser({
+        ...userData,
+        id: data.id
+      });
+
+      return { success: true, local: false, data };
+    } catch (error) {
+      console.error('Erro ao salvar no banco:', error);
+      // Fallback: salvar apenas localmente
+      addUser(userData);
+      return { success: true, local: true };
+    }
+  };
+
+  const updateUserInDatabase = async (userId: string, userData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          name: userData.name,
+          role: userData.role,
+          status: userData.status,
+          phone: userData.phone || null,
+          company: userData.company || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.warn('Erro ao atualizar no banco:', error);
+        // Se falhar, atualizar apenas localmente
+        updateUser(userId, userData);
+        return { success: true, local: true };
+      }
+
+      console.log('Usuário atualizado no banco:', data);
+      // Atualizar também no contexto local
+      updateUser(userId, userData);
+
+      return { success: true, local: false, data };
+    } catch (error) {
+      console.error('Erro ao atualizar no banco:', error);
+      // Fallback: atualizar apenas localmente
+      updateUser(userId, userData);
+      return { success: true, local: true };
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -162,6 +244,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           return;
         }
 
+        console.log('Criando novo usuário:', formData.email);
+
+        let authUserId = null;
+
         try {
           // Tentar criar usuário no Supabase Auth primeiro
           const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -177,41 +263,42 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           if (authError) {
             console.warn('Erro ao criar usuário no Supabase Auth:', authError);
-            // Continuar com criação local se falhar no Supabase
+            toast.warning('Usuário criado localmente (sem autenticação Supabase)');
+          } else {
+            authUserId = authData.user?.id;
+            console.log('Usuário criado no Supabase Auth:', authUserId);
+            toast.success('Usuário criado no sistema de autenticação!');
           }
-
-          // Sempre adicionar ao contexto local (funciona como fallback)
-          addUser({
-            name: formData.name,
-            email: formData.email,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company
-          });
-
-          toast.success('Usuário criado com sucesso!');
-        } catch (error: any) {
-          console.error('Erro ao criar usuário:', error);
-          
-          // Fallback: criar apenas localmente
-          addUser({
-            name: formData.name,
-            email: formData.email,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company
-          });
-          
-          toast.success('Usuário criado localmente (sem autenticação Supabase)');
+        } catch (authError) {
+          console.warn('Erro na criação do usuário Auth:', authError);
         }
+
+        // Criar usuário no banco de dados (profiles)
+        const result = await createUserInDatabase({
+          name: formData.name,
+          email: formData.email,
+          status: formData.status,
+          role: formData.role,
+          phone: formData.phone,
+          company: formData.company
+        }, authUserId);
+
+        if (result.success) {
+          if (result.local) {
+            toast.success('Usuário criado localmente com sucesso!');
+          } else {
+            toast.success('Usuário criado e salvo no banco de dados!');
+          }
+        }
+
       } else if (mode === 'edit' && user) {
         // Verificar permissões para edição
         if (profile?.role !== 'admin' && currentUser?.id !== user.id) {
           toast.error('Você só pode editar seu próprio perfil');
           return;
         }
+
+        console.log('Atualizando usuário:', user.id);
 
         try {
           // Tentar atualizar senha no Supabase se fornecida
@@ -232,8 +319,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           console.warn('Erro ao atualizar senha:', error);
         }
 
-        // Sempre atualizar no contexto local
-        updateUser(user.id, {
+        // Atualizar usuário no banco de dados
+        const result = await updateUserInDatabase(user.id, {
           name: formData.name,
           email: formData.email,
           status: formData.status,
@@ -242,7 +329,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           company: formData.company
         });
 
-        toast.success('Usuário atualizado com sucesso!');
+        if (result.success) {
+          if (result.local) {
+            toast.success('Usuário atualizado localmente!');
+          } else {
+            toast.success('Usuário atualizado no banco de dados!');
+          }
+        }
       }
       
       onClose();

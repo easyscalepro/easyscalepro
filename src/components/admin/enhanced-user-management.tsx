@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
 import { UserFormModal } from './user-form-modal';
+import { UserSyncButton } from './user-sync-button';
 
 export const EnhancedUserManagement: React.FC = () => {
   const { users, deleteUser, toggleUserStatus } = useUsers();
@@ -206,6 +207,7 @@ export const EnhancedUserManagement: React.FC = () => {
               Gerenciar Usuários ({filteredUsers.length} de {users.length})
             </CardTitle>
             <div className="flex gap-2">
+              <UserSyncButton />
               <Button
                 onClick={handleExportUsers}
                 variant="outline"
