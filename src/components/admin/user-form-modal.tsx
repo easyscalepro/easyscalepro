@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
-import { usePasswordPolicy } from '@/hooks/use-password-policy';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserFormModalProps {
@@ -26,14 +25,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   mode
 }) => {
   const { addUser, updateUser } = useUsers();
-  const { 
-    policy, 
-    validatePassword, 
-    getPasswordStrengthText, 
-    getPasswordStrengthColor, 
-    generatePassword 
-  } = usePasswordPolicy();
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -47,7 +38,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordValidation, setPasswordValidation] = useState<{ valid: boolean; errors: string[]; strength: number } | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
@@ -76,24 +66,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   }, [mode, user, isOpen]);
 
-  const handlePasswordChange = (password: string) => {
-    setFormData({...formData, password});
-    
-    if (password) {
-      const validation = validatePassword(password, {
-        name: formData.name,
-        email: formData.email
-      });
-      setPasswordValidation(validation);
-    } else {
-      setPasswordValidation(null);
+  const generateSimplePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-  };
-
-  const handleGeneratePassword = () => {
-    const newPassword = generatePassword();
-    handlePasswordChange(newPassword);
-    setFormData({...formData, password: newPassword, confirmPassword: newPassword});
+    setFormData({...formData, password, confirmPassword: password});
     toast.success('Senha gerada automaticamente!');
   };
 
@@ -145,7 +124,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       return;
     }
 
-    // Validação de senha para novos usuários
+    // Validação simples de senha para novos usuários
     if (mode === 'create') {
       if (!formData.password) {
         toast.error('A senha é obrigatória para novos usuários');
@@ -153,13 +132,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         return;
       }
 
-      const validation = validatePassword(formData.password, {
-        name: formData.name,
-        email: formData.email
-      });
-
-      if (!validation.valid) {
-        toast.error('A senha não atende aos critérios de segurança');
+      if (formData.password.length < 6) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
         setIsSubmitting(false);
         return;
       }
@@ -171,15 +145,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       }
     }
 
-    // Validação de senha para edição (se fornecida)
+    // Validação simples de senha para edição (se fornecida)
     if (mode === 'edit' && formData.password) {
-      const validation = validatePassword(formData.password, {
-        name: formData.name,
-        email: formData.email
-      });
-
-      if (!validation.valid) {
-        toast.error('A senha não atende aos critérios de segurança');
+      if (formData.password.length < 6) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
         setIsSubmitting(false);
         return;
       }
@@ -342,32 +311,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             />
           </div>
 
-          {/* Seção de Senha com Políticas Personalizadas */}
+          {/* Seção de Senha Simplificada */}
           <div className="border-t pt-4 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Key className="h-4 w-4 text-[#2563EB]" />
               <Label className="text-sm font-semibold">
                 {mode === 'create' ? 'Definir Senha *' : 'Alterar Senha (opcional)'}
               </Label>
-            </div>
-
-            {/* Política de senha ativa */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Política de Senha Ativa
-                </span>
-              </div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-                <div>• Mínimo de {policy.min_length} caracteres</div>
-                {policy.require_uppercase && <div>• Pelo menos {policy.min_uppercase} letra(s) maiúscula(s)</div>}
-                {policy.require_lowercase && <div>• Pelo menos {policy.min_lowercase} letra(s) minúscula(s)</div>}
-                {policy.require_numbers && <div>• Pelo menos {policy.min_numbers} número(s)</div>}
-                {policy.require_special_chars && <div>• Pelo menos {policy.min_special_chars} caractere(s) especial(is)</div>}
-                {policy.disallow_common_passwords && <div>• Não pode ser uma senha comum</div>}
-                {policy.disallow_personal_info && <div>• Não pode conter informações pessoais</div>}
-              </div>
             </div>
 
             {mode === 'edit' && (
@@ -404,7 +354,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </Label>
                 <Button
                   type="button"
-                  onClick={handleGeneratePassword}
+                  onClick={generateSimplePassword}
                   size="sm"
                   variant="ghost"
                   className="text-xs text-blue-600 hover:text-blue-700"
@@ -418,9 +368,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
-                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
                   placeholder="••••••••"
                   required={mode === 'create'}
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -430,43 +381,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              
-              {/* Validação da senha baseada na política */}
-              {passwordValidation && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor(passwordValidation.strength)}`}
-                        style={{ width: `${(passwordValidation.strength / 5) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-gray-600">
-                      {getPasswordStrengthText(passwordValidation.strength)}
-                    </span>
-                  </div>
-                  
-                  {!passwordValidation.valid && (
-                    <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-                      <div className="flex items-center gap-1 mb-1">
-                        <AlertCircle className="h-3 w-3 text-red-500" />
-                        <span className="text-xs font-medium text-red-700 dark:text-red-300">Critérios não atendidos:</span>
-                      </div>
-                      <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
-                        {passwordValidation.errors.map((error, index) => (
-                          <li key={index}>• {error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {passwordValidation.valid && (
-                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                      <CheckCircle className="h-3 w-3" />
-                      <span>Senha atende a todos os critérios</span>
-                    </div>
-                  )}
-                </div>
+              {mode === 'create' && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  A senha deve ter pelo menos 6 caracteres
+                </p>
               )}
             </div>
 
@@ -492,18 +410,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </button>
               </div>
               
-              {/* Indicador de confirmação */}
+              {/* Indicador simples de confirmação */}
               {formData.confirmPassword && (
                 <div className="flex items-center gap-1 text-xs">
                   {formData.password === formData.confirmPassword ? (
                     <>
                       <CheckCircle className="h-3 w-3 text-green-500" />
-                      <span className="text-green-600">Senhas coincidem</span>
+                      <span className="text-green-600 dark:text-green-400">Senhas coincidem</span>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-3 w-3 text-red-500" />
-                      <span className="text-red-600">Senhas não coincidem</span>
+                      <span className="text-red-600 dark:text-red-400">Senhas não coincidem</span>
                     </>
                   )}
                 </div>
