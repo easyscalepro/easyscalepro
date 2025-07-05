@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Download, X, Smartphone, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { IOSInstallButton } from './ios-install-button';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -28,12 +27,10 @@ export const InstallPrompt: React.FC = () => {
     setIsIOS(iOS);
 
     // Check if app is already installed (standalone mode)
-    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
-                        (window.navigator as any).standalone ||
-                        document.referrer.includes('android-app://');
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
     setIsStandalone(standalone);
 
-    // Listen for beforeinstallprompt event (Android/Desktop)
+    // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -96,12 +93,7 @@ export const InstallPrompt: React.FC = () => {
     toast.info('Você pode instalar o app a qualquer momento através do menu do navegador');
   };
 
-  // Show iOS install button for iOS devices
-  if (isIOS) {
-    return <IOSInstallButton />;
-  }
-
-  // Don't show if already installed or no prompt available
+  // Don't show if already installed or user is not on mobile
   if (isStandalone || (!deferredPrompt && !isIOS) || !showInstallPrompt) {
     return null;
   }
@@ -152,7 +144,7 @@ export const InstallPrompt: React.FC = () => {
                 className="flex-1 bg-white text-blue-600 hover:bg-white/90 font-bold"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Instalar App
+                {isIOS ? 'Instruções' : 'Instalar'}
               </Button>
               
               <Button
