@@ -40,7 +40,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit' && user) {
@@ -78,88 +77,51 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     toast.success('Senha gerada automaticamente!');
   };
 
-  const handleResetPassword = async () => {
-    if (!user?.email) {
-      toast.error('Email do usuário não encontrado');
-      return;
-    }
-
-    setIsResettingPassword(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success(`Email de redefinição enviado para ${user.email}`);
-    } catch (error: any) {
-      console.error('Erro ao enviar email de redefinição:', error);
-      toast.error('Erro ao enviar email de redefinição: ' + error.message);
-    } finally {
-      setIsResettingPassword(false);
-    }
-  };
-
-  const testDatabaseConnection = async () => {
-    try {
-      console.log('🔍 Testando conexão com banco de dados...');
-      const { data, error } = await supabase.from('profiles').select('count').limit(1);
-      
-      if (error) {
-        console.error('❌ Erro na conexão:', error);
-        throw error;
-      }
-      
-      console.log('✅ Conexão com banco OK');
-      return true;
-    } catch (error) {
-      console.error('❌ Falha na conexão com banco:', error);
-      throw new Error('Não foi possível conectar ao banco de dados');
-    }
-  };
-
-  const createUserInAuth = async (email: string, password: string, userData: any) => {
-    console.log('🔐 Criando usuário no Supabase Auth...');
+  const createUserWithSignup = async (email: string, password: string, userData: any) => {
+    console.log('🔐 Criando usuário com signup normal...');
     
     try {
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Salvar sessão atual
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // Fazer signup do novo usuário
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email: email,
         password: password,
-        user_metadata: {
-          name: userData.name,
-          company: userData.company,
-          phone: userData.phone
-        },
-        email_confirm: true
+        options: {
+          data: {
+            name: userData.name,
+            company: userData.company,
+            phone: userData.phone
+          }
+        }
       });
 
-      if (authError) {
-        console.error('❌ Erro no Supabase Auth:', authError);
-        throw authError;
+      if (signupError) {
+        console.error('❌ Erro no signup:', signupError);
+        throw signupError;
       }
 
-      if (!authData.user) {
-        throw new Error('Usuário não foi criado no Auth');
+      if (!signupData.user) {
+        throw new Error('Usuário não foi criado');
       }
 
-      console.log('✅ Usuário criado no Supabase Auth:', {
-        id: authData.user.id,
-        email: authData.user.email,
-        confirmed: authData.user.email_confirmed_at
+      console.log('✅ Usuário criado com signup:', {
+        id: signupData.user.id,
+        email: signupData.user.email
       });
+
+      // Fazer logout do novo usuário e restaurar sessão do admin
+      await supabase.auth.signOut();
       
-      return authData.user;
+      if (currentSession) {
+        await supabase.auth.setSession(currentSession);
+      }
+
+      return signupData.user;
 
     } catch (error: any) {
-      console.error('❌ Falha na criação do usuário Auth:', error);
-      
-      if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
-        throw new Error('Este email já está cadastrado no sistema');
-      }
-      
+      console.error('❌ Falha na criação com signup:', error);
       throw error;
     }
   };
@@ -184,18 +146,30 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       console.log('📝 Dados do perfil a serem inseridos:', profileData);
 
-      // Primeiro, verificar se o perfil já existe
+      // Aguardar um pouco para o trigger executar
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Verificar se o perfil já foi criado pelo trigger
       const { data: existingProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('*')
         .eq('id', userId)
         .single();
 
       if (existingProfile) {
-        console.log('⚠️ Perfil já existe, atualizando...');
+        console.log('✅ Perfil já criado pelo trigger:', existingProfile);
+        
+        // Atualizar com dados completos
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
-          .update(profileData)
+          .update({
+            name: userData.name,
+            role: userData.role,
+            status: userData.status,
+            phone: userData.phone || null,
+            company: userData.company || null,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', userId)
           .select()
           .single();
@@ -209,7 +183,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         return updatedProfile;
       }
 
-      // Inserir novo perfil
+      // Se não foi criado pelo trigger, criar manualmente
       const { data: profileResult, error: profileError } = await supabase
         .from('profiles')
         .insert(profileData)
@@ -218,31 +192,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       if (profileError) {
         console.error('❌ Erro ao inserir perfil:', profileError);
-        console.error('📋 Detalhes do erro:', {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint
-        });
         throw profileError;
       }
 
-      console.log('✅ Perfil criado com sucesso:', profileResult);
-      
-      // Verificar se realmente foi salvo
-      const { data: verificationData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (verificationData) {
-        console.log('✅ Verificação: Perfil salvo no banco:', verificationData);
-      } else {
-        console.error('❌ Verificação: Perfil NÃO foi salvo no banco');
-        throw new Error('Perfil não foi salvo corretamente no banco');
-      }
-
+      console.log('✅ Perfil criado manualmente:', profileResult);
       return profileResult;
 
     } catch (error: any) {
@@ -304,10 +257,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           return;
         }
 
-        // Testar conexão com banco
-        toast.loading('Verificando conexão com banco de dados...', { id: 'create-user' });
-        await testDatabaseConnection();
-
         // Verificar se email já existe
         console.log('🔍 Verificando se email já existe...');
         toast.loading('Verificando se email já existe...', { id: 'create-user' });
@@ -330,12 +279,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         let profileResult = null;
 
         try {
-          // 1. Criar usuário no Supabase Auth
-          toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
-          authUser = await createUserInAuth(formData.email, formData.password, formData);
+          // 1. Criar usuário com signup normal
+          toast.loading('Criando usuário no sistema...', { id: 'create-user' });
+          authUser = await createUserWithSignup(formData.email, formData.password, formData);
           
-          // 2. Criar perfil na tabela profiles
-          toast.loading('Salvando perfil no banco de dados...', { id: 'create-user' });
+          // 2. Criar/atualizar perfil na tabela profiles
+          toast.loading('Configurando perfil do usuário...', { id: 'create-user' });
           profileResult = await createUserProfile(authUser.id, formData);
 
           // 3. Adicionar ao contexto local
@@ -377,17 +326,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           
           toast.dismiss('create-user');
           
-          // Se criou no Auth mas falhou no profile, tentar limpar
-          if (authUser && !profileResult) {
-            console.log('🧹 Tentando limpar usuário órfão do Auth...');
-            try {
-              await supabase.auth.admin.deleteUser(authUser.id);
-              console.log('🗑️ Usuário órfão removido do Auth');
-            } catch (cleanupError) {
-              console.warn('⚠️ Não foi possível limpar usuário órfão:', cleanupError);
-            }
-          }
-          
           // Mostrar erro específico
           if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
             toast.error('❌ Email já cadastrado', {
@@ -401,9 +339,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             toast.error('❌ Erro na senha', {
               description: 'A senha deve ter pelo menos 6 caracteres'
             });
-          } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
-            toast.error('❌ Erro de permissão', {
-              description: 'Problema nas políticas de segurança do banco'
+          } else if (error.message?.includes('User not allowed')) {
+            toast.error('❌ Usuário não permitido', {
+              description: 'Verifique as configurações de Auth no Supabase'
             });
           } else {
             toast.error('❌ Erro ao criar usuário', {
@@ -416,7 +354,43 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       } else if (mode === 'edit' && user) {
         console.log('✏️ Modo: Editar usuário existente');
-        // ... código de edição permanece igual
+        
+        try {
+          // Atualizar perfil existente
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              name: formData.name,
+              status: formData.status,
+              role: formData.role,
+              phone: formData.phone || null,
+              company: formData.company || null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          // Atualizar contexto local
+          updateUser(user.id, {
+            name: formData.name,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company
+          });
+
+          toast.success('✅ Usuário atualizado com sucesso!');
+          
+        } catch (error: any) {
+          console.error('💥 Erro ao atualizar usuário:', error);
+          toast.error('❌ Erro ao atualizar usuário: ' + error.message);
+          return;
+        }
       }
       
       console.log('🎯 Processo concluído com sucesso');
@@ -442,15 +416,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         {/* Aviso importante para criação */}
         {mode === 'create' && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
             <div className="flex items-start gap-3">
-              <Database className="h-5 w-5 text-green-600 mt-0.5" />
+              <Database className="h-5 w-5 text-blue-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-100 text-sm">
-                  Criação Completa no Sistema
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                  Criação via Signup Normal
                 </h4>
-                <p className="text-green-700 dark:text-green-300 text-xs mt-1">
-                  O usuário será criado no Auth e no banco de dados, podendo fazer login imediatamente.
+                <p className="text-blue-700 dark:text-blue-300 text-xs mt-1">
+                  O usuário será criado usando signup normal e poderá fazer login imediatamente.
                 </p>
               </div>
             </div>
@@ -545,15 +519,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </div>
 
           {/* Seção de Senha */}
-          <div className="border-t pt-4 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Key className="h-4 w-4 text-[#2563EB]" />
-              <Label className="text-sm font-semibold">
-                {mode === 'create' ? 'Definir Senha *' : 'Alterar Senha (opcional)'}
-              </Label>
-            </div>
+          {mode === 'create' && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="h-4 w-4 text-[#2563EB]" />
+                <Label className="text-sm font-semibold">
+                  Definir Senha *
+                </Label>
+              </div>
 
-            {mode === 'create' && (
               <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                   <Shield className="h-4 w-4" />
@@ -562,89 +536,83 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   </span>
                 </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">
-                  {mode === 'create' ? 'Senha *' : 'Nova Senha'}
-                </Label>
-                <Button
-                  type="button"
-                  onClick={generateSimplePassword}
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs text-blue-600 hover:text-blue-700"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Gerar
-                </Button>
-              </div>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  placeholder="••••••••"
-                  required={mode === 'create'}
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {mode === 'create' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha *</Label>
+                  <Button
+                    type="button"
+                    onClick={generateSimplePassword}
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Gerar
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   A senha deve ter pelo menos 6 caracteres
                 </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">
-                {mode === 'create' ? 'Confirmar Senha *' : 'Confirmar Nova Senha'}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                  placeholder="••••••••"
-                  required={mode === 'create' || !!formData.password}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
               </div>
-              
-              {/* Indicador de confirmação */}
-              {formData.confirmPassword && (
-                <div className="flex items-center gap-1 text-xs">
-                  {formData.password === formData.confirmPassword ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      <span className="text-green-600 dark:text-green-400">Senhas coincidem</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-3 w-3 text-red-500" />
-                      <span className="text-red-600 dark:text-red-400">Senhas não coincidem</span>
-                    </>
-                  )}
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              )}
+                
+                {/* Indicador de confirmação */}
+                {formData.confirmPassword && (
+                  <div className="flex items-center gap-1 text-xs">
+                    {formData.password === formData.confirmPassword ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        <span className="text-green-600 dark:text-green-400">Senhas coincidem</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 text-red-500" />
+                        <span className="text-red-600 dark:text-red-400">Senhas não coincidem</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4">
             <Button

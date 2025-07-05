@@ -34,23 +34,38 @@ export const UserCreationTest: React.FC = () => {
     try {
       console.log('🧪 Iniciando teste de criação de usuário...');
       
-      // 1. Testar criação no Auth
-      toast.loading('Testando criação no Auth...', { id: 'test-user' });
+      // Salvar sessão atual
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // 1. Testar criação com signup normal
+      toast.loading('Testando criação com signup...', { id: 'test-user' });
       
       try {
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: testEmail,
           password: testPassword,
-          email_confirm: true
+          options: {
+            data: {
+              name: 'Usuário Teste'
+            }
+          }
         });
 
-        if (authError) {
-          results.errors.push(`Auth Error: ${authError.message}`);
-        } else if (authData.user) {
+        if (signupError) {
+          results.errors.push(`Signup Error: ${signupError.message}`);
+        } else if (signupData.user) {
           results.authCreated = true;
-          console.log('✅ Usuário criado no Auth:', authData.user.id);
+          console.log('✅ Usuário criado com signup:', signupData.user.id);
           
-          // 2. Verificar se perfil foi criado automaticamente
+          // Fazer logout do usuário de teste
+          await supabase.auth.signOut();
+          
+          // Restaurar sessão do admin
+          if (currentSession) {
+            await supabase.auth.setSession(currentSession);
+          }
+          
+          // 2. Verificar se perfil foi criado
           toast.loading('Verificando criação do perfil...', { id: 'test-user' });
           
           // Aguardar um pouco para o trigger executar
@@ -59,7 +74,7 @@ export const UserCreationTest: React.FC = () => {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', authData.user.id)
+            .eq('id', signupData.user.id)
             .single();
 
           if (profileError) {
@@ -70,7 +85,7 @@ export const UserCreationTest: React.FC = () => {
             const { data: manualProfile, error: manualError } = await supabase
               .from('profiles')
               .insert({
-                id: authData.user.id,
+                id: signupData.user.id,
                 email: testEmail,
                 name: 'Usuário Teste',
                 role: 'user',
@@ -110,14 +125,27 @@ export const UserCreationTest: React.FC = () => {
             
             // Fazer logout imediatamente
             await supabase.auth.signOut();
+            
+            // Restaurar sessão do admin
+            if (currentSession) {
+              await supabase.auth.setSession(currentSession);
+            }
           }
 
           // 4. Limpar usuário de teste
           console.log('🧹 Limpando usuário de teste...');
-          await supabase.auth.admin.deleteUser(authData.user.id);
           
+          // Deletar perfil primeiro
           if (results.profileCreated) {
-            await supabase.from('profiles').delete().eq('id', authData.user.id);
+            await supabase.from('profiles').delete().eq('id', signupData.user.id);
+          }
+          
+          // Tentar deletar do Auth (pode não funcionar sem Admin API)
+          try {
+            await supabase.auth.admin.deleteUser(signupData.user.id);
+          } catch (deleteError) {
+            console.warn('⚠️ Não foi possível deletar do Auth (sem Admin API):', deleteError);
+            results.errors.push('Aviso: Usuário de teste não foi removido do Auth (sem Admin API)');
           }
         }
       } catch (error: any) {
@@ -157,13 +185,13 @@ export const UserCreationTest: React.FC = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
           <TestTube className="h-5 w-5" />
-          Teste de Criação de Usuário
+          Teste de Criação de Usuário (Signup Normal)
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <p className="text-blue-700 dark:text-blue-300 text-sm">
-            Execute este teste para verificar se a criação de usuários está funcionando corretamente.
+            Execute este teste para verificar se a criação de usuários via signup está funcionando.
           </p>
           
           <div className="grid grid-cols-2 gap-4">
@@ -213,8 +241,8 @@ export const UserCreationTest: React.FC = () => {
               
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(testResults.authCreated, testResults.errors.some(e => e.includes('Auth')))}
-                  <span className="text-sm">Criação no Supabase Auth</span>
+                  {getStatusIcon(testResults.authCreated, testResults.errors.some(e => e.includes('Signup')))}
+                  <span className="text-sm">Criação via Signup</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -230,7 +258,7 @@ export const UserCreationTest: React.FC = () => {
 
               {testResults.errors.length > 0 && (
                 <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <h5 className="font-medium text-red-800 dark:text-red-200 mb-2">Erros Encontrados:</h5>
+                  <h5 className="font-medium text-red-800 dark:text-red-200 mb-2">Erros/Avisos:</h5>
                   <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                     {testResults.errors.map((error, index) => (
                       <li key={index} className="break-words">• {error}</li>
