@@ -288,7 +288,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
               onClick={() => onViewDetails(id)}
               size="sm"
               variant="outline"
-              className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600 font-bold transition-all duration-300 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 group/btn relative overflow-hidden"
+              className="border-2 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-800 dark:hover:text-blue-200 hover:border-blue-400 dark:hover:border-blue-500 font-bold transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden"
             >
               <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
               Ver
