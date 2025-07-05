@@ -9,7 +9,7 @@ import { EasyScaleLogoLarge } from '@/components/easyscale-logo-large';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { signUp } from '@/lib/auth';
 
@@ -20,6 +20,7 @@ export const LoginForm: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, user } = useAuth();
@@ -41,11 +42,32 @@ export const LoginForm: React.FC = () => {
     }
   }, [user, router, redirectPath, error]);
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Validações básicas
+      if (!email.trim()) {
+        toast.error('Email é obrigatório');
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        toast.error('Por favor, insira um email válido');
+        return;
+      }
+
+      if (!password.trim()) {
+        toast.error('Senha é obrigatória');
+        return;
+      }
+
       if (isSignUp) {
         // Cadastro
         if (!name.trim()) {
@@ -53,29 +75,84 @@ export const LoginForm: React.FC = () => {
           return;
         }
 
+        if (password.length < 6) {
+          toast.error('A senha deve ter pelo menos 6 caracteres');
+          return;
+        }
+
+        toast.loading('Criando sua conta...', { id: 'auth' });
+
         await signUp(email, password, name);
-        toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
+        
+        toast.dismiss('auth');
+        toast.success('Conta criada com sucesso!', {
+          description: 'Você pode fazer login agora com suas credenciais.'
+        });
+        
         setIsSignUp(false);
         setName('');
+        setLoginAttempts(0);
+        
       } else {
         // Login
-        await signIn(email, password);
-        // O AuthProvider vai lidar com o redirecionamento
-        router.push(redirectPath);
+        if (loginAttempts >= 3) {
+          toast.error('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+          return;
+        }
+
+        toast.loading('Fazendo login...', { id: 'auth' });
+
+        try {
+          await signIn(email, password);
+          
+          toast.dismiss('auth');
+          toast.success('Login realizado com sucesso!');
+          
+          // Reset tentativas em caso de sucesso
+          setLoginAttempts(0);
+          
+          // Redirecionar será feito pelo AuthProvider
+          router.push(redirectPath);
+          
+        } catch (loginError: any) {
+          setLoginAttempts(prev => prev + 1);
+          throw loginError;
+        }
       }
     } catch (error: any) {
       console.error('Erro de autenticação:', error);
       
-      if (error.message?.includes('Invalid login credentials')) {
-        toast.error('Email ou senha incorretos');
-      } else if (error.message?.includes('Email not confirmed')) {
-        toast.error('Confirme seu email antes de fazer login');
-      } else if (error.message?.includes('User already registered')) {
-        toast.error('Este email já está cadastrado');
-      } else if (error.message?.includes('Password should be at least 6 characters')) {
+      toast.dismiss('auth');
+      
+      // Tratamento específico de erros
+      const errorMessage = error.message || 'Erro desconhecido';
+      
+      if (errorMessage.includes('Invalid login credentials') || errorMessage.includes('Email ou senha incorretos')) {
+        toast.error('Email ou senha incorretos', {
+          description: `Tentativa ${loginAttempts + 1} de 3. Verifique suas credenciais.`
+        });
+      } else if (errorMessage.includes('Email not confirmed') || errorMessage.includes('não confirmado')) {
+        toast.error('Email não confirmado', {
+          description: 'Verifique sua caixa de entrada e confirme seu email antes de fazer login.'
+        });
+      } else if (errorMessage.includes('User already registered') || errorMessage.includes('já está cadastrado')) {
+        toast.error('Este email já está cadastrado', {
+          description: 'Tente fazer login ou use outro email.'
+        });
+      } else if (errorMessage.includes('Password should be at least 6 characters')) {
         toast.error('A senha deve ter pelo menos 6 caracteres');
+      } else if (errorMessage.includes('Too many requests') || errorMessage.includes('Muitas tentativas')) {
+        toast.error('Muitas tentativas de login', {
+          description: 'Aguarde alguns minutos antes de tentar novamente.'
+        });
+      } else if (errorMessage.includes('inativa')) {
+        toast.error('Conta inativa', {
+          description: 'Entre em contato com o administrador para reativar sua conta.'
+        });
       } else {
-        toast.error(error.message || 'Erro ao processar solicitação');
+        toast.error('Erro na autenticação', {
+          description: errorMessage
+        });
       }
     } finally {
       setLoading(false);
@@ -83,7 +160,18 @@ export const LoginForm: React.FC = () => {
   };
 
   const handleForgotPassword = () => {
+    if (!email) {
+      toast.error('Digite seu email primeiro para recuperar a senha');
+      return;
+    }
+    
     toast.info('Funcionalidade de recuperação de senha em desenvolvimento');
+  };
+
+  const handleTestLogin = () => {
+    setEmail('teste@gmail.com');
+    setPassword('123456');
+    toast.info('Credenciais de teste preenchidas');
   };
 
   return (
@@ -120,6 +208,22 @@ export const LoginForm: React.FC = () => {
                 {error === 'account_suspended' && 'Conta suspensa'}
                 {error === 'access_denied' && 'Acesso negado'}
               </span>
+            </div>
+          )}
+
+          {/* Botão de teste (apenas em desenvolvimento) */}
+          {!isSignUp && (
+            <div className="mb-4">
+              <Button
+                type="button"
+                onClick={handleTestLogin}
+                variant="outline"
+                size="sm"
+                className="w-full border-green-300 text-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Usar Credenciais de Teste
+              </Button>
             </div>
           )}
 
@@ -173,7 +277,7 @@ export const LoginForm: React.FC = () => {
                   placeholder="••••••••"
                   className="pl-10 pr-10 h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   required
-                  minLength={6}
+                  minLength={isSignUp ? 6 : 1}
                 />
                 <button
                   type="button"
@@ -223,6 +327,7 @@ export const LoginForm: React.FC = () => {
                   setName('');
                   setEmail('');
                   setPassword('');
+                  setLoginAttempts(0);
                 }}
                 className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
               >

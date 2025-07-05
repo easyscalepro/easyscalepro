@@ -179,19 +179,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('Tentando fazer login com:', email);
       
-      await authSignIn(email, password);
-      // O onAuthStateChange vai lidar com o resto
+      // Verificar se o usuário existe primeiro
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('email, status')
+        .eq('email', email)
+        .single();
+
+      if (existingProfile && existingProfile.status !== 'ativo') {
+        throw new Error('Sua conta está inativa. Entre em contato com o administrador.');
+      }
+
+      // Tentar fazer login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Erro no login:', error);
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('Falha na autenticação');
+      }
+
+      console.log('Login realizado com sucesso para:', data.user.email);
+      
     } catch (error: any) {
       console.error('Erro no login:', error);
       
       if (error.message?.includes('Invalid login credentials')) {
-        throw new Error('Email ou senha incorretos');
+        throw new Error('Email ou senha incorretos. Verifique suas credenciais e tente novamente.');
       } else if (error.message?.includes('Email not confirmed')) {
-        throw new Error('Email não confirmado. Verifique sua caixa de entrada');
+        throw new Error('Email não confirmado. Verifique sua caixa de entrada e confirme seu email.');
       } else if (error.message?.includes('Too many requests')) {
-        throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente');
+        throw new Error('Muitas tentativas de login. Aguarde alguns minutos e tente novamente.');
+      } else if (error.message?.includes('inativa')) {
+        throw new Error(error.message);
       } else {
-        throw new Error('Erro ao fazer login. Verifique sua conexão e tente novamente');
+        throw new Error('Erro ao fazer login. Verifique sua conexão e tente novamente.');
       }
     } finally {
       setLoading(false);
