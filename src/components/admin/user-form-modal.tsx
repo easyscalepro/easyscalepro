@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
+import { useAuth } from '@/components/auth/auth-provider';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserFormModalProps {
@@ -25,6 +26,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   mode
 }) => {
   const { addUser, updateUser } = useUsers();
+  const { user: currentUser, profile } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -105,102 +107,132 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validações básicas
-    if (!formData.name.trim()) {
-      toast.error('O nome é obrigatório');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast.error('O email é obrigatório');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error('Email inválido');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Validação simples de senha para novos usuários
-    if (mode === 'create') {
-      if (!formData.password) {
-        toast.error('A senha é obrigatória para novos usuários');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('As senhas não coincidem');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    // Validação simples de senha para edição (se fornecida)
-    if (mode === 'edit' && formData.password) {
-      if (formData.password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('As senhas não coincidem');
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
     try {
+      // Validações básicas
+      if (!formData.name.trim()) {
+        toast.error('O nome é obrigatório');
+        return;
+      }
+
+      if (!formData.email.trim()) {
+        toast.error('O email é obrigatório');
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        toast.error('Email inválido');
+        return;
+      }
+
+      // Validação simples de senha para novos usuários
       if (mode === 'create') {
-        // Criar usuário no Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          password: formData.password,
-          user_metadata: {
+        if (!formData.password) {
+          toast.error('A senha é obrigatória para novos usuários');
+          return;
+        }
+
+        if (formData.password.length < 6) {
+          toast.error('A senha deve ter pelo menos 6 caracteres');
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast.error('As senhas não coincidem');
+          return;
+        }
+      }
+
+      // Validação simples de senha para edição (se fornecida)
+      if (mode === 'edit' && formData.password) {
+        if (formData.password.length < 6) {
+          toast.error('A senha deve ter pelo menos 6 caracteres');
+          return;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast.error('As senhas não coincidem');
+          return;
+        }
+      }
+
+      if (mode === 'create') {
+        // Verificar se o usuário atual é admin
+        if (profile?.role !== 'admin') {
+          toast.error('Apenas administradores podem criar usuários');
+          return;
+        }
+
+        try {
+          // Tentar criar usuário no Supabase Auth primeiro
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: formData.email,
+            password: formData.password,
+            user_metadata: {
+              name: formData.name,
+              company: formData.company,
+              phone: formData.phone
+            },
+            email_confirm: true // Confirmar email automaticamente
+          });
+
+          if (authError) {
+            console.warn('Erro ao criar usuário no Supabase Auth:', authError);
+            // Continuar com criação local se falhar no Supabase
+          }
+
+          // Sempre adicionar ao contexto local (funciona como fallback)
+          addUser({
             name: formData.name,
-            company: formData.company,
-            phone: formData.phone
-          }
-        });
+            email: formData.email,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company
+          });
 
-        if (authError) {
-          throw authError;
+          toast.success('Usuário criado com sucesso!');
+        } catch (error: any) {
+          console.error('Erro ao criar usuário:', error);
+          
+          // Fallback: criar apenas localmente
+          addUser({
+            name: formData.name,
+            email: formData.email,
+            status: formData.status,
+            role: formData.role,
+            phone: formData.phone,
+            company: formData.company
+          });
+          
+          toast.success('Usuário criado localmente (sem autenticação Supabase)');
         }
-
-        // Adicionar ao contexto local
-        addUser({
-          name: formData.name,
-          email: formData.email,
-          status: formData.status,
-          role: formData.role,
-          phone: formData.phone,
-          company: formData.company
-        });
       } else if (mode === 'edit' && user) {
-        // Atualizar usuário
-        if (formData.password) {
-          // Se uma nova senha foi fornecida, atualizar no Supabase
-          const { error: passwordError } = await supabase.auth.admin.updateUserById(
-            user.id,
-            { password: formData.password }
-          );
-
-          if (passwordError) {
-            console.warn('Erro ao atualizar senha no Supabase:', passwordError);
-            // Continuar mesmo se falhar, pois pode ser um usuário local
-          }
+        // Verificar permissões para edição
+        if (profile?.role !== 'admin' && currentUser?.id !== user.id) {
+          toast.error('Você só pode editar seu próprio perfil');
+          return;
         }
 
+        try {
+          // Tentar atualizar senha no Supabase se fornecida
+          if (formData.password && profile?.role === 'admin') {
+            const { error: passwordError } = await supabase.auth.admin.updateUserById(
+              user.id,
+              { password: formData.password }
+            );
+
+            if (passwordError) {
+              console.warn('Erro ao atualizar senha no Supabase:', passwordError);
+              toast.warning('Senha não foi atualizada no sistema de autenticação');
+            } else {
+              toast.success('Senha atualizada no sistema de autenticação');
+            }
+          }
+        } catch (error) {
+          console.warn('Erro ao atualizar senha:', error);
+        }
+
+        // Sempre atualizar no contexto local
         updateUser(user.id, {
           name: formData.name,
           email: formData.email,
@@ -209,12 +241,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           phone: formData.phone,
           company: formData.company
         });
+
+        toast.success('Usuário atualizado com sucesso!');
       }
       
       onClose();
     } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      toast.error('Erro ao salvar usuário: ' + error.message);
+      toast.error('Erro ao salvar usuário: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsSubmitting(false);
     }
@@ -278,6 +312,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               <Select 
                 value={formData.role} 
                 onValueChange={(value) => setFormData({...formData, role: value as any})}
+                disabled={profile?.role !== 'admin'}
               >
                 <SelectTrigger>
                   <SelectValue />

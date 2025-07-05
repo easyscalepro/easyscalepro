@@ -47,11 +47,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const createSimpleProfile = (user: User): SimpleProfile => {
+    // Emails que devem ser admin
+    const adminEmails = ['admin@easyscale.com', 'julionavyy@gmail.com'];
+    const isAdmin = adminEmails.includes(user.email || '');
+    
     return {
       id: user.id,
       email: user.email || '',
       name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
-      role: (user.email === 'admin@easyscale.com' || user.email === 'julionavyy@gmail.com') ? 'admin' : 'user',
+      role: isAdmin ? 'admin' : 'user',
       status: 'ativo'
     };
   };
@@ -78,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Tentar criar no banco (se a tabela existir)
         try {
-          await supabase
+          const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: user.id,
@@ -91,9 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             });
-          console.log('Perfil criado no banco com sucesso');
+          
+          if (!insertError) {
+            console.log('Perfil criado no banco com sucesso');
+          }
         } catch (createError) {
-          console.log('Não foi possível criar perfil no banco (tabela pode não existir):', createError);
+          console.log('Não foi possível criar perfil no banco:', createError);
         }
       }
     } catch (error) {
