@@ -1,62 +1,35 @@
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/auth-provider';
+
 export default function Home() {
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <h1 style={{
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          color: '#1f2937',
-          marginBottom: '16px'
-        }}>
-          EasyScale
-        </h1>
-        <p style={{
-          fontSize: '1.25rem',
-          color: '#6b7280',
-          marginBottom: '32px'
-        }}>
-          Comandos ChatGPT para PMEs
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-          <a 
-            href="/login"
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontWeight: '500',
-              textDecoration: 'none',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            Fazer Login
-          </a>
-          <a 
-            href="/dashboard"
-            style={{
-              display: 'inline-block',
-              backgroundColor: '#7c3aed',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontWeight: '500',
-              textDecoration: 'none',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            Ver Dashboard
-          </a>
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        // Se o usuário está logado, redirecionar para dashboard
+        router.push('/dashboard');
+      } else {
+        // Se não está logado, redirecionar para login
+        router.push('/login');
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }

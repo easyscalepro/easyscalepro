@@ -1,280 +1,165 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/components/auth/auth-provider';
+import { useCommands } from '@/contexts/commands-context';
+import { useRouter } from 'next/navigation';
+import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
+import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
+import { DashboardStats } from '@/components/dashboard/dashboard-stats';
+import { Search, Sparkles, TrendingUp, Zap, Star, Rocket, Target, Clock, BookOpen, Filter } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
+  const { commands, incrementViews, favorites } = useCommands();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedLevel, setSelectedLevel] = useState('Todos');
+  const [filteredCommands, setFilteredCommands] = useState(commands);
+  const [isGridVisible, setIsGridVisible] = useState(false);
 
-  const commands = [
-    {
-      id: 1,
-      title: 'Estratégia de Marketing Digital',
-      description: 'Desenvolva uma estratégia completa de marketing digital',
-      category: 'Marketing',
-      level: 'Intermediário'
-    },
-    {
-      id: 2,
-      title: 'Análise Financeira Mensal',
-      description: 'Gere relatórios financeiros detalhados',
-      category: 'Finanças',
-      level: 'Avançado'
-    },
-    {
-      id: 3,
-      title: 'Gestão de Equipe Remota',
-      description: 'Otimize a produtividade da sua equipe remota',
-      category: 'Gestão',
-      level: 'Iniciante'
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
     }
-  ];
+  }, [user, loading, router]);
 
-  const filteredCommands = commands.filter(cmd =>
-    cmd.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cmd.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    let filtered = commands;
+
+    if (searchTerm) {
+      filtered = filtered.filter(command =>
+        command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        command.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (command.tags && command.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+      );
+    }
+
+    if (selectedCategory !== 'Todas') {
+      filtered = filtered.filter(command => command.category === selectedCategory);
+    }
+
+    if (selectedLevel !== 'Todos') {
+      filtered = filtered.filter(command => command.level === selectedLevel);
+    }
+
+    setFilteredCommands(filtered);
+    
+    // Trigger grid animation when commands change
+    setIsGridVisible(false);
+    setTimeout(() => setIsGridVisible(true), 100);
+  }, [searchTerm, selectedCategory, selectedLevel, commands]);
+
+  const handleViewDetails = (id: string) => {
+    incrementViews(id);
+    router.push(`/command/${id}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300 font-medium">Carregando sua experiência...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      {/* Header */}
-      <header style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-      }}>
-        <div style={{
-          maxWidth: '1280px',
-          margin: '0 auto',
-          padding: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <h1 style={{
-            fontSize: '1.5rem',
-            fontWeight: 'bold',
-            color: '#1f2937',
-            margin: 0
-          }}>
-            EasyScale Dashboard
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-              Bem-vindo, Admin!
-            </span>
-            <a 
-              href="/login" 
-              style={{
-                color: '#2563eb',
-                fontSize: '0.875rem',
-                textDecoration: 'none'
-              }}
-            >
-              Sair
-            </a>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
+      <DashboardHeader />
+      
+      <main className="container mx-auto px-6 py-12 max-w-7xl relative overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating geometric shapes */}
+          <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-xl animate-pulse"></div>
+          <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-xl animate-pulse delay-1000"></div>
+          <div className="absolute bottom-40 left-1/4 w-40 h-40 bg-gradient-to-br from-amber-400/10 to-orange-400/10 rounded-full blur-xl animate-pulse delay-2000"></div>
+          
+          {/* Grid pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main style={{
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '32px 16px'
-      }}>
         {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '24px',
-          marginBottom: '32px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-          }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#1f2937',
-              margin: '0 0 8px 0'
-            }}>
-              Total de Comandos
-            </h3>
-            <p style={{
-              fontSize: '1.875rem',
-              fontWeight: 'bold',
-              color: '#2563eb',
-              margin: 0
-            }}>
-              {commands.length}
-            </p>
-          </div>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-          }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#1f2937',
-              margin: '0 0 8px 0'
-            }}>
-              Usuários Ativos
-            </h3>
-            <p style={{
-              fontSize: '1.875rem',
-              fontWeight: 'bold',
-              color: '#10b981',
-              margin: 0
-            }}>
-              1,247
-            </p>
-          </div>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-          }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#1f2937',
-              margin: '0 0 8px 0'
-            }}>
-              Taxa de Sucesso
-            </h3>
-            <p style={{
-              fontSize: '1.875rem',
-              fontWeight: 'bold',
-              color: '#7c3aed',
-              margin: 0
-            }}>
-              94.2%
-            </p>
-          </div>
-        </div>
+        <DashboardStats />
 
-        {/* Search */}
-        <div style={{ marginBottom: '24px' }}>
-          <input
-            type="text"
-            placeholder="Buscar comandos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              maxWidth: '400px',
-              padding: '8px 16px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '16px',
-              outline: 'none'
-            }}
-          />
-        </div>
+        {/* Filters */}
+        <ModernCommandFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          selectedLevel={selectedLevel}
+          onLevelChange={setSelectedLevel}
+        />
 
-        {/* Commands Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '24px'
-        }}>
-          {filteredCommands.map((command) => (
-            <div 
-              key={command.id} 
-              style={{
-                backgroundColor: 'white',
-                padding: '24px',
-                borderRadius: '8px',
-                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                transition: 'box-shadow 0.2s'
-              }}
-            >
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  margin: '0 0 8px 0'
-                }}>
-                  {command.title}
-                </h3>
-                <p style={{
-                  color: '#6b7280',
-                  fontSize: '0.875rem',
-                  margin: '0 0 12px 0'
-                }}>
-                  {command.description}
-                </p>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#dbeafe',
-                    color: '#1e40af',
-                    fontSize: '0.75rem',
-                    borderRadius: '9999px'
-                  }}>
-                    {command.category}
-                  </span>
-                  <span style={{
-                    padding: '4px 8px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#1f2937',
-                    fontSize: '0.75rem',
-                    borderRadius: '9999px'
-                  }}>
-                    {command.level}
-                  </span>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{
-                    padding: '4px 12px',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    borderRadius: '4px',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}>
-                    Copiar
-                  </button>
-                  <button style={{
-                    padding: '4px 12px',
-                    border: '1px solid #d1d5db',
-                    color: '#374151',
-                    fontSize: '0.875rem',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer'
-                  }}>
-                    Ver
-                  </button>
-                </div>
-              </div>
+        {/* Results Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {filteredCommands.length} comandos encontrados
+            </h2>
+          </div>
+          {searchTerm && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Resultados para "{searchTerm}"
             </div>
-          ))}
+          )}
         </div>
 
-        {filteredCommands.length === 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: '48px 0'
-          }}>
-            <p style={{ color: '#6b7280' }}>Nenhum comando encontrado</p>
+        {/* Enhanced Commands Grid */}
+        {filteredCommands.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredCommands.map((command, index) => (
+              <div
+                key={command.id}
+                className={`transform transition-all duration-700 ${
+                  isGridVisible 
+                    ? 'translate-y-0 opacity-100' 
+                    : 'translate-y-8 opacity-0'
+                }`}
+                style={{ 
+                  transitionDelay: `${index * 100}ms`,
+                  animationFillMode: 'both'
+                }}
+              >
+                <ModernCommandCard
+                  {...command}
+                  onViewDetails={handleViewDetails}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Search className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Nenhum comando encontrado
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
+              Tente ajustar seus filtros ou buscar por outros termos para encontrar o comando perfeito
+            </p>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategory('Todas');
+                setSelectedLevel('Todos');
+              }}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              Limpar Filtros
+            </button>
           </div>
         )}
       </main>
