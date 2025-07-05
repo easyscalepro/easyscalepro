@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { MobileDashboardHeader } from '@/components/dashboard/mobile-dashboard-header';
 import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
 import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
+import { CommandListItem } from '@/components/dashboard/command-list-item';
 import { DashboardStats } from '@/components/dashboard/dashboard-stats';
 import { Search, Sparkles, TrendingUp, Zap, Star, Rocket, Target, Clock, BookOpen, Filter, Grid3X3, List, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -295,7 +296,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Enhanced Commands Grid */}
+        {/* Enhanced Commands Grid/List */}
         {filteredCommands.length > 0 ? (
           <div className={`grid gap-4 sm:gap-6 lg:gap-8 ${
             viewMode === 'grid' 
@@ -315,10 +316,17 @@ export default function DashboardPage() {
                   animationFillMode: 'both'
                 }}
               >
-                <ModernCommandCard
-                  {...command}
-                  onViewDetails={handleViewDetails}
-                />
+                {viewMode === 'grid' ? (
+                  <ModernCommandCard
+                    {...command}
+                    onViewDetails={handleViewDetails}
+                  />
+                ) : (
+                  <CommandListItem
+                    {...command}
+                    onViewDetails={handleViewDetails}
+                  />
+                )}
               </div>
             ))}
           </div>
