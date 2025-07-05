@@ -24,16 +24,20 @@ import {
   Upload,
   AlertTriangle,
   CheckCircle,
-  Database
+  Database,
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
 import { UserFormModal } from './user-form-modal';
 import { UserSyncButton } from './user-sync-button';
+import { ManualUserSync } from './manual-user-sync';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/auth/auth-provider';
 
 export const EnhancedUserManagement: React.FC = () => {
   const { users, deleteUser, toggleUserStatus } = useUsers();
+  const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [roleFilter, setRoleFilter] = useState('todos');
@@ -44,6 +48,7 @@ export const EnhancedUserManagement: React.FC = () => {
     authUsers: number;
     profiles: number;
     needsSync: boolean;
+    hasAdminAccess: boolean;
   } | null>(null);
 
   // Verificar status de sincronização ao carregar
@@ -53,19 +58,39 @@ export const EnhancedUserManagement: React.FC = () => {
 
   const checkSyncStatus = async () => {
     try {
-      const { data: authResponse } = await supabase.auth.admin.listUsers();
+      let authCount = 0;
+      let hasAdminAccess = false;
+
+      // Tentar acessar Admin API
+      try {
+        const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (!authError && authResponse) {
+          authCount = authResponse.users?.length || 0;
+          hasAdminAccess = true;
+        }
+      } catch (error) {
+        console.warn('Sem acesso à Admin API:', error);
+      }
+
+      // Buscar perfis existentes
       const { data: profiles } = await supabase.from('profiles').select('id');
-      
-      const authCount = authResponse?.users?.length || 0;
       const profileCount = profiles?.length || 0;
       
       setSyncStatus({
         authUsers: authCount,
         profiles: profileCount,
-        needsSync: authCount > profileCount
+        needsSync: hasAdminAccess && authCount > profileCount,
+        hasAdminAccess
       });
     } catch (error) {
       console.warn('Não foi possível verificar status de sincronização:', error);
+      setSyncStatus({
+        authUsers: 0,
+        profiles: 0,
+        needsSync: false,
+        hasAdminAccess: false
+      });
     }
   };
 
@@ -171,8 +196,11 @@ export const EnhancedUserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Componente de sincronização manual */}
+      <ManualUserSync />
+
       {/* Alerta de sincronização se necessário */}
-      {syncStatus?.needsSync && (
+      {syncStatus?.needsSync && syncStatus.hasAdminAccess && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -190,8 +218,25 @@ export const EnhancedUserManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Aviso sobre limitações de acesso */}
+      {syncStatus && !syncStatus.hasAdminAccess && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-blue-600" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                Acesso Limitado ao Sistema de Autenticação
+              </h4>
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
+                Sem acesso à Admin API. Apenas sincronização manual disponível.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status de sincronização */}
-      {syncStatus && (
+      {syncStatus && syncStatus.hasAdminAccess && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <Database className="h-5 w-5 text-blue-600" />
@@ -282,7 +327,7 @@ export const EnhancedUserManagement: React.FC = () => {
               Gerenciar Usuários ({filteredUsers.length} de {users.length})
             </CardTitle>
             <div className="flex gap-2">
-              <UserSyncButton />
+              {syncStatus?.hasAdminAccess && <UserSyncButton />}
               <Button
                 onClick={handleExportUsers}
                 variant="outline"
@@ -292,14 +337,16 @@ export const EnhancedUserManagement: React.FC = () => {
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
               </Button>
-              <Button 
-                onClick={handleCreateUser}
-                size="sm"
-                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
+              {profile?.role === 'admin' && (
+                <Button 
+                  onClick={handleCreateUser}
+                  size="sm"
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -448,15 +495,17 @@ export const EnhancedUserManagement: React.FC = () => {
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
-                        <Button
-                          onClick={() => handleDeleteUser(user.id, user.name)}
-                          size="sm"
-                          variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50"
-                          title="Excluir usuário"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {profile?.role === 'admin' && (
+                          <Button
+                            onClick={() => handleDeleteUser(user.id, user.name)}
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            title="Excluir usuário"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -482,7 +531,7 @@ export const EnhancedUserManagement: React.FC = () => {
                   : 'Comece criando o primeiro usuário da plataforma'
                 }
               </p>
-              {(!searchTerm && statusFilter === 'todos' && roleFilter === 'todos') && (
+              {(!searchTerm && statusFilter === 'todos' && roleFilter === 'todos' && profile?.role === 'admin') && (
                 <Button 
                   onClick={handleCreateUser}
                   className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"

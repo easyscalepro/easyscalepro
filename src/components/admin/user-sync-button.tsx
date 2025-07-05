@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Database, CheckCircle, AlertTriangle, Users } from 'lucide-react';
+import { RefreshCw, Database, CheckCircle, AlertTriangle, Users, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,20 +16,47 @@ export const UserSyncButton: React.FC = () => {
       console.log('🔄 Iniciando sincronização de usuários...');
       
       // Mostrar progresso
-      toast.loading('Verificando usuários no sistema...', { id: 'sync-users' });
+      toast.loading('Verificando permissões e usuários...', { id: 'sync-users' });
 
-      // 1. Buscar todos os usuários do Supabase Auth
-      const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error('❌ Erro ao buscar usuários do Auth:', authError);
-        throw new Error('Erro ao acessar sistema de autenticação: ' + authError.message);
+      // 1. Primeiro, verificar se temos acesso admin
+      let authUsers = [];
+      let hasAdminAccess = false;
+
+      try {
+        const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (authError) {
+          console.warn('⚠️ Erro ao acessar Auth Admin API:', authError);
+          throw new Error('Sem permissão para acessar sistema de autenticação');
+        }
+
+        authUsers = authResponse.users || [];
+        hasAdminAccess = true;
+        console.log(`📊 Encontrados ${authUsers.length} usuários no Auth`);
+
+      } catch (authError: any) {
+        console.warn('⚠️ Não foi possível acessar Auth Admin API:', authError);
+        
+        // Fallback: tentar buscar usuário atual
+        try {
+          const { data: { user: currentUser }, error: currentUserError } = await supabase.auth.getUser();
+          
+          if (currentUserError || !currentUser) {
+            throw new Error('Usuário não autenticado');
+          }
+
+          // Se não conseguir acessar admin API, pelo menos sincronizar o usuário atual
+          authUsers = [currentUser];
+          console.log('📋 Usando fallback: sincronizando apenas usuário atual');
+          
+        } catch (fallbackError) {
+          throw new Error('Não foi possível acessar sistema de autenticação. Verifique suas permissões.');
+        }
       }
 
-      const authUsers = authResponse.users || [];
-      console.log(`📊 Encontrados ${authUsers.length} usuários no Auth`);
-
       // 2. Buscar usuários existentes na tabela profiles
+      toast.loading('Verificando perfis existentes...', { id: 'sync-users' });
+      
       const { data: existingProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email');
@@ -50,18 +77,21 @@ export const UserSyncButton: React.FC = () => {
       if (usersToSync.length === 0) {
         toast.dismiss('sync-users');
         toast.success('✅ Todos os usuários já estão sincronizados!', {
-          description: `${authUsers.length} usuários verificados`
+          description: hasAdminAccess 
+            ? `${authUsers.length} usuários verificados`
+            : 'Usuário atual já sincronizado'
         });
         return;
       }
 
       // 4. Mostrar progresso da sincronização
-      toast.loading(`Sincronizando ${usersToSync.length} usuários...`, { id: 'sync-users' });
+      toast.loading(`Sincronizando ${usersToSync.length} usuário(s)...`, { id: 'sync-users' });
 
       // 5. Criar perfis para usuários não sincronizados
       const profilesData = usersToSync.map(user => {
         // Determinar role baseado no email
-        const isAdmin = ['admin@easyscale.com', 'julionavyy@gmail.com'].includes(user.email || '');
+        const adminEmails = ['admin@easyscale.com', 'julionavyy@gmail.com'];
+        const isAdmin = adminEmails.includes(user.email || '');
         
         return {
           id: user.id,
@@ -75,8 +105,8 @@ export const UserSyncButton: React.FC = () => {
           phone: user.user_metadata?.phone || null,
           company: user.user_metadata?.company || null,
           commands_used: 0,
-          last_access: user.last_sign_in_at || user.created_at,
-          created_at: user.created_at,
+          last_access: user.last_sign_in_at || user.created_at || new Date().toISOString(),
+          created_at: user.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
       });
@@ -91,6 +121,41 @@ export const UserSyncButton: React.FC = () => {
 
       if (insertError) {
         console.error('❌ Erro ao inserir perfis:', insertError);
+        
+        // Tentar inserir um por vez se falhar em lote
+        if (profilesData.length > 1) {
+          console.log('🔄 Tentando inserção individual...');
+          let successCount = 0;
+          
+          for (const profileData of profilesData) {
+            try {
+              const { error: singleInsertError } = await supabase
+                .from('profiles')
+                .insert(profileData);
+              
+              if (!singleInsertError) {
+                successCount++;
+              } else {
+                console.warn('⚠️ Erro ao inserir perfil individual:', singleInsertError);
+              }
+            } catch (singleError) {
+              console.warn('⚠️ Erro na inserção individual:', singleError);
+            }
+          }
+          
+          if (successCount > 0) {
+            toast.dismiss('sync-users');
+            toast.success(`✅ ${successCount} de ${profilesData.length} usuários sincronizados!`, {
+              description: successCount < profilesData.length ? 'Alguns usuários já existiam ou tiveram erro' : 'Sincronização concluída'
+            });
+            
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+            return;
+          }
+        }
+        
         throw new Error('Erro ao criar perfis: ' + insertError.message);
       }
 
@@ -98,8 +163,10 @@ export const UserSyncButton: React.FC = () => {
 
       // 7. Mostrar resultado
       toast.dismiss('sync-users');
-      toast.success(`✅ ${usersToSync.length} usuários sincronizados com sucesso!`, {
-        description: `Total de usuários: ${authUsers.length}`
+      toast.success(`✅ ${usersToSync.length} usuário(s) sincronizado(s) com sucesso!`, {
+        description: hasAdminAccess 
+          ? `Total de usuários: ${authUsers.length}`
+          : 'Sincronização do usuário atual concluída'
       });
 
       // 8. Recarregar a página para mostrar os novos usuários
@@ -112,13 +179,22 @@ export const UserSyncButton: React.FC = () => {
       
       toast.dismiss('sync-users');
       
-      if (error.message?.includes('JWT')) {
-        toast.error('❌ Erro de autenticação', {
-          description: 'Você não tem permissão para sincronizar usuários'
+      // Tratamento de erros mais específico
+      if (error.message?.includes('permissão') || error.message?.includes('permission')) {
+        toast.error('❌ Erro de permissão', {
+          description: 'Você não tem permissão para sincronizar usuários. Entre em contato com o administrador.'
         });
-      } else if (error.message?.includes('network')) {
+      } else if (error.message?.includes('autenticação') || error.message?.includes('authentication')) {
+        toast.error('❌ Erro de autenticação', {
+          description: 'Faça login novamente e tente sincronizar'
+        });
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
         toast.error('❌ Erro de conexão', {
-          description: 'Verifique sua conexão com a internet'
+          description: 'Verifique sua conexão com a internet e tente novamente'
+        });
+      } else if (error.message?.includes('tabela') || error.message?.includes('profiles')) {
+        toast.error('❌ Erro na base de dados', {
+          description: 'Problema ao acessar a tabela de perfis'
         });
       } else {
         toast.error('❌ Erro na sincronização', {
@@ -127,25 +203,6 @@ export const UserSyncButton: React.FC = () => {
       }
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const checkSyncStatus = async () => {
-    try {
-      // Verificar rapidamente se há usuários para sincronizar
-      const { data: authResponse } = await supabase.auth.admin.listUsers();
-      const { data: profiles } = await supabase.from('profiles').select('id');
-      
-      const authCount = authResponse?.users?.length || 0;
-      const profileCount = profiles?.length || 0;
-      
-      return {
-        authUsers: authCount,
-        profiles: profileCount,
-        needsSync: authCount > profileCount
-      };
-    } catch (error) {
-      return { authUsers: 0, profiles: 0, needsSync: false };
     }
   };
 
