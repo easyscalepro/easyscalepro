@@ -5,6 +5,8 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { SettingsPanel } from '@/components/admin/settings-panel';
+import { PasswordPolicySettings } from '@/components/admin/password-policy-settings';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminSettingsPage() {
   const { user, loading } = useAuth();
@@ -43,7 +45,20 @@ export default function AdminSettingsPage() {
           </p>
         </div>
 
-        <SettingsPanel />
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="general">Configurações Gerais</TabsTrigger>
+            <TabsTrigger value="password">Políticas de Senha</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general">
+            <SettingsPanel />
+          </TabsContent>
+          
+          <TabsContent value="password">
+            <PasswordPolicySettings />
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );

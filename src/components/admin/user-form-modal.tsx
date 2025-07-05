@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
+import { usePasswordPolicy } from '@/hooks/use-password-policy';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserFormModalProps {
@@ -25,6 +26,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   mode
 }) => {
   const { addUser, updateUser } = useUsers();
+  const { 
+    policy, 
+    validatePassword, 
+    getPasswordStrengthText, 
+    getPasswordStrengthColor, 
+    generatePassword 
+  } = usePasswordPolicy();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,7 +47,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordValidation, setPasswordValidation] = useState<{ valid: boolean; errors: string[]; strength: number } | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
@@ -67,65 +76,24 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   }, [mode, user, isOpen]);
 
-  const calculatePasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength += 1;
-    if (/[A-Z]/.test(password)) strength += 1;
-    if (/[a-z]/.test(password)) strength += 1;
-    if (/[0-9]/.test(password)) strength += 1;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
-    return strength;
-  };
-
   const handlePasswordChange = (password: string) => {
     setFormData({...formData, password});
-    setPasswordStrength(calculatePasswordStrength(password));
-  };
-
-  const getPasswordStrengthColor = (strength: number) => {
-    switch (strength) {
-      case 0:
-      case 1:
-        return 'bg-red-500';
-      case 2:
-        return 'bg-orange-500';
-      case 3:
-        return 'bg-yellow-500';
-      case 4:
-        return 'bg-blue-500';
-      case 5:
-        return 'bg-green-500';
-      default:
-        return 'bg-gray-300';
+    
+    if (password) {
+      const validation = validatePassword(password, {
+        name: formData.name,
+        email: formData.email
+      });
+      setPasswordValidation(validation);
+    } else {
+      setPasswordValidation(null);
     }
   };
 
-  const getPasswordStrengthText = (strength: number) => {
-    switch (strength) {
-      case 0:
-      case 1:
-        return 'Muito fraca';
-      case 2:
-        return 'Fraca';
-      case 3:
-        return 'Média';
-      case 4:
-        return 'Forte';
-      case 5:
-        return 'Muito forte';
-      default:
-        return '';
-    }
-  };
-
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    handlePasswordChange(password);
-    setFormData({...formData, password, confirmPassword: password});
+  const handleGeneratePassword = () => {
+    const newPassword = generatePassword();
+    handlePasswordChange(newPassword);
+    setFormData({...formData, password: newPassword, confirmPassword: newPassword});
     toast.success('Senha gerada automaticamente!');
   };
 
@@ -158,7 +126,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validações
+    // Validações básicas
     if (!formData.name.trim()) {
       toast.error('O nome é obrigatório');
       setIsSubmitting(false);
@@ -185,8 +153,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         return;
       }
 
-      if (formData.password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres');
+      const validation = validatePassword(formData.password, {
+        name: formData.name,
+        email: formData.email
+      });
+
+      if (!validation.valid) {
+        toast.error('A senha não atende aos critérios de segurança');
         setIsSubmitting(false);
         return;
       }
@@ -200,8 +173,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
     // Validação de senha para edição (se fornecida)
     if (mode === 'edit' && formData.password) {
-      if (formData.password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres');
+      const validation = validatePassword(formData.password, {
+        name: formData.name,
+        email: formData.email
+      });
+
+      if (!validation.valid) {
+        toast.error('A senha não atende aos critérios de segurança');
         setIsSubmitting(false);
         return;
       }
@@ -304,7 +282,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               placeholder="joao@empresa.com"
               required
-              disabled={mode === 'edit'} // Email não pode ser alterado
+              disabled={mode === 'edit'}
             />
           </div>
 
@@ -364,13 +342,32 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             />
           </div>
 
-          {/* Seção de Senha */}
+          {/* Seção de Senha com Políticas Personalizadas */}
           <div className="border-t pt-4 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Key className="h-4 w-4 text-[#2563EB]" />
               <Label className="text-sm font-semibold">
                 {mode === 'create' ? 'Definir Senha *' : 'Alterar Senha (opcional)'}
               </Label>
+            </div>
+
+            {/* Política de senha ativa */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Política de Senha Ativa
+                </span>
+              </div>
+              <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                <div>• Mínimo de {policy.min_length} caracteres</div>
+                {policy.require_uppercase && <div>• Pelo menos {policy.min_uppercase} letra(s) maiúscula(s)</div>}
+                {policy.require_lowercase && <div>• Pelo menos {policy.min_lowercase} letra(s) minúscula(s)</div>}
+                {policy.require_numbers && <div>• Pelo menos {policy.min_numbers} número(s)</div>}
+                {policy.require_special_chars && <div>• Pelo menos {policy.min_special_chars} caractere(s) especial(is)</div>}
+                {policy.disallow_common_passwords && <div>• Não pode ser uma senha comum</div>}
+                {policy.disallow_personal_info && <div>• Não pode conter informações pessoais</div>}
+              </div>
             </div>
 
             {mode === 'edit' && (
@@ -407,7 +404,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </Label>
                 <Button
                   type="button"
-                  onClick={generateRandomPassword}
+                  onClick={handleGeneratePassword}
                   size="sm"
                   variant="ghost"
                   className="text-xs text-blue-600 hover:text-blue-700"
@@ -434,46 +431,41 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </button>
               </div>
               
-              {/* Indicador de força da senha */}
-              {formData.password && (
-                <div className="space-y-1">
+              {/* Validação da senha baseada na política */}
+              {passwordValidation && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
                       <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor(passwordStrength)}`}
-                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor(passwordValidation.strength)}`}
+                        style={{ width: `${(passwordValidation.strength / 5) * 100}%` }}
                       ></div>
                     </div>
                     <span className="text-xs text-gray-600">
-                      {getPasswordStrengthText(passwordStrength)}
+                      {getPasswordStrengthText(passwordValidation.strength)}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <div className="flex items-center gap-1">
-                      {formData.password.length >= 8 ? (
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <AlertCircle className="h-3 w-3 text-gray-400" />
-                      )}
-                      <span>Pelo menos 8 caracteres</span>
+                  
+                  {!passwordValidation.valid && (
+                    <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
+                      <div className="flex items-center gap-1 mb-1">
+                        <AlertCircle className="h-3 w-3 text-red-500" />
+                        <span className="text-xs font-medium text-red-700 dark:text-red-300">Critérios não atendidos:</span>
+                      </div>
+                      <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                        {passwordValidation.errors.map((error, index) => (
+                          <li key={index}>• {error}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {/[A-Z]/.test(formData.password) ? (
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <AlertCircle className="h-3 w-3 text-gray-400" />
-                      )}
-                      <span>Letra maiúscula</span>
+                  )}
+                  
+                  {passwordValidation.valid && (
+                    <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Senha atende a todos os critérios</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {/[0-9]/.test(formData.password) ? (
-                        <CheckCircle className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <AlertCircle className="h-3 w-3 text-gray-400" />
-                      )}
-                      <span>Número</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
