@@ -28,19 +28,47 @@ export const DashboardHeader: React.FC = () => {
   const pathname = usePathname();
 
   const handleLogout = async () => {
+    console.log('Iniciando logout do DashboardHeader...');
+    
     try {
+      // Mostrar loading
+      toast.loading('Fazendo logout...', { id: 'logout' });
+      
+      // Fazer logout
       await signOut();
+      
+      // Limpar toast de loading
+      toast.dismiss('logout');
+      
+      // Redirecionar para login
       router.push('/login');
-    } catch (error) {
+      
+      // Mostrar sucesso
+      toast.success('Logout realizado com sucesso!');
+      
+    } catch (error: any) {
       console.error('Erro no logout:', error);
+      
+      // Limpar toast de loading
+      toast.dismiss('logout');
+      
+      // Mostrar erro
       toast.error('Erro ao fazer logout');
+      
+      // Fallback: forçar redirecionamento
+      setTimeout(() => {
+        try {
+          router.push('/login');
+        } catch (redirectError) {
+          window.location.href = '/login';
+        }
+      }, 1000);
     }
   };
 
   const handleNavigation = (path: string, label: string) => {
     try {
       router.push(path);
-      toast.success(`Navegando para ${label}`);
     } catch (error) {
       console.error('Erro na navegação:', error);
       toast.error(`Erro ao navegar para ${label}`);
@@ -67,7 +95,7 @@ export const DashboardHeader: React.FC = () => {
       label: 'Perfil', 
       path: '/profile',
       color: 'from-purple-500 to-violet-600',
-      description: '  conta'
+      description: 'Sua conta'
     },
   ];
 
@@ -185,7 +213,7 @@ export const DashboardHeader: React.FC = () => {
             <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
               <div className="relative">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <User className="h-4 w-4 text-white" />
+                  <User className="h-4 w-4  text-white" />
                 </div>
                 
                 {/* Status indicator */}

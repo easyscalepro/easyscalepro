@@ -154,11 +154,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
           await loadUserProfile(session.user);
-          toast.success('Login realizado com sucesso!');
         } else if (event === 'SIGNED_OUT') {
+          console.log('Usuário deslogado, limpando estado...');
           setUser(null);
           setProfile(null);
-          toast.success('Logout realizado com sucesso!');
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
           // Não recarregar perfil no refresh do token
@@ -201,16 +200,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      setLoading(true);
-      console.log('Fazendo logout...');
+      console.log('Iniciando processo de logout no AuthProvider...');
       
+      // Limpar estado imediatamente para melhor UX
+      setUser(null);
+      setProfile(null);
+      
+      // Tentar fazer logout no Supabase
       await authSignOut();
-      // O onAuthStateChange vai lidar com o resto
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      
+      console.log('Logout concluído com sucesso');
+      
+    } catch (error: any) {
+      console.error('Erro no logout do AuthProvider:', error);
+      
+      // Mesmo com erro, garantir que o estado seja limpo
+      setUser(null);
+      setProfile(null);
+      
+      // Não lançar erro para não bloquear o logout
+      console.log('Estado limpo mesmo com erro no logout');
     }
   };
 

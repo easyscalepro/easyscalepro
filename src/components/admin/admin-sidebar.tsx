@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 export const AdminSidebar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -35,7 +35,6 @@ export const AdminSidebar: React.FC = () => {
     console.log('Navegando para:', path);
     try {
       router.push(path);
-      toast.success(`Navegando para ${path}`);
     } catch (error) {
       console.error('Erro na navegação:', error);
       toast.error('Erro ao navegar');
@@ -46,7 +45,6 @@ export const AdminSidebar: React.FC = () => {
     console.log('Criando novo comando');
     try {
       router.push('/admin/commands/new');
-      toast.success('Abrindo formulário de novo comando');
     } catch (error) {
       console.error('Erro ao criar comando:', error);
       toast.error('Erro ao abrir formulário');
@@ -54,14 +52,47 @@ export const AdminSidebar: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    console.log('Fazendo logout');
+    console.log('Iniciando processo de logout...');
+    
     try {
-      logout();
-      toast.success('Logout realizado com sucesso!');
+      // Mostrar loading
+      toast.loading('Fazendo logout...', { id: 'logout' });
+      
+      // Fazer logout
+      await signOut();
+      
+      // Limpar toast de loading
+      toast.dismiss('logout');
+      
+      // Redirecionar para login
       router.push('/login');
-    } catch (error) {
+      
+      // Mostrar sucesso
+      toast.success('Logout realizado com sucesso!');
+      
+    } catch (error: any) {
       console.error('Erro no logout:', error);
-      toast.error('Erro ao fazer logout');
+      
+      // Limpar toast de loading
+      toast.dismiss('logout');
+      
+      // Mostrar erro específico
+      if (error.message) {
+        toast.error(`Erro ao fazer logout: ${error.message}`);
+      } else {
+        toast.error('Erro ao fazer logout. Tente novamente.');
+      }
+      
+      // Fallback: forçar redirecionamento mesmo com erro
+      setTimeout(() => {
+        try {
+          router.push('/login');
+        } catch (redirectError) {
+          console.error('Erro no redirecionamento:', redirectError);
+          // Último recurso: recarregar a página
+          window.location.href = '/login';
+        }
+      }, 2000);
     }
   };
 

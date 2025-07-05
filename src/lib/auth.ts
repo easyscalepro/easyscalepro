@@ -73,12 +73,47 @@ export const signUp = async (email: string, password: string, name?: string) => 
 
 export const signOut = async () => {
   try {
+    console.log('Executando signOut...')
+    
+    // Tentar fazer logout no Supabase
     const { error } = await supabase.auth.signOut()
+    
     if (error) {
-      throw error
+      console.error('Erro no Supabase signOut:', error)
+      // Não lançar erro aqui, continuar com limpeza local
     }
+    
+    // Limpar localStorage como fallback
+    try {
+      localStorage.removeItem('supabase.auth.token')
+      localStorage.removeItem('sb-wlynpcuqlqynsutkpvmq-auth-token')
+      console.log('LocalStorage limpo')
+    } catch (storageError) {
+      console.warn('Erro ao limpar localStorage:', storageError)
+    }
+    
+    // Limpar sessionStorage como fallback
+    try {
+      sessionStorage.clear()
+      console.log('SessionStorage limpo')
+    } catch (sessionError) {
+      console.warn('Erro ao limpar sessionStorage:', sessionError)
+    }
+    
+    console.log('SignOut concluído com sucesso')
+    
   } catch (error) {
     console.error('Erro no signOut:', error)
-    throw error
+    
+    // Mesmo com erro, tentar limpar dados locais
+    try {
+      localStorage.clear()
+      sessionStorage.clear()
+    } catch (clearError) {
+      console.warn('Erro ao limpar storage:', clearError)
+    }
+    
+    // Não lançar erro para não bloquear o logout
+    console.log('Logout forçado devido a erro')
   }
 }
