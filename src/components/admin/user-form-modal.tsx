@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Save, X } from 'lucide-react';
+import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -30,9 +31,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     status: 'ativo' as 'ativo' | 'inativo' | 'suspenso',
     role: 'user' as 'admin' | 'user' | 'moderator',
     phone: '',
-    company: ''
+    company: '',
+    password: '',
+    confirmPassword: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit' && user) {
@@ -42,7 +49,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         status: user.status,
         role: user.role,
         phone: user.phone || '',
-        company: user.company || ''
+        company: user.company || '',
+        password: '',
+        confirmPassword: ''
       });
     } else {
       setFormData({
@@ -51,10 +60,99 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         status: 'ativo',
         role: 'user',
         phone: '',
-        company: ''
+        company: '',
+        password: '',
+        confirmPassword: ''
       });
     }
   }, [mode, user, isOpen]);
+
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/[a-z]/.test(password)) strength += 1;
+    if (/[0-9]/.test(password)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+    return strength;
+  };
+
+  const handlePasswordChange = (password: string) => {
+    setFormData({...formData, password});
+    setPasswordStrength(calculatePasswordStrength(password));
+  };
+
+  const getPasswordStrengthColor = (strength: number) => {
+    switch (strength) {
+      case 0:
+      case 1:
+        return 'bg-red-500';
+      case 2:
+        return 'bg-orange-500';
+      case 3:
+        return 'bg-yellow-500';
+      case 4:
+        return 'bg-blue-500';
+      case 5:
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
+  const getPasswordStrengthText = (strength: number) => {
+    switch (strength) {
+      case 0:
+      case 1:
+        return 'Muito fraca';
+      case 2:
+        return 'Fraca';
+      case 3:
+        return 'Média';
+      case 4:
+        return 'Forte';
+      case 5:
+        return 'Muito forte';
+      default:
+        return '';
+    }
+  };
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    handlePasswordChange(password);
+    setFormData({...formData, password, confirmPassword: password});
+    toast.success('Senha gerada automaticamente!');
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      toast.error('Email do usuário não encontrado');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Email de redefinição enviado para ${user.email}`);
+    } catch (error: any) {
+      console.error('Erro ao enviar email de redefinição:', error);
+      toast.error('Erro ao enviar email de redefinição: ' + error.message);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,17 +177,97 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       return;
     }
 
+    // Validação de senha para novos usuários
+    if (mode === 'create') {
+      if (!formData.password) {
+        toast.error('A senha é obrigatória para novos usuários');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (formData.password.length < 6) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('As senhas não coincidem');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Validação de senha para edição (se fornecida)
+    if (mode === 'edit' && formData.password) {
+      if (formData.password.length < 6) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('As senhas não coincidem');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       if (mode === 'create') {
-        addUser(formData);
+        // Criar usuário no Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email,
+          password: formData.password,
+          user_metadata: {
+            name: formData.name,
+            company: formData.company,
+            phone: formData.phone
+          }
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        // Adicionar ao contexto local
+        addUser({
+          name: formData.name,
+          email: formData.email,
+          status: formData.status,
+          role: formData.role,
+          phone: formData.phone,
+          company: formData.company
+        });
       } else if (mode === 'edit' && user) {
-        updateUser(user.id, formData);
+        // Atualizar usuário
+        if (formData.password) {
+          // Se uma nova senha foi fornecida, atualizar no Supabase
+          const { error: passwordError } = await supabase.auth.admin.updateUserById(
+            user.id,
+            { password: formData.password }
+          );
+
+          if (passwordError) {
+            console.warn('Erro ao atualizar senha no Supabase:', passwordError);
+            // Continuar mesmo se falhar, pois pode ser um usuário local
+          }
+        }
+
+        updateUser(user.id, {
+          name: formData.name,
+          email: formData.email,
+          status: formData.status,
+          role: formData.role,
+          phone: formData.phone,
+          company: formData.company
+        });
       }
       
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar usuário:', error);
-      toast.error('Erro ao salvar usuário');
+      toast.error('Erro ao salvar usuário: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -97,7 +275,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-[#2563EB]" />
@@ -126,6 +304,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               placeholder="joao@empresa.com"
               required
+              disabled={mode === 'edit'} // Email não pode ser alterado
             />
           </div>
 
@@ -183,6 +362,161 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               onChange={(e) => setFormData({...formData, phone: e.target.value})}
               placeholder="(11) 99999-9999"
             />
+          </div>
+
+          {/* Seção de Senha */}
+          <div className="border-t pt-4 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Key className="h-4 w-4 text-[#2563EB]" />
+              <Label className="text-sm font-semibold">
+                {mode === 'create' ? 'Definir Senha *' : 'Alterar Senha (opcional)'}
+              </Label>
+            </div>
+
+            {mode === 'edit' && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-blue-700 dark:text-blue-300">
+                      Enviar email de redefinição
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={isResettingPassword}
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                  >
+                    {isResettingPassword ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">
+                  {mode === 'create' ? 'Senha *' : 'Nova Senha'}
+                </Label>
+                <Button
+                  type="button"
+                  onClick={generateRandomPassword}
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Gerar
+                </Button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  placeholder="••••••••"
+                  required={mode === 'create'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              
+              {/* Indicador de força da senha */}
+              {formData.password && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor(passwordStrength)}`}
+                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-600">
+                      {getPasswordStrengthText(passwordStrength)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center gap-1">
+                      {formData.password.length >= 8 ? (
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-gray-400" />
+                      )}
+                      <span>Pelo menos 8 caracteres</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {/[A-Z]/.test(formData.password) ? (
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-gray-400" />
+                      )}
+                      <span>Letra maiúscula</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {/[0-9]/.test(formData.password) ? (
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-3 w-3 text-gray-400" />
+                      )}
+                      <span>Número</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">
+                {mode === 'create' ? 'Confirmar Senha *' : 'Confirmar Nova Senha'}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                  placeholder="••••••••"
+                  required={mode === 'create' || !!formData.password}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              
+              {/* Indicador de confirmação */}
+              {formData.confirmPassword && (
+                <div className="flex items-center gap-1 text-xs">
+                  {formData.password === formData.confirmPassword ? (
+                    <>
+                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <span className="text-green-600">Senhas coincidem</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-3 w-3 text-red-500" />
+                      <span className="text-red-600">Senhas não coincidem</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
