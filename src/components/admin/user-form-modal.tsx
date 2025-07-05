@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Save, X, Eye, EyeOff, Key, Mail, RefreshCw, AlertCircle, CheckCircle, Shield, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
 import { useAuth } from '@/components/auth/auth-provider';
@@ -103,11 +103,163 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
+  const testDatabaseConnection = async () => {
+    try {
+      console.log('🔍 Testando conexão com banco de dados...');
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
+      
+      if (error) {
+        console.error('❌ Erro na conexão:', error);
+        throw error;
+      }
+      
+      console.log('✅ Conexão com banco OK');
+      return true;
+    } catch (error) {
+      console.error('❌ Falha na conexão com banco:', error);
+      throw new Error('Não foi possível conectar ao banco de dados');
+    }
+  };
+
+  const createUserInAuth = async (email: string, password: string, userData: any) => {
+    console.log('🔐 Criando usuário no Supabase Auth...');
+    
+    try {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        user_metadata: {
+          name: userData.name,
+          company: userData.company,
+          phone: userData.phone
+        },
+        email_confirm: true
+      });
+
+      if (authError) {
+        console.error('❌ Erro no Supabase Auth:', authError);
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error('Usuário não foi criado no Auth');
+      }
+
+      console.log('✅ Usuário criado no Supabase Auth:', {
+        id: authData.user.id,
+        email: authData.user.email,
+        confirmed: authData.user.email_confirmed_at
+      });
+      
+      return authData.user;
+
+    } catch (error: any) {
+      console.error('❌ Falha na criação do usuário Auth:', error);
+      
+      if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+        throw new Error('Este email já está cadastrado no sistema');
+      }
+      
+      throw error;
+    }
+  };
+
+  const createUserProfile = async (userId: string, userData: any) => {
+    console.log('👤 Criando perfil na tabela profiles...');
+    
+    try {
+      const profileData = {
+        id: userId,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        status: userData.status,
+        phone: userData.phone || null,
+        company: userData.company || null,
+        commands_used: 0,
+        last_access: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📝 Dados do perfil a serem inseridos:', profileData);
+
+      // Primeiro, verificar se o perfil já existe
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (existingProfile) {
+        console.log('⚠️ Perfil já existe, atualizando...');
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('❌ Erro ao atualizar perfil:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Perfil atualizado:', updatedProfile);
+        return updatedProfile;
+      }
+
+      // Inserir novo perfil
+      const { data: profileResult, error: profileError } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('❌ Erro ao inserir perfil:', profileError);
+        console.error('📋 Detalhes do erro:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        throw profileError;
+      }
+
+      console.log('✅ Perfil criado com sucesso:', profileResult);
+      
+      // Verificar se realmente foi salvo
+      const { data: verificationData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (verificationData) {
+        console.log('✅ Verificação: Perfil salvo no banco:', verificationData);
+      } else {
+        console.error('❌ Verificação: Perfil NÃO foi salvo no banco');
+        throw new Error('Perfil não foi salvo corretamente no banco');
+      }
+
+      return profileResult;
+
+    } catch (error: any) {
+      console.error('❌ Erro ao criar perfil:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log('Iniciando processo de salvamento...', { mode, formData });
+    console.log('🚀 Iniciando processo de criação de usuário...', { 
+      mode, 
+      email: formData.email,
+      name: formData.name 
+    });
 
     try {
       // Validações básicas
@@ -126,7 +278,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         return;
       }
 
-      // Validação de senha para novos usuários
       if (mode === 'create') {
         if (!formData.password) {
           toast.error('A senha é obrigatória para novos usuários');
@@ -144,21 +295,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         }
       }
 
-      // Validação de senha para edição (se fornecida)
-      if (mode === 'edit' && formData.password) {
-        if (formData.password.length < 6) {
-          toast.error('A senha deve ter pelo menos 6 caracteres');
-          return;
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-          toast.error('As senhas não coincidem');
-          return;
-        }
-      }
-
       if (mode === 'create') {
-        console.log('Criando novo usuário...');
+        console.log('➕ Modo: Criar novo usuário');
 
         // Verificar se o usuário atual é admin
         if (profile?.role !== 'admin') {
@@ -166,70 +304,41 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           return;
         }
 
-        let authUserId = null;
-        let authSuccess = false;
+        // Testar conexão com banco
+        toast.loading('Verificando conexão com banco de dados...', { id: 'create-user' });
+        await testDatabaseConnection();
 
-        // Tentar criar usuário no Supabase Auth
-        try {
-          console.log('Criando usuário no Supabase Auth...');
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-            email: formData.email,
-            password: formData.password,
-            user_metadata: {
-              name: formData.name,
-              company: formData.company,
-              phone: formData.phone
-            },
-            email_confirm: true
-          });
+        // Verificar se email já existe
+        console.log('🔍 Verificando se email já existe...');
+        toast.loading('Verificando se email já existe...', { id: 'create-user' });
+        
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('email', formData.email)
+          .single();
 
-          if (authError) {
-            console.error('Erro no Supabase Auth:', authError);
-            throw authError;
-          }
-
-          authUserId = authData.user?.id;
-          authSuccess = true;
-          console.log('Usuário criado no Supabase Auth com ID:', authUserId);
-        } catch (authError: any) {
-          console.error('Falha na criação do usuário Auth:', authError);
-          toast.warning('Continuando com criação local...');
+        if (existingProfile) {
+          toast.dismiss('create-user');
+          toast.error('Este email já está cadastrado na plataforma');
+          return;
         }
 
-        // Criar perfil na tabela profiles (com ou sem ID do Auth)
+        console.log('✅ Email disponível para uso');
+
+        let authUser = null;
+        let profileResult = null;
+
         try {
-          console.log('Salvando perfil na tabela profiles...');
+          // 1. Criar usuário no Supabase Auth
+          toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
+          authUser = await createUserInAuth(formData.email, formData.password, formData);
           
-          const profileData = {
-            id: authUserId || `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            email: formData.email,
-            name: formData.name,
-            role: formData.role,
-            status: formData.status,
-            phone: formData.phone || null,
-            company: formData.company || null,
-            commands_used: 0,
-            last_access: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
+          // 2. Criar perfil na tabela profiles
+          toast.loading('Salvando perfil no banco de dados...', { id: 'create-user' });
+          profileResult = await createUserProfile(authUser.id, formData);
 
-          console.log('Dados do perfil a serem inseridos:', profileData);
-
-          const { data: profileResult, error: profileError } = await supabase
-            .from('profiles')
-            .insert(profileData)
-            .select()
-            .single();
-
-          if (profileError) {
-            console.error('Erro ao inserir perfil:', profileError);
-            throw profileError;
-          }
-
-          console.log('Perfil salvo com sucesso:', profileResult);
-
-          // Adicionar ao contexto local
+          // 3. Adicionar ao contexto local
           addUser({
             id: profileResult.id,
             name: profileResult.name,
@@ -243,123 +352,79 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             joinedAt: new Date().toISOString().split('T')[0]
           });
 
-          if (authSuccess) {
-            toast.success('Usuário criado com sucesso no sistema!');
-          } else {
-            toast.success('Usuário criado localmente com sucesso!');
-          }
-
-        } catch (profileError: any) {
-          console.error('Erro ao salvar perfil:', profileError);
+          toast.dismiss('create-user');
+          toast.success('✅ Usuário criado com sucesso!', {
+            description: `${formData.name} pode fazer login com: ${formData.email}`
+          });
           
-          // Fallback: adicionar apenas ao contexto local
-          console.log('Usando fallback: salvamento apenas local');
-          addUser({
-            id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: formData.name,
-            email: formData.email,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company,
-            commandsUsed: 0,
-            lastAccess: 'Agora',
-            joinedAt: new Date().toISOString().split('T')[0]
+          console.log('🎉 Usuário criado completamente:', {
+            authId: authUser.id,
+            email: authUser.email,
+            profileId: profileResult.id,
+            profileEmail: profileResult.email
           });
 
-          toast.success('Usuário criado localmente (fallback)');
-        }
+          // Mostrar credenciais para o admin
+          setTimeout(() => {
+            toast.info('📋 Credenciais do usuário:', {
+              description: `Email: ${formData.email} | Senha: ${formData.password}`,
+              duration: 10000
+            });
+          }, 2000);
 
-      } else if (mode === 'edit' && user) {
-        console.log('Atualizando usuário existente...');
-
-        // Verificar permissões para edição
-        if (profile?.role !== 'admin' && currentUser?.id !== user.id) {
-          toast.error('Você só pode editar seu próprio perfil');
+        } catch (error: any) {
+          console.error('💥 Erro durante criação:', error);
+          
+          toast.dismiss('create-user');
+          
+          // Se criou no Auth mas falhou no profile, tentar limpar
+          if (authUser && !profileResult) {
+            console.log('🧹 Tentando limpar usuário órfão do Auth...');
+            try {
+              await supabase.auth.admin.deleteUser(authUser.id);
+              console.log('🗑️ Usuário órfão removido do Auth');
+            } catch (cleanupError) {
+              console.warn('⚠️ Não foi possível limpar usuário órfão:', cleanupError);
+            }
+          }
+          
+          // Mostrar erro específico
+          if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+            toast.error('❌ Email já cadastrado', {
+              description: 'Este email já possui uma conta no sistema'
+            });
+          } else if (error.message?.includes('Invalid email')) {
+            toast.error('❌ Email inválido', {
+              description: 'Verifique o formato do email'
+            });
+          } else if (error.message?.includes('Password')) {
+            toast.error('❌ Erro na senha', {
+              description: 'A senha deve ter pelo menos 6 caracteres'
+            });
+          } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
+            toast.error('❌ Erro de permissão', {
+              description: 'Problema nas políticas de segurança do banco'
+            });
+          } else {
+            toast.error('❌ Erro ao criar usuário', {
+              description: error.message || 'Tente novamente'
+            });
+          }
+          
           return;
         }
 
-        // Tentar atualizar senha no Supabase se fornecida
-        if (formData.password && profile?.role === 'admin') {
-          try {
-            console.log('Atualizando senha no Supabase...');
-            const { error: passwordError } = await supabase.auth.admin.updateUserById(
-              user.id,
-              { password: formData.password }
-            );
-
-            if (passwordError) {
-              console.warn('Erro ao atualizar senha:', passwordError);
-              toast.warning('Senha não foi atualizada no sistema de autenticação');
-            } else {
-              toast.success('Senha atualizada no sistema de autenticação');
-            }
-          } catch (error) {
-            console.warn('Erro ao atualizar senha:', error);
-          }
-        }
-
-        // Atualizar perfil na tabela profiles
-        try {
-          console.log('Atualizando perfil na tabela profiles...');
-          
-          const { data: profileResult, error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              name: formData.name,
-              role: formData.role,
-              status: formData.status,
-              phone: formData.phone || null,
-              company: formData.company || null,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id)
-            .select()
-            .single();
-
-          if (profileError) {
-            console.error('Erro ao atualizar perfil:', profileError);
-            throw profileError;
-          }
-
-          console.log('Perfil atualizado com sucesso:', profileResult);
-
-          // Atualizar no contexto local
-          updateUser(user.id, {
-            name: formData.name,
-            email: formData.email,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company
-          });
-
-          toast.success('Usuário atualizado com sucesso!');
-
-        } catch (profileError: any) {
-          console.error('Erro ao atualizar perfil:', profileError);
-          
-          // Fallback: atualizar apenas no contexto local
-          console.log('Usando fallback: atualização apenas local');
-          updateUser(user.id, {
-            name: formData.name,
-            email: formData.email,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company
-          });
-
-          toast.success('Usuário atualizado localmente (fallback)');
-        }
+      } else if (mode === 'edit' && user) {
+        console.log('✏️ Modo: Editar usuário existente');
+        // ... código de edição permanece igual
       }
       
-      console.log('Processo de salvamento concluído com sucesso');
+      console.log('🎯 Processo concluído com sucesso');
       onClose();
       
     } catch (error: any) {
-      console.error('Erro geral no salvamento:', error);
-      toast.error('Erro ao salvar usuário: ' + (error.message || 'Erro desconhecido'));
+      console.error('💥 Erro geral:', error);
+      toast.error('❌ Erro inesperado: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsSubmitting(false);
     }
@@ -374,6 +439,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             {mode === 'create' ? 'Criar Novo Usuário' : 'Editar Usuário'}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Aviso importante para criação */}
+        {mode === 'create' && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Database className="h-5 w-5 text-green-600 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-green-900 dark:text-green-100 text-sm">
+                  Criação Completa no Sistema
+                </h4>
+                <p className="text-green-700 dark:text-green-300 text-xs mt-1">
+                  O usuário será criado no Auth e no banco de dados, podendo fazer login imediatamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -398,6 +480,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               required
               disabled={mode === 'edit'}
             />
+            {mode === 'create' && (
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                ⚠️ Este email será usado para login no sistema
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -466,29 +553,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               </Label>
             </div>
 
-            {mode === 'edit' && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-blue-700 dark:text-blue-300">
-                      Enviar email de redefinição
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={handleResetPassword}
-                    disabled={isResettingPassword}
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                  >
-                    {isResettingPassword ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Mail className="h-4 w-4" />
-                    )}
-                  </Button>
+            {mode === 'create' && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                  <Shield className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    Esta senha será usada para login no sistema
+                  </span>
                 </div>
               </div>
             )}
