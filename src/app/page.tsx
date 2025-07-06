@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/auth-provider';
-import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -12,16 +11,13 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // Se o usuário está logado, redirecionar para dashboard
         router.push('/dashboard');
       } else {
-        // Se não está logado, redirecionar para login
         router.push('/login');
       }
     }
   }, [user, loading, router]);
 
-  // Mostrar loading enquanto verifica autenticação
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
       <div className="text-center space-y-4">
