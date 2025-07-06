@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { checkSession, withAuth, withOptionalAuth } from '@/lib/supabase-utils';
 
 export interface User {
   id: string;
@@ -45,95 +46,64 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Verificar se há sessão válida
-  const checkSession = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Erro ao verificar sessão:', error);
-        return null;
-      }
-      
-      return session;
-    } catch (error) {
-      console.error('Erro inesperado ao verificar sessão:', error);
-      return null;
-    }
-  };
-
   // Carregar usuários do Supabase
   const loadUsers = async () => {
     try {
       console.log('🔄 Carregando usuários do Supabase...');
       setError(null);
       
-      // Verificar se há sessão válida antes de tentar acessar dados
-      const session = await checkSession();
-      
-      if (!session) {
-        console.log('⚠️ Nenhuma sessão ativa - não é possível carregar usuários');
-        setError('Sessão de autenticação ausente. Faça login para acessar os dados.');
-        setUsers([]);
-        return;
-      }
-
-      console.log('✅ Sessão válida encontrada para:', session.user.email);
-
-      // Tentar carregar perfis
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) {
-        console.error('❌ Erro ao carregar perfis:', profilesError);
-        
-        // Se for erro de permissão, tentar carregar apenas o perfil do usuário atual
-        if (profilesError.code === 'PGRST301' || profilesError.message?.includes('permission')) {
-          console.log('🔄 Tentando carregar apenas perfil do usuário atual...');
-          
-          const { data: userProfile, error: userProfileError } = await supabase
+      // Usar withOptionalAuth para tentar carregar todos os usuários, com fallback para usuário atual
+      const profiles = await withOptionalAuth(
+        async () => {
+          const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
-            .single();
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          return data || [];
+        },
+        [] // fallback vazio
+      );
 
-          if (userProfileError) {
-            console.error('❌ Erro ao carregar perfil do usuário:', userProfileError);
-            setError('Sem permissão para acessar dados de usuários');
-            setUsers([]);
-            return;
-          }
+      // Se não conseguiu carregar todos os usuários, tentar carregar apenas o usuário atual
+      if (profiles.length === 0) {
+        console.log('🔄 Tentando carregar apenas perfil do usuário atual...');
+        
+        const session = await checkSession();
+        if (session) {
+          try {
+            const { data: userProfile, error: userProfileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
 
-          if (userProfile) {
-            console.log('✅ Perfil do usuário carregado:', userProfile.email);
-            const formattedUser = formatUser(userProfile);
-            setUsers([formattedUser]);
-            return;
+            if (userProfile && !userProfileError) {
+              console.log('✅ Perfil do usuário carregado:', userProfile.email);
+              const formattedUser = formatUser(userProfile);
+              setUsers([formattedUser]);
+              return;
+            }
+          } catch (userError) {
+            console.warn('Não foi possível carregar perfil do usuário:', userError);
           }
         }
         
-        setError(`Erro ao carregar usuários: ${profilesError.message}`);
+        setError('Sem permissão para acessar dados de usuários');
         setUsers([]);
         return;
       }
 
-      console.log('✅ Perfis carregados:', profiles?.length || 0);
+      console.log('✅ Perfis carregados:', profiles.length);
 
       // Converter dados do Supabase para formato do contexto
-      const formattedUsers: User[] = (profiles || []).map(formatUser);
+      const formattedUsers: User[] = profiles.map(formatUser);
       setUsers(formattedUsers);
 
     } catch (error: any) {
       console.error('💥 Erro inesperado ao carregar usuários:', error);
-      
-      // Verificar se é erro de sessão ausente
-      if (error.message?.includes('Auth session missing') || error.message?.includes('AuthSessionMissingError')) {
-        setError('Sessão de autenticação expirou. Faça login novamente.');
-      } else {
-        setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
-      }
+      setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -199,12 +169,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('➕ Adicionando usuário ao contexto:', userData.email);
       
-      // Verificar sessão antes de recarregar
-      const session = await checkSession();
-      if (!session) {
-        throw new Error('Sessão de autenticação ausente');
-      }
-      
       // Recarregar a lista de usuários
       await loadUsers();
       
@@ -219,34 +183,32 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('✏️ Atualizando usuário:', id, updates);
       
-      // Verificar sessão antes de atualizar
-      const session = await checkSession();
-      if (!session) {
-        throw new Error('Sessão de autenticação ausente');
-      }
-      
-      // Preparar dados para o Supabase
-      const supabaseUpdates: any = {
-        updated_at: new Date().toISOString()
-      };
+      await withAuth(async () => {
+        // Preparar dados para o Supabase
+        const supabaseUpdates: any = {
+          updated_at: new Date().toISOString()
+        };
 
-      if (updates.name !== undefined) supabaseUpdates.name = updates.name;
-      if (updates.status !== undefined) supabaseUpdates.status = updates.status;
-      if (updates.role !== undefined) supabaseUpdates.role = updates.role;
-      if (updates.phone !== undefined) supabaseUpdates.phone = updates.phone;
-      if (updates.company !== undefined) supabaseUpdates.company = updates.company;
-      if (updates.avatar !== undefined) supabaseUpdates.avatar_url = updates.avatar;
-      if (updates.commandsUsed !== undefined) supabaseUpdates.commands_used = updates.commandsUsed;
+        if (updates.name !== undefined) supabaseUpdates.name = updates.name;
+        if (updates.status !== undefined) supabaseUpdates.status = updates.status;
+        if (updates.role !== undefined) supabaseUpdates.role = updates.role;
+        if (updates.phone !== undefined) supabaseUpdates.phone = updates.phone;
+        if (updates.company !== undefined) supabaseUpdates.company = updates.company;
+        if (updates.avatar !== undefined) supabaseUpdates.avatar_url = updates.avatar;
+        if (updates.commandsUsed !== undefined) supabaseUpdates.commands_used = updates.commandsUsed;
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(supabaseUpdates)
-        .eq('id', id);
+        const { error } = await supabase
+          .from('profiles')
+          .update(supabaseUpdates)
+          .eq('id', id);
 
-      if (error) {
-        console.error('❌ Erro ao atualizar no Supabase:', error);
-        throw error;
-      }
+        if (error) {
+          console.error('❌ Erro ao atualizar no Supabase:', error);
+          throw error;
+        }
+
+        return true;
+      });
 
       // Atualizar estado local
       setUsers(prevUsers => 
@@ -267,34 +229,32 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('🗑️ Deletando usuário:', id);
       
-      // Verificar sessão antes de deletar
-      const session = await checkSession();
-      if (!session) {
-        throw new Error('Sessão de autenticação ausente');
-      }
-      
-      // Deletar do Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
+      await withAuth(async () => {
+        // Deletar do Supabase
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', id);
 
-      if (error) {
-        console.error('❌ Erro ao deletar do Supabase:', error);
-        throw error;
-      }
-
-      // Tentar deletar do Auth também (pode falhar se não tiver Admin API)
-      try {
-        const { error: authError } = await supabase.auth.admin.deleteUser(id);
-        if (authError) {
-          console.warn('⚠️ Não foi possível deletar do Auth:', authError);
-        } else {
-          console.log('✅ Usuário deletado do Auth também');
+        if (error) {
+          console.error('❌ Erro ao deletar do Supabase:', error);
+          throw error;
         }
-      } catch (authError) {
-        console.warn('⚠️ Erro ao deletar do Auth (sem Admin API):', authError);
-      }
+
+        // Tentar deletar do Auth também (pode falhar se não tiver Admin API)
+        try {
+          const { error: authError } = await supabase.auth.admin.deleteUser(id);
+          if (authError) {
+            console.warn('⚠️ Não foi possível deletar do Auth:', authError);
+          } else {
+            console.log('✅ Usuário deletado do Auth também');
+          }
+        } catch (authError) {
+          console.warn('⚠️ Erro ao deletar do Auth (sem Admin API):', authError);
+        }
+
+        return true;
+      });
 
       // Atualizar estado local
       setUsers(prevUsers => prevUsers.filter(user => user.id !== id));
