@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 // Imports de ícones
-import { User, Mail, Settings } from 'lucide-react';
+import { User, Mail, Settings } from '../../node_modules/lucide-react';
 
 // Imports do Supabase
 import { supabase } from '@/integrations/supabase/client';

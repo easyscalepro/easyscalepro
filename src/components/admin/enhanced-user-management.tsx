@@ -491,7 +491,7 @@ export const EnhancedUserManagement: React.FC = () => {
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-gray-50">
-                    <Table Cell>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                           {user.name.charAt(0).toUpperCase()}
