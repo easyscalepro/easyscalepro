@@ -21,6 +21,7 @@ export interface User {
 interface UsersContextType {
   users: User[];
   loading: boolean;
+  error: string | null;
   addUser: (user: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => Promise<void>;
   updateUser: (id: string, user: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
@@ -42,71 +43,135 @@ export const useUsers = () => {
 export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Carregar usuários do Supabase
   const loadUsers = async () => {
     try {
       console.log('🔄 Carregando usuários do Supabase...');
+      setError(null);
       
-      const { data: profiles, error } = await supabase
+      // Verificar se o usuário está autenticado
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('❌ Erro de autenticação:', authError);
+        setError('Erro de autenticação');
+        setUsers([]);
+        return;
+      }
+
+      if (!currentUser) {
+        console.log('⚠️ Usuário não autenticado');
+        setError('Usuário não autenticado');
+        setUsers([]);
+        return;
+      }
+
+      console.log('✅ Usuário autenticado:', currentUser.email);
+
+      // Tentar carregar perfis
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('❌ Erro ao carregar usuários:', error);
-        throw error;
+      if (profilesError) {
+        console.error('❌ Erro ao carregar perfis:', profilesError);
+        
+        // Se for erro de permissão, tentar carregar apenas o perfil do usuário atual
+        if (profilesError.code === 'PGRST301' || profilesError.message?.includes('permission')) {
+          console.log('🔄 Tentando carregar apenas perfil do usuário atual...');
+          
+          const { data: userProfile, error: userProfileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+
+          if (userProfileError) {
+            console.error('❌ Erro ao carregar perfil do usuário:', userProfileError);
+            setError('Sem permissão para acessar dados de usuários');
+            setUsers([]);
+            return;
+          }
+
+          if (userProfile) {
+            console.log('✅ Perfil do usuário carregado:', userProfile.email);
+            const formattedUser = formatUser(userProfile);
+            setUsers([formattedUser]);
+            return;
+          }
+        }
+        
+        setError(`Erro ao carregar usuários: ${profilesError.message}`);
+        setUsers([]);
+        return;
       }
 
-      console.log('✅ Usuários carregados:', profiles?.length || 0);
+      console.log('✅ Perfis carregados:', profiles?.length || 0);
 
       // Converter dados do Supabase para formato do contexto
-      const formattedUsers: User[] = (profiles || []).map(profile => ({
-        id: profile.id,
-        name: profile.name || profile.email,
-        email: profile.email,
-        status: profile.status || 'ativo',
-        role: profile.role || 'user',
-        lastAccess: formatLastAccess(profile.last_access),
-        commandsUsed: profile.commands_used || 0,
-        joinedAt: formatDate(profile.created_at),
-        avatar: profile.avatar_url,
-        phone: profile.phone,
-        company: profile.company
-      }));
-
+      const formattedUsers: User[] = (profiles || []).map(formatUser);
       setUsers(formattedUsers);
+
     } catch (error: any) {
-      console.error('💥 Erro ao carregar usuários:', error);
-      toast.error('Erro ao carregar usuários: ' + error.message);
+      console.error('💥 Erro inesperado ao carregar usuários:', error);
+      setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Função para formatar dados do usuário
+  const formatUser = (profile: any): User => {
+    return {
+      id: profile.id,
+      name: profile.name || profile.email || 'Usuário',
+      email: profile.email || '',
+      status: profile.status || 'ativo',
+      role: profile.role || 'user',
+      lastAccess: formatLastAccess(profile.last_access),
+      commandsUsed: profile.commands_used || 0,
+      joinedAt: formatDate(profile.created_at),
+      avatar: profile.avatar_url,
+      phone: profile.phone,
+      company: profile.company
+    };
   };
 
   // Formatar data de último acesso
   const formatLastAccess = (timestamp: string | null): string => {
     if (!timestamp) return 'Nunca';
     
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return 'Agora';
-    if (diffMins < 60) return `${diffMins} min atrás`;
-    if (diffHours < 24) return `${diffHours}h atrás`;
-    if (diffDays < 7) return `${diffDays} dias atrás`;
-    
-    return date.toLocaleDateString('pt-BR');
+      if (diffMins < 1) return 'Agora';
+      if (diffMins < 60) return `${diffMins} min atrás`;
+      if (diffHours < 24) return `${diffHours}h atrás`;
+      if (diffDays < 7) return `${diffDays} dias atrás`;
+      
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      return 'Data inválida';
+    }
   };
 
   // Formatar data de criação
   const formatDate = (timestamp: string | null): string => {
     if (!timestamp) return new Date().toISOString().split('T')[0];
-    return new Date(timestamp).toISOString().split('T')[0];
+    try {
+      return new Date(timestamp).toISOString().split('T')[0];
+    } catch (error) {
+      return new Date().toISOString().split('T')[0];
+    }
   };
 
   // Carregar usuários ao inicializar
@@ -118,8 +183,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('➕ Adicionando usuário ao contexto:', userData.email);
       
-      // Não precisamos inserir no Supabase aqui, pois isso é feito no UserFormModal
-      // Apenas recarregar a lista de usuários
+      // Recarregar a lista de usuários
       await loadUsers();
       
       toast.success('Usuário adicionado com sucesso!');
@@ -230,6 +294,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <UsersContext.Provider value={{
       users,
       loading,
+      error,
       addUser,
       updateUser,
       deleteUser,

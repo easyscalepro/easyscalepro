@@ -25,7 +25,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Database,
-  Shield
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
@@ -40,7 +41,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
 export const EnhancedUserManagement: React.FC = () => {
-  const { users, deleteUser, toggleUserStatus } = useUsers();
+  const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers } = useUsers();
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -198,6 +199,64 @@ export const EnhancedUserManagement: React.FC = () => {
     suspended: users.filter(u => u.status === 'suspenso').length
   };
 
+  // Se há erro, mostrar interface de erro
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <AlertTriangle className="h-5 w-5" />
+              Erro ao Carregar Usuários
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-red-700 dark:text-red-300">
+                {error}
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={refreshUsers}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Tentar Novamente
+                </Button>
+                
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-red-300 text-red-600"
+                >
+                  Recarregar Página
+                </Button>
+              </div>
+              
+              <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg">
+                <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  Possíveis Soluções:
+                </h4>
+                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  <li>• Verifique se você está logado corretamente</li>
+                  <li>• Confirme se tem permissões adequadas</li>
+                  <li>• Tente fazer logout e login novamente</li>
+                  <li>• Entre em contato com o administrador se o problema persistir</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Componentes de diagnóstico */}
+        <ManualUserSync />
+        <DatabaseCheck />
+        <EmailConfirmationTool />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Componente de sincronização manual */}
@@ -345,6 +404,16 @@ export const EnhancedUserManagement: React.FC = () => {
               Gerenciar Usuários ({filteredUsers.length} de {users.length})
             </CardTitle>
             <div className="flex gap-2">
+              <Button
+                onClick={refreshUsers}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
               {syncStatus?.hasAdminAccess && <UserSyncButton />}
               <Button
                 onClick={handleExportUsers}
@@ -532,7 +601,7 @@ export const EnhancedUserManagement: React.FC = () => {
             </Table>
           </div>
 
-          {filteredUsers.length === 0 && (
+          {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="h-8 w-8 text-gray-400" />
