@@ -35,6 +35,7 @@ import { ManualUserSync } from './manual-user-sync';
 import { UserCreationTest } from './user-creation-test';
 import { LoginTest } from './login-test';
 import { DatabaseCheck } from './database-check';
+import { EmailConfirmationTool } from './email-confirmation-tool';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -204,6 +205,9 @@ export const EnhancedUserManagement: React.FC = () => {
 
       {/* Componente de verificação do banco */}
       <DatabaseCheck />
+
+      {/* Ferramenta de confirmação de email */}
+      <EmailConfirmationTool />
 
       {/* Componentes de teste */}
       {profile?.role === 'admin' && (
@@ -451,7 +455,7 @@ export const EnhancedUserManagement: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(user.status)}
+                      {getStatus Badge(user.status)}
                     </TableCell>
                     <TableCell>
                       {getRoleBadge(user.role)}
