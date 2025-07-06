@@ -39,7 +39,7 @@ import { UserCreationTest } from './user-creation-test';
 import { LoginTest } from './login-test';
 import { DatabaseCheck } from './database-check';
 import { EmailConfirmationTool } from './email-confirmation-tool';
-import { SimpleUserCreator } from './simple-user-creator';
+import { ImprovedUserCreator } from './improved-user-creator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -317,7 +317,7 @@ export const EnhancedUserManagement: React.FC = () => {
         </Card>
 
         {/* Componentes de diagnóstico */}
-        <SimpleUserCreator />
+        <ImprovedUserCreator />
         <ManualUserSync />
         <DatabaseCheck />
         <EmailConfirmationTool />
@@ -344,16 +344,14 @@ export const EnhancedUserManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Criador rápido de usuários */}
-      <SimpleUserCreator />
+      {/* Criador melhorado de usuários */}
+      <ImprovedUserCreator />
 
       {/* Componente de sincronização manual */}
       <ManualUserSync />
 
       {/* Componente de verificação do banco */}
       <DatabaseCheck />
-
-      
 
       {/* Ferramenta de confirmação de email */}
       <EmailConfirmationTool />
