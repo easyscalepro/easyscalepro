@@ -40,6 +40,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [creationMethod, setCreationMethod] = useState<'admin_api' | 'signup' | 'profile_only'>('admin_api');
 
   useEffect(() => {
     if (mode === 'edit' && user) {
@@ -77,15 +78,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     toast.success('Senha gerada automaticamente!');
   };
 
+  // Método 1: Tentar Admin API (mais completo)
   const createUserWithAdminAPI = async (email: string, password: string, userData: any) => {
-    console.log('🔐 Criando usuário com Admin API...');
+    console.log('🔐 Tentando criar usuário com Admin API...');
     
     try {
-      // Tentar usar Admin API primeiro
       const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
         email: email,
         password: password,
-        email_confirm: true, // Confirmar email automaticamente
+        email_confirm: true,
         user_metadata: {
           name: userData.name,
           company: userData.company,
@@ -102,12 +103,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         throw new Error('Usuário não foi criado via Admin API');
       }
 
-      console.log('✅ Usuário criado com Admin API:', {
-        id: adminUser.user.id,
-        email: adminUser.user.email,
-        confirmed: adminUser.user.email_confirmed_at
-      });
-
+      console.log('✅ Usuário criado com Admin API:', adminUser.user.email);
       return adminUser.user;
 
     } catch (error: any) {
@@ -116,10 +112,59 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     }
   };
 
-  const createUserProfile = async (userId: string, userData: any) => {
-    console.log('👤 Criando/atualizando perfil na tabela profiles...');
+  // Método 2: Usar signup normal (fallback)
+  const createUserWithSignup = async (email: string, password: string, userData: any) => {
+    console.log('📝 Tentando criar usuário com signup normal...');
     
     try {
+      // Salvar sessão atual
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: {
+            name: userData.name,
+            company: userData.company,
+            phone: userData.phone
+          }
+        }
+      });
+
+      if (signupError) {
+        console.error('❌ Erro no signup:', signupError);
+        throw signupError;
+      }
+
+      if (!signupData.user) {
+        throw new Error('Usuário não foi criado via signup');
+      }
+
+      console.log('✅ Usuário criado com signup:', signupData.user.email);
+      
+      // Fazer logout do usuário criado e restaurar sessão admin
+      await supabase.auth.signOut();
+      if (currentSession) {
+        await supabase.auth.setSession(currentSession);
+      }
+
+      return signupData.user;
+
+    } catch (error: any) {
+      console.error('❌ Falha no signup:', error);
+      throw error;
+    }
+  };
+
+  // Método 3: Criar apenas perfil (sem auth)
+  const createProfileOnly = async (userData: any) => {
+    console.log('👤 Criando apenas perfil (sem autenticação)...');
+    
+    try {
+      // Gerar ID único para o perfil
+      const userId = crypto.randomUUID();
+      
       const profileData = {
         id: userId,
         email: userData.email,
@@ -134,14 +179,34 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         updated_at: new Date().toISOString()
       };
 
-      console.log('📝 Dados do perfil a serem inseridos:', profileData);
+      const { data: profileResult, error: profileError } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select()
+        .single();
 
-      // Aguardar um pouco para o trigger executar
-      console.log('⏳ Aguardando trigger executar...');
+      if (profileError) {
+        console.error('❌ Erro ao criar perfil:', profileError);
+        throw profileError;
+      }
+
+      console.log('✅ Perfil criado sem autenticação:', profileResult);
+      return { user: { id: userId, email: userData.email }, profile: profileResult };
+
+    } catch (error: any) {
+      console.error('❌ Falha ao criar perfil:', error);
+      throw error;
+    }
+  };
+
+  const createUserProfile = async (userId: string, userData: any) => {
+    console.log('👤 Criando/atualizando perfil na tabela profiles...');
+    
+    try {
+      // Aguardar trigger executar
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Verificar se o perfil já foi criado pelo trigger
-      console.log('🔍 Verificando se perfil foi criado pelo trigger...');
+      // Verificar se perfil foi criado pelo trigger
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('*')
@@ -149,9 +214,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         .single();
 
       if (existingProfile && !checkError) {
-        console.log('✅ Perfil já criado pelo trigger:', existingProfile);
+        console.log('✅ Perfil já criado pelo trigger, atualizando...');
         
-        // Atualizar com dados completos
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -167,16 +231,28 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           .single();
 
         if (updateError) {
-          console.error('❌ Erro ao atualizar perfil:', updateError);
           throw updateError;
         }
 
-        console.log('✅ Perfil atualizado com dados completos:', updatedProfile);
         return updatedProfile;
       }
 
-      // Se não foi criado pelo trigger, criar manualmente
-      console.log('🔧 Trigger não funcionou, criando perfil manualmente...');
+      // Criar perfil manualmente
+      console.log('🔧 Criando perfil manualmente...');
+      const profileData = {
+        id: userId,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        status: userData.status,
+        phone: userData.phone || null,
+        company: userData.company || null,
+        commands_used: 0,
+        last_access: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       const { data: profileResult, error: profileError } = await supabase
         .from('profiles')
         .insert(profileData)
@@ -184,26 +260,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         .single();
 
       if (profileError) {
-        console.error('❌ Erro ao inserir perfil manualmente:', profileError);
         throw profileError;
       }
 
       console.log('✅ Perfil criado manualmente:', profileResult);
-      
-      // Verificação final
-      const { data: verificationData, error: verificationError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (verificationError || !verificationData) {
-        console.error('❌ FALHA NA VERIFICAÇÃO: Perfil NÃO foi salvo no banco');
-        throw new Error('Perfil não foi salvo corretamente no banco de dados');
-      }
-
-      console.log('✅ VERIFICAÇÃO CONFIRMADA: Perfil salvo com sucesso:', verificationData);
-      return verificationData;
+      return profileResult;
 
     } catch (error: any) {
       console.error('❌ Erro ao criar perfil:', error);
@@ -215,10 +276,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log('🚀 Iniciando processo de criação/edição de usuário...', { 
+    console.log('🚀 Iniciando criação de usuário...', { 
       mode, 
       email: formData.email,
-      name: formData.name 
+      name: formData.name,
+      method: creationMethod
     });
 
     try {
@@ -239,26 +301,27 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       }
 
       if (mode === 'create') {
-        if (!formData.password) {
-          toast.error('A senha é obrigatória para novos usuários');
-          return;
-        }
+        if (creationMethod !== 'profile_only') {
+          if (!formData.password) {
+            toast.error('A senha é obrigatória');
+            return;
+          }
 
-        if (formData.password.length < 6) {
-          toast.error('A senha deve ter pelo menos 6 caracteres');
-          return;
-        }
+          if (formData.password.length < 6) {
+            toast.error('A senha deve ter pelo menos 6 caracteres');
+            return;
+          }
 
-        if (formData.password !== formData.confirmPassword) {
-          toast.error('As senhas não coincidem');
-          return;
+          if (formData.password !== formData.confirmPassword) {
+            toast.error('As senhas não coincidem');
+            return;
+          }
         }
       }
 
       if (mode === 'create') {
         console.log('➕ Modo: Criar novo usuário');
 
-        // Verificar se o usuário atual é admin
         if (profile?.role !== 'admin') {
           toast.error('Apenas administradores podem criar usuários');
           return;
@@ -266,7 +329,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         // Verificar se email já existe
         console.log('🔍 Verificando se email já existe...');
-        toast.loading('Verificando se email já existe...', { id: 'create-user' });
+        toast.loading('Verificando disponibilidade do email...', { id: 'create-user' });
         
         const { data: existingProfile } = await supabase
           .from('profiles')
@@ -280,86 +343,96 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           return;
         }
 
-        console.log('✅ Email disponível para uso');
-
         let authUser = null;
         let profileResult = null;
+        let creationSuccess = false;
 
-        try {
-          // 1. Criar usuário com Admin API (com confirmação automática)
-          toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
-          authUser = await createUserWithAdminAPI(formData.email, formData.password, formData);
-          
-          // 2. Criar/atualizar perfil na tabela profiles
-          toast.loading('Salvando perfil completo no banco de dados...', { id: 'create-user' });
-          profileResult = await createUserProfile(authUser.id, formData);
+        // Tentar diferentes métodos de criação
+        const methods = [
+          { name: 'Admin API', method: 'admin_api' },
+          { name: 'Signup Normal', method: 'signup' },
+          { name: 'Apenas Perfil', method: 'profile_only' }
+        ];
 
-          toast.dismiss('create-user');
+        for (const methodInfo of methods) {
+          if (creationSuccess) break;
+
+          try {
+            console.log(`🔄 Tentando método: ${methodInfo.name}`);
+            toast.loading(`Tentando criar usuário via ${methodInfo.name}...`, { id: 'create-user' });
+
+            if (methodInfo.method === 'admin_api') {
+              authUser = await createUserWithAdminAPI(formData.email, formData.password, formData);
+              profileResult = await createUserProfile(authUser.id, formData);
+              creationSuccess = true;
+              
+            } else if (methodInfo.method === 'signup') {
+              authUser = await createUserWithSignup(formData.email, formData.password, formData);
+              profileResult = await createUserProfile(authUser.id, formData);
+              creationSuccess = true;
+              
+            } else if (methodInfo.method === 'profile_only') {
+              const result = await createProfileOnly(formData);
+              authUser = result.user;
+              profileResult = result.profile;
+              creationSuccess = true;
+            }
+
+            console.log(`✅ Sucesso com método: ${methodInfo.name}`);
+            break;
+
+          } catch (error: any) {
+            console.warn(`⚠️ Falha no método ${methodInfo.name}:`, error.message);
+            
+            // Limpar usuário órfão se necessário
+            if (authUser && !profileResult && methodInfo.method !== 'profile_only') {
+              try {
+                await supabase.auth.admin.deleteUser(authUser.id);
+                console.log('🧹 Usuário órfão removido');
+              } catch (cleanupError) {
+                console.warn('⚠️ Não foi possível limpar usuário órfão:', cleanupError);
+              }
+            }
+            
+            // Se é o último método, relançar o erro
+            if (methodInfo === methods[methods.length - 1]) {
+              throw error;
+            }
+          }
+        }
+
+        if (!creationSuccess) {
+          throw new Error('Todos os métodos de criação falharam');
+        }
+
+        toast.dismiss('create-user');
+        
+        if (creationMethod === 'profile_only') {
+          toast.success('✅ Perfil criado com sucesso!', {
+            description: `${formData.name} foi adicionado à plataforma (sem autenticação)`
+          });
+        } else {
           toast.success('✅ Usuário criado com sucesso!', {
-            description: `${formData.name} pode fazer login imediatamente com: ${formData.email}`
+            description: `${formData.name} pode fazer login com: ${formData.email}`
           });
           
-          console.log('🎉 Usuário criado completamente:', {
-            authId: authUser.id,
-            email: authUser.email,
-            profileId: profileResult.id,
-            profileEmail: profileResult.email,
-            profileName: profileResult.name,
-            emailConfirmed: authUser.email_confirmed_at
-          });
-
-          // Mostrar credenciais para o admin
+          // Mostrar credenciais
           setTimeout(() => {
             toast.info('📋 Credenciais do usuário:', {
               description: `Email: ${formData.email} | Senha: ${formData.password}`,
               duration: 10000
             });
           }, 2000);
-
-          // Atualizar lista de usuários
-          await refreshUsers();
-
-        } catch (error: any) {
-          console.error('💥 Erro durante criação:', error);
-          
-          toast.dismiss('create-user');
-          
-          // Se criou no Auth mas falhou no profile, tentar limpar
-          if (authUser && !profileResult) {
-            console.log('🧹 Tentando limpar usuário órfão do Auth...');
-            try {
-              await supabase.auth.admin.deleteUser(authUser.id);
-              console.log('🗑️ Usuário órfão removido do Auth');
-            } catch (cleanupError) {
-              console.warn('⚠️ Não foi possível limpar usuário órfão:', cleanupError);
-            }
-          }
-          
-          // Mostrar erro específico
-          if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
-            toast.error('❌ Email já cadastrado', {
-              description: 'Este email já possui uma conta no sistema'
-            });
-          } else if (error.message?.includes('Invalid email')) {
-            toast.error('❌ Email inválido', {
-              description: 'Verifique o formato do email'
-            });
-          } else if (error.message?.includes('Password')) {
-            toast.error('❌ Erro na senha', {
-              description: 'A senha deve ter pelo menos 6 caracteres'
-            });
-          } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
-            toast.error('❌ Erro de permissão', {
-              description: 'Problema nas políticas de segurança do banco'
-            });
-          } else {
-            toast.error('❌ Erro ao criar usuário', {
-              description: error.message || 'Tente novamente'
-            });
-          }
-          
-          return;
         }
+
+        console.log('🎉 Usuário criado completamente:', {
+          authId: authUser?.id,
+          email: formData.email,
+          profileId: profileResult?.id,
+          method: creationMethod
+        });
+
+        await refreshUsers();
 
       } else if (mode === 'edit' && user) {
         console.log('✏️ Modo: Editar usuário existente');
@@ -367,7 +440,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         try {
           toast.loading('Atualizando dados do usuário...', { id: 'update-user' });
 
-          // Atualizar perfil existente
           const { data: updatedProfile, error: updateError } = await supabase
             .from('profiles')
             .update({
@@ -389,7 +461,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           toast.dismiss('update-user');
           toast.success('✅ Usuário atualizado com sucesso!');
 
-          // Atualizar lista de usuários
           await refreshUsers();
           
         } catch (error: any) {
@@ -405,7 +476,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       
     } catch (error: any) {
       console.error('💥 Erro geral:', error);
-      toast.error('❌ Erro inesperado: ' + (error.message || 'Erro desconhecido'));
+      toast.dismiss('create-user');
+      toast.error('❌ Erro ao criar usuário: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsSubmitting(false);
     }
@@ -421,19 +493,47 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Aviso importante para criação */}
+        {/* Seletor de método de criação */}
         {mode === 'create' && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-green-900 dark:text-green-100 text-sm">
-                  Criação com Email Confirmado
-                </h4>
-                <p className="text-green-700 dark:text-green-300 text-xs mt-1">
-                  O usuário será criado com email confirmado automaticamente e poderá fazer login imediatamente.
-                </p>
-              
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+            <div className="space-y-3">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+                Método de Criação
+              </h4>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="creationMethod"
+                    value="admin_api"
+                    checked={creationMethod === 'admin_api'}
+                    onChange={(e) => setCreationMethod(e.target.value as any)}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Admin API (Completo com login)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="creationMethod"
+                    value="signup"
+                    checked={creationMethod === 'signup'}
+                    onChange={(e) => setCreationMethod(e.target.value as any)}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Signup Normal (Fallback)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="creationMethod"
+                    value="profile_only"
+                    checked={creationMethod === 'profile_only'}
+                    onChange={(e) => setCreationMethod(e.target.value as any)}
+                    className="text-blue-600"
+                  />
+                  <span className="text-sm">Apenas Perfil (Sem autenticação)</span>
+                </label>
               </div>
             </div>
           </div>
@@ -462,11 +562,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               required
               disabled={mode === 'edit'}
             />
-            {mode === 'create' && (
-              <p className="text-xs text-green-600 dark:text-green-400">
-                ✅ Email será confirmado automaticamente
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -527,22 +622,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </div>
 
           {/* Seção de Senha */}
-          {mode === 'create' && (
+          {mode === 'create' && creationMethod !== 'profile_only' && (
             <div className="border-t pt-4 space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Key className="h-4 w-4 text-[#2563EB]" />
                 <Label className="text-sm font-semibold">
                   Definir Senha *
                 </Label>
-              </div>
-
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                  <Shield className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Usuário poderá fazer login imediatamente
-                  </span>
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -577,9 +663,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  A senha deve ter pelo menos 6 caracteres
-                </p>
               </div>
 
               <div className="space-y-2">

@@ -37,6 +37,7 @@ import { UserCreationTest } from './user-creation-test';
 import { LoginTest } from './login-test';
 import { DatabaseCheck } from './database-check';
 import { EmailConfirmationTool } from './email-confirmation-tool';
+import { SimpleUserCreator } from './simple-user-creator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -250,6 +251,7 @@ export const EnhancedUserManagement: React.FC = () => {
         </Card>
 
         {/* Componentes de diagnóstico */}
+        <SimpleUserCreator />
         <ManualUserSync />
         <DatabaseCheck />
         <EmailConfirmationTool />
@@ -259,6 +261,9 @@ export const EnhancedUserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Criador rápido de usuários */}
+      <SimpleUserCreator />
+
       {/* Componente de sincronização manual */}
       <ManualUserSync />
 
@@ -291,23 +296,6 @@ export const EnhancedUserManagement: React.FC = () => {
               </p>
             </div>
             <UserSyncButton />
-          </div>
-        </div>
-      )}
-
-      {/* Aviso sobre limitações de acesso */}
-      {syncStatus && !syncStatus.hasAdminAccess && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <Shield className="h-5 w-5 text-blue-600" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
-                Acesso Limitado ao Sistema de Autenticação
-              </h4>
-              <p className="text-blue-700 dark:text-blue-300 text-sm">
-                Sem acesso à Admin API. Apenas sincronização manual disponível.
-              </p>
-            </div>
           </div>
         </div>
       )}
@@ -503,7 +491,7 @@ export const EnhancedUserManagement: React.FC = () => {
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-gray-50">
-                    <TableCell>
+                    <Table Cell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                           {user.name.charAt(0).toUpperCase()}
