@@ -108,7 +108,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       console.log('✅ Usuário criado com signup:', {
         id: signupData.user.id,
-        email: signupData.user.email
+        email: signupData.user.email,
+        confirmed: signupData.user.email_confirmed_at
       });
 
       // Fazer logout do novo usuário e restaurar sessão do admin
@@ -128,6 +129,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const createUserProfile = async (userId: string, userData: any) => {
     console.log('👤 Criando perfil na tabela profiles...');
+    console.log('📋 Dados do usuário:', { userId, userData });
     
     try {
       const profileData = {
@@ -147,19 +149,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       console.log('📝 Dados do perfil a serem inseridos:', profileData);
 
       // Aguardar um pouco para o trigger executar
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('⏳ Aguardando trigger executar...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Verificar se o perfil já foi criado pelo trigger
-      const { data: existingProfile } = await supabase
+      console.log('🔍 Verificando se perfil foi criado pelo trigger...');
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (existingProfile) {
+      if (existingProfile && !checkError) {
         console.log('✅ Perfil já criado pelo trigger:', existingProfile);
         
-        // Atualizar com dados completos
+        // Atualizar com dados completos se necessário
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -179,11 +183,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           throw updateError;
         }
 
-        console.log('✅ Perfil atualizado:', updatedProfile);
+        console.log('✅ Perfil atualizado com dados completos:', updatedProfile);
         return updatedProfile;
       }
 
       // Se não foi criado pelo trigger, criar manualmente
+      console.log('🔧 Trigger não funcionou, criando perfil manualmente...');
       const { data: profileResult, error: profileError } = await supabase
         .from('profiles')
         .insert(profileData)
@@ -191,12 +196,34 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         .single();
 
       if (profileError) {
-        console.error('❌ Erro ao inserir perfil:', profileError);
+        console.error('❌ Erro ao inserir perfil manualmente:', profileError);
+        console.error('📋 Detalhes do erro:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
         throw profileError;
       }
 
       console.log('✅ Perfil criado manualmente:', profileResult);
-      return profileResult;
+      
+      // Verificação final - confirmar que foi salvo
+      console.log('🔍 Verificação final - confirmando salvamento...');
+      const { data: verificationData, error: verificationError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (verificationError || !verificationData) {
+        console.error('❌ FALHA NA VERIFICAÇÃO: Perfil NÃO foi salvo no banco');
+        console.error('Erro de verificação:', verificationError);
+        throw new Error('Perfil não foi salvo corretamente no banco de dados');
+      }
+
+      console.log('✅ VERIFICAÇÃO CONFIRMADA: Perfil salvo com sucesso:', verificationData);
+      return verificationData;
 
     } catch (error: any) {
       console.error('❌ Erro ao criar perfil:', error);
@@ -280,11 +307,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         try {
           // 1. Criar usuário com signup normal
-          toast.loading('Criando usuário no sistema...', { id: 'create-user' });
+          toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
           authUser = await createUserWithSignup(formData.email, formData.password, formData);
           
-          // 2. Criar/atualizar perfil na tabela profiles
-          toast.loading('Configurando perfil do usuário...', { id: 'create-user' });
+          // 2. Criar perfil na tabela profiles
+          toast.loading('Salvando perfil no banco de dados...', { id: 'create-user' });
           profileResult = await createUserProfile(authUser.id, formData);
 
           // 3. Adicionar ao contexto local
@@ -310,7 +337,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             authId: authUser.id,
             email: authUser.email,
             profileId: profileResult.id,
-            profileEmail: profileResult.email
+            profileEmail: profileResult.email,
+            profileName: profileResult.name
           });
 
           // Mostrar credenciais para o admin
@@ -326,6 +354,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           
           toast.dismiss('create-user');
           
+          // Se criou no Auth mas falhou no profile, tentar limpar
+          if (authUser && !profileResult) {
+            console.log('🧹 Tentando limpar usuário órfão do Auth...');
+            try {
+              // Tentar deletar do Auth se possível
+              await supabase.auth.admin.deleteUser(authUser.id);
+              console.log('🗑️ Usuário órfão removido do Auth');
+            } catch (cleanupError) {
+              console.warn('⚠️ Não foi possível limpar usuário órfão:', cleanupError);
+            }
+          }
+          
           // Mostrar erro específico
           if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
             toast.error('❌ Email já cadastrado', {
@@ -339,9 +379,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             toast.error('❌ Erro na senha', {
               description: 'A senha deve ter pelo menos 6 caracteres'
             });
-          } else if (error.message?.includes('User not allowed')) {
-            toast.error('❌ Usuário não permitido', {
-              description: 'Verifique as configurações de Auth no Supabase'
+          } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
+            toast.error('❌ Erro de permissão', {
+              description: 'Problema nas políticas de segurança do banco'
+            });
+          } else if (error.message?.includes('não foi salvo')) {
+            toast.error('❌ Erro ao salvar perfil', {
+              description: 'O perfil não foi salvo no banco de dados'
             });
           } else {
             toast.error('❌ Erro ao criar usuário', {
@@ -421,10 +465,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               <Database className="h-5 w-5 text-blue-600 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
-                  Criação via Signup Normal
+                  Criação Completa no Sistema
                 </h4>
                 <p className="text-blue-700 dark:text-blue-300 text-xs mt-1">
-                  O usuário será criado usando signup normal e poderá fazer login imediatamente.
+                  O usuário será criado no Auth e no banco de dados, podendo fazer login imediatamente.
                 </p>
               </div>
             </div>
