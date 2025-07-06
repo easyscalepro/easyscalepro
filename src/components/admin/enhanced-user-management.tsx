@@ -455,7 +455,7 @@ export const EnhancedUserManagement: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatus Badge(user.status)}
+                      {getStatusBadge(user.status)}
                     </TableCell>
                     <TableCell>
                       {getRoleBadge(user.role)}
