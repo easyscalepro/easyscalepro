@@ -49,61 +49,128 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Carregar usuários do Supabase
   const loadUsers = async () => {
     try {
-      console.log('🔄 Carregando usuários do Supabase...');
+      console.log('🔄 Iniciando carregamento de usuários...');
       setError(null);
+      setLoading(true);
       
-      // Usar withOptionalAuth para tentar carregar todos os usuários, com fallback para usuário atual
-      const profiles = await withOptionalAuth(
-        async () => {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
-          
-          if (error) throw error;
-          return data || [];
-        },
-        [] // fallback vazio
-      );
-
-      // Se não conseguiu carregar todos os usuários, tentar carregar apenas o usuário atual
-      if (profiles.length === 0) {
-        console.log('🔄 Tentando carregar apenas perfil do usuário atual...');
+      // Primeiro, verificar se temos uma sessão válida
+      const session = await checkSession();
+      console.log('📋 Sessão verificada:', session ? 'Válida' : 'Inválida');
+      
+      // Tentar carregar usuários com diferentes estratégias
+      let profiles: any[] = [];
+      let loadMethod = '';
+      
+      // Estratégia 1: Tentar carregar todos os perfis (se tiver permissão)
+      try {
+        console.log('🔍 Tentando carregar todos os perfis...');
         
-        const session = await checkSession();
+        const { data: allProfiles, error: allProfilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!allProfilesError && allProfiles && allProfiles.length > 0) {
+          profiles = allProfiles;
+          loadMethod = 'todos_perfis';
+          console.log('✅ Carregados todos os perfis:', profiles.length);
+        } else if (allProfilesError) {
+          console.warn('⚠️ Erro ao carregar todos os perfis:', allProfilesError);
+          throw allProfilesError;
+        }
+      } catch (allProfilesError: any) {
+        console.warn('⚠️ Falha ao carregar todos os perfis:', allProfilesError.message);
+        
+        // Estratégia 2: Carregar apenas perfil do usuário atual
         if (session) {
           try {
+            console.log('🔍 Tentando carregar perfil do usuário atual...');
+            
             const { data: userProfile, error: userProfileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
 
-            if (userProfile && !userProfileError) {
-              console.log('✅ Perfil do usuário carregado:', userProfile.email);
-              const formattedUser = formatUser(userProfile);
-              setUsers([formattedUser]);
-              return;
+            if (!userProfileError && userProfile) {
+              profiles = [userProfile];
+              loadMethod = 'perfil_atual';
+              console.log('✅ Carregado perfil do usuário atual:', userProfile.email);
+            } else {
+              console.warn('⚠️ Erro ao carregar perfil do usuário:', userProfileError);
+              throw userProfileError;
             }
-          } catch (userError) {
-            console.warn('Não foi possível carregar perfil do usuário:', userError);
+          } catch (userProfileError: any) {
+            console.warn('⚠️ Falha ao carregar perfil do usuário:', userProfileError.message);
+            
+            // Estratégia 3: Criar perfil básico se não existir
+            try {
+              console.log('🔧 Tentando criar perfil básico...');
+              
+              const basicProfile = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário',
+                role: 'user' as const,
+                status: 'ativo' as const,
+                commands_used: 0,
+                last_access: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+
+              const { data: createdProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert(basicProfile)
+                .select()
+                .single();
+
+              if (!createError && createdProfile) {
+                profiles = [createdProfile];
+                loadMethod = 'perfil_criado';
+                console.log('✅ Perfil básico criado:', createdProfile.email);
+              } else {
+                throw createError;
+              }
+            } catch (createError: any) {
+              console.error('❌ Falha ao criar perfil básico:', createError.message);
+              throw new Error('Não foi possível carregar ou criar perfil de usuário');
+            }
           }
+        } else {
+          throw new Error('Sessão de autenticação não encontrada');
         }
-        
-        setError('Sem permissão para acessar dados de usuários');
-        setUsers([]);
-        return;
       }
 
-      console.log('✅ Perfis carregados:', profiles.length);
-
       // Converter dados do Supabase para formato do contexto
-      const formattedUsers: User[] = profiles.map(formatUser);
-      setUsers(formattedUsers);
+      if (profiles.length > 0) {
+        const formattedUsers: User[] = profiles.map(formatUser);
+        setUsers(formattedUsers);
+        console.log(`✅ ${formattedUsers.length} usuário(s) carregado(s) via ${loadMethod}`);
+      } else {
+        console.warn('⚠️ Nenhum perfil encontrado');
+        setUsers([]);
+      }
 
     } catch (error: any) {
-      console.error('💥 Erro inesperado ao carregar usuários:', error);
-      setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
+      console.error('💥 Erro ao carregar usuários:', error);
+      
+      // Tratamento específico de erros
+      let errorMessage = 'Erro desconhecido ao carregar usuários';
+      
+      if (error.message?.includes('permission') || error.message?.includes('RLS')) {
+        errorMessage = 'Sem permissão para acessar dados de usuários. Verifique suas credenciais.';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      } else if (error.message?.includes('auth') || error.message?.includes('session')) {
+        errorMessage = 'Sessão expirada. Faça login novamente.';
+      } else if (error.message?.includes('table') || error.message?.includes('relation')) {
+        errorMessage = 'Tabela de usuários não encontrada. Entre em contato com o administrador.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -280,6 +347,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const refreshUsers = async () => {
+    console.log('🔄 Atualizando lista de usuários...');
     setLoading(true);
     await loadUsers();
   };

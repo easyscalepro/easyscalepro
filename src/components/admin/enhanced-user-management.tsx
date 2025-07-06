@@ -26,7 +26,9 @@ import {
   CheckCircle,
   Database,
   Shield,
-  RefreshCw
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
@@ -50,6 +52,7 @@ export const EnhancedUserManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedUser, setSelectedUser] = useState(undefined);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [syncStatus, setSyncStatus] = useState<{
     authUsers: number;
     profiles: number;
@@ -57,10 +60,33 @@ export const EnhancedUserManagement: React.FC = () => {
     hasAdminAccess: boolean;
   } | null>(null);
 
-  // Verificar status de sincronização ao carregar
+  // Verificar conexão e status de sincronização ao carregar
   useEffect(() => {
+    checkConnection();
     checkSyncStatus();
   }, []);
+
+  const checkConnection = async () => {
+    try {
+      setConnectionStatus('checking');
+      
+      // Teste simples de conexão
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.warn('Problema de conexão:', error);
+        setConnectionStatus('disconnected');
+      } else {
+        setConnectionStatus('connected');
+      }
+    } catch (error) {
+      console.error('Erro de conexão:', error);
+      setConnectionStatus('disconnected');
+    }
+  };
 
   const checkSyncStatus = async () => {
     try {
@@ -200,10 +226,37 @@ export const EnhancedUserManagement: React.FC = () => {
     suspended: users.filter(u => u.status === 'suspenso').length
   };
 
-  // Se há erro, mostrar interface de erro
+  // Se há erro, mostrar interface de erro melhorada
   if (error) {
     return (
       <div className="space-y-6">
+        {/* Status de conexão */}
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+              {connectionStatus === 'connected' ? (
+                <Wifi className="h-5 w-5 text-green-600" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-red-600" />
+              )}
+              Status da Conexão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'connected' ? 'bg-green-500' : 
+                connectionStatus === 'checking' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+              }`}></div>
+              <span className="text-sm">
+                {connectionStatus === 'connected' && 'Conectado ao Supabase'}
+                {connectionStatus === 'checking' && 'Verificando conexão...'}
+                {connectionStatus === 'disconnected' && 'Problema de conexão'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
@@ -213,17 +266,29 @@ export const EnhancedUserManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-red-700 dark:text-red-300">
-                {error}
-              </p>
+              <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg">
+                <p className="text-red-700 dark:text-red-300 font-medium">
+                  {error}
+                </p>
+              </div>
               
               <div className="flex gap-3">
                 <Button
                   onClick={refreshUsers}
                   className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={loading}
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Tentar Novamente
+                </Button>
+                
+                <Button
+                  onClick={checkConnection}
+                  variant="outline"
+                  className="border-red-300 text-red-600"
+                >
+                  <Wifi className="h-4 w-4 mr-2" />
+                  Verificar Conexão
                 </Button>
                 
                 <Button
@@ -242,6 +307,7 @@ export const EnhancedUserManagement: React.FC = () => {
                 <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                   <li>• Verifique se você está logado corretamente</li>
                   <li>• Confirme se tem permissões adequadas</li>
+                  <li>• Verifique sua conexão com a internet</li>
                   <li>• Tente fazer logout e login novamente</li>
                   <li>• Entre em contato com o administrador se o problema persistir</li>
                 </ul>
@@ -261,6 +327,23 @@ export const EnhancedUserManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Status de conexão */}
+      <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Wifi className="h-5 w-5 text-green-600" />
+            <div>
+              <div className="font-semibold text-green-800 dark:text-green-200">
+                Sistema Conectado
+              </div>
+              <div className="text-sm text-green-600 dark:text-green-300">
+                {users.length} usuário(s) carregado(s) com sucesso
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Criador rápido de usuários */}
       <SimpleUserCreator />
 
@@ -269,6 +352,8 @@ export const EnhancedUserManagement: React.FC = () => {
 
       {/* Componente de verificação do banco */}
       <DatabaseCheck />
+
+      
 
       {/* Ferramenta de confirmação de email */}
       <EmailConfirmationTool />
