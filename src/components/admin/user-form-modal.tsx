@@ -216,7 +216,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         if (profileError) {
           console.error('❌ Erro ao criar perfil:', profileError);
-          throw new Error('Erro ao salvar perfil na tabela: ' + profileError.message);
+          
+          // Mensagem de erro melhorada
+          let errorMessage = 'Falha ao salvar perfil na tabela profiles';
+          
+          if (profileError.message) {
+            if (profileError.message.includes('duplicate key')) {
+              errorMessage = 'Este usuário já existe na tabela profiles';
+            } else if (profileError.message.includes('permission')) {
+              errorMessage = 'Sem permissão para criar perfil na tabela profiles';
+            } else if (profileError.message.includes('violates')) {
+              errorMessage = 'Dados inválidos para criação do perfil';
+            } else {
+              errorMessage = `Erro na tabela profiles: ${profileError.message}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         console.log('✅ Perfil criado na tabela profiles:', profileResult);
@@ -263,7 +279,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           .single();
 
         if (updateError) {
-          throw updateError;
+          console.error('❌ Erro ao atualizar perfil:', updateError);
+          
+          let errorMessage = 'Falha ao atualizar perfil na tabela profiles';
+          
+          if (updateError.message) {
+            if (updateError.message.includes('permission')) {
+              errorMessage = 'Sem permissão para atualizar este perfil';
+            } else if (updateError.message.includes('violates')) {
+              errorMessage = 'Dados inválidos para atualização do perfil';
+            } else {
+              errorMessage = `Erro na atualização: ${updateError.message}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         toast.dismiss('update-user');
@@ -278,7 +308,27 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       console.error('💥 Erro geral:', error);
       toast.dismiss('create-user');
       toast.dismiss('update-user');
-      toast.error('❌ Erro: ' + (error.message || 'Erro desconhecido'));
+      
+      // Tratamento de erro melhorado
+      let userFriendlyMessage = 'Erro desconhecido';
+      
+      if (error.message) {
+        if (error.message.includes('já existe')) {
+          userFriendlyMessage = 'Este email já está cadastrado no sistema';
+        } else if (error.message.includes('permissão')) {
+          userFriendlyMessage = 'Você não tem permissão para esta operação';
+        } else if (error.message.includes('profiles')) {
+          userFriendlyMessage = 'Erro ao acessar a tabela de usuários';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          userFriendlyMessage = 'Erro de conexão. Verifique sua internet';
+        } else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      
+      toast.error('❌ Operação falhou', {
+        description: userFriendlyMessage
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -350,7 +400,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 <SelectContent>
                   <SelectItem value="user">Usuário</SelectItem>
                   <SelectItem value="moderator">Moderador</SelectItem>
-                  
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

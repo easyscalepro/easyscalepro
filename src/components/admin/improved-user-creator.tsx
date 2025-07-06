@@ -166,7 +166,23 @@ export const ImprovedUserCreator: React.FC = () => {
 
       if (profileError) {
         console.error('❌ Erro ao criar perfil:', profileError);
-        throw new Error('Erro ao salvar perfil na tabela: ' + profileError.message);
+        
+        // Mensagem de erro mais detalhada e clara
+        let errorMessage = 'Erro ao salvar perfil na tabela profiles do Supabase';
+        
+        if (profileError.message) {
+          if (profileError.message.includes('duplicate key')) {
+            errorMessage = 'Este usuário já existe na tabela profiles';
+          } else if (profileError.message.includes('permission')) {
+            errorMessage = 'Sem permissão para criar perfil na tabela profiles';
+          } else if (profileError.message.includes('violates')) {
+            errorMessage = 'Dados inválidos para criação do perfil';
+          } else {
+            errorMessage = `Erro na tabela profiles: ${profileError.message}`;
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       profileCreated = true;
@@ -209,7 +225,27 @@ export const ImprovedUserCreator: React.FC = () => {
     } catch (error: any) {
       console.error('💥 Erro ao criar usuário:', error);
       toast.dismiss('create-user');
-      toast.error('❌ Erro ao criar usuário: ' + error.message);
+      
+      // Tratamento de erro melhorado
+      let userFriendlyMessage = 'Erro desconhecido ao criar usuário';
+      
+      if (error.message) {
+        if (error.message.includes('já existe')) {
+          userFriendlyMessage = 'Este email já está cadastrado no sistema';
+        } else if (error.message.includes('permissão')) {
+          userFriendlyMessage = 'Você não tem permissão para criar usuários';
+        } else if (error.message.includes('profiles')) {
+          userFriendlyMessage = 'Erro ao salvar dados na tabela de usuários';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          userFriendlyMessage = 'Erro de conexão. Verifique sua internet';
+        } else {
+          userFriendlyMessage = error.message;
+        }
+      }
+      
+      toast.error('❌ Falha na criação do usuário', {
+        description: userFriendlyMessage
+      });
     } finally {
       setCreating(false);
     }
