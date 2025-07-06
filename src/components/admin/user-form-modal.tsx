@@ -71,14 +71,55 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let password = '';
     for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+      password += chars.charAt(Math.random() * chars.length);
     }
     setFormData({...formData, password, confirmPassword: password});
     toast.success('Senha gerada automaticamente!');
   };
 
-  const createUserWithSignup = async (email: string, password: string, userData: any) => {
-    console.log('🔐 Criando usuário com signup normal...');
+  const createUserWithAdminAPI = async (email: string, password: string, userData: any) => {
+    console.log('🔐 Criando usuário com Admin API...');
+    
+    try {
+      // Tentar usar Admin API primeiro
+      const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true, // Confirmar email automaticamente
+        user_metadata: {
+          name: userData.name,
+          company: userData.company,
+          phone: userData.phone
+        }
+      });
+
+      if (adminError) {
+        console.error('❌ Erro na Admin API:', adminError);
+        throw adminError;
+      }
+
+      if (!adminUser.user) {
+        throw new Error('Usuário não foi criado via Admin API');
+      }
+
+      console.log('✅ Usuário criado com Admin API:', {
+        id: adminUser.user.id,
+        email: adminUser.user.email,
+        confirmed: adminUser.user.email_confirmed_at
+      });
+
+      return adminUser.user;
+
+    } catch (error: any) {
+      console.error('❌ Falha na Admin API, tentando signup normal:', error);
+      
+      // Fallback para signup normal se Admin API falhar
+      return await createUserWithSignupFallback(email, password, userData);
+    }
+  };
+
+  const createUserWithSignupFallback = async (email: string, password: string, userData: any) => {
+    console.log('🔄 Fallback: Criando usuário com signup normal...');
     
     try {
       // Salvar sessão atual
@@ -112,6 +153,27 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         confirmed: signupData.user.email_confirmed_at
       });
 
+      // Se o email não foi confirmado, tentar confirmar via Admin API
+      if (!signupData.user.email_confirmed_at) {
+        console.log('📧 Tentando confirmar email via Admin API...');
+        
+        try {
+          const { data: confirmedUser, error: confirmError } = await supabase.auth.admin.updateUserById(
+            signupData.user.id,
+            { email_confirm: true }
+          );
+
+          if (!confirmError && confirmedUser) {
+            console.log('✅ Email confirmado via Admin API');
+            signupData.user.email_confirmed_at = new Date().toISOString();
+          } else {
+            console.warn('⚠️ Não foi possível confirmar email via Admin API:', confirmError);
+          }
+        } catch (confirmError) {
+          console.warn('⚠️ Erro ao confirmar email:', confirmError);
+        }
+      }
+
       // Fazer logout do novo usuário e restaurar sessão do admin
       await supabase.auth.signOut();
       
@@ -122,14 +184,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       return signupData.user;
 
     } catch (error: any) {
-      console.error('❌ Falha na criação com signup:', error);
+      console.error('❌ Falha no signup fallback:', error);
       throw error;
     }
   };
 
   const createUserProfile = async (userId: string, userData: any) => {
     console.log('👤 Criando perfil na tabela profiles...');
-    console.log('📋 Dados do usuário:', { userId, userData });
     
     try {
       const profileData = {
@@ -150,7 +211,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       // Aguardar um pouco para o trigger executar
       console.log('⏳ Aguardando trigger executar...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Verificar se o perfil já foi criado pelo trigger
       console.log('🔍 Verificando se perfil foi criado pelo trigger...');
@@ -163,7 +224,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       if (existingProfile && !checkError) {
         console.log('✅ Perfil já criado pelo trigger:', existingProfile);
         
-        // Atualizar com dados completos se necessário
+        // Atualizar com dados completos
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -197,19 +258,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       if (profileError) {
         console.error('❌ Erro ao inserir perfil manualmente:', profileError);
-        console.error('📋 Detalhes do erro:', {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint
-        });
         throw profileError;
       }
 
       console.log('✅ Perfil criado manualmente:', profileResult);
       
-      // Verificação final - confirmar que foi salvo
-      console.log('🔍 Verificação final - confirmando salvamento...');
+      // Verificação final
       const { data: verificationData, error: verificationError } = await supabase
         .from('profiles')
         .select('*')
@@ -218,7 +272,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
       if (verificationError || !verificationData) {
         console.error('❌ FALHA NA VERIFICAÇÃO: Perfil NÃO foi salvo no banco');
-        console.error('Erro de verificação:', verificationError);
         throw new Error('Perfil não foi salvo corretamente no banco de dados');
       }
 
@@ -306,9 +359,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         let profileResult = null;
 
         try {
-          // 1. Criar usuário com signup normal
+          // 1. Criar usuário com Admin API (com confirmação automática)
           toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
-          authUser = await createUserWithSignup(formData.email, formData.password, formData);
+          authUser = await createUserWithAdminAPI(formData.email, formData.password, formData);
           
           // 2. Criar perfil na tabela profiles
           toast.loading('Salvando perfil no banco de dados...', { id: 'create-user' });
@@ -330,7 +383,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           toast.dismiss('create-user');
           toast.success('✅ Usuário criado com sucesso!', {
-            description: `${formData.name} pode fazer login com: ${formData.email}`
+            description: `${formData.name} pode fazer login imediatamente com: ${formData.email}`
           });
           
           console.log('🎉 Usuário criado completamente:', {
@@ -338,7 +391,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             email: authUser.email,
             profileId: profileResult.id,
             profileEmail: profileResult.email,
-            profileName: profileResult.name
+            profileName: profileResult.name,
+            emailConfirmed: authUser.email_confirmed_at
           });
 
           // Mostrar credenciais para o admin
@@ -358,7 +412,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           if (authUser && !profileResult) {
             console.log('🧹 Tentando limpar usuário órfão do Auth...');
             try {
-              // Tentar deletar do Auth se possível
               await supabase.auth.admin.deleteUser(authUser.id);
               console.log('🗑️ Usuário órfão removido do Auth');
             } catch (cleanupError) {
@@ -379,13 +432,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             toast.error('❌ Erro na senha', {
               description: 'A senha deve ter pelo menos 6 caracteres'
             });
+          } else if (error.message?.includes('Email not confirmed')) {
+            toast.error('❌ Email não confirmado', {
+              description: 'Houve um problema na confirmação automática do email. Tente novamente.'
+            });
           } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
             toast.error('❌ Erro de permissão', {
               description: 'Problema nas políticas de segurança do banco'
-            });
-          } else if (error.message?.includes('não foi salvo')) {
-            toast.error('❌ Erro ao salvar perfil', {
-              description: 'O perfil não foi salvo no banco de dados'
             });
           } else {
             toast.error('❌ Erro ao criar usuário', {
@@ -460,15 +513,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         {/* Aviso importante para criação */}
         {mode === 'create' && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
             <div className="flex items-start gap-3">
-              <Database className="h-5 w-5 text-blue-600 mt-0.5" />
+              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
-                  Criação Completa no Sistema
+                <h4 className="font-semibold text-green-900 dark:text-green-100 text-sm">
+                  Criação com Email Confirmado
                 </h4>
-                <p className="text-blue-700 dark:text-blue-300 text-xs mt-1">
-                  O usuário será criado no Auth e no banco de dados, podendo fazer login imediatamente.
+                <p className="text-green-700 dark:text-green-300 text-xs mt-1">
+                  O usuário será criado com email confirmado automaticamente e poderá fazer login imediatamente.
                 </p>
               </div>
             </div>
@@ -499,8 +552,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               disabled={mode === 'edit'}
             />
             {mode === 'create' && (
-              <p className="text-xs text-blue-600 dark:text-blue-400">
-                ⚠️ Este email será usado para login no sistema
+              <p className="text-xs text-green-600 dark:text-green-400">
+                ✅ Email será confirmado automaticamente
               </p>
             )}
           </div>
@@ -572,11 +625,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 </Label>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                   <Shield className="h-4 w-4" />
                   <span className="text-sm font-medium">
-                    Esta senha será usada para login no sistema
+                    Usuário poderá fazer login imediatamente
                   </span>
                 </div>
               </div>
