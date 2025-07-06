@@ -64,7 +64,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Carregando perfil para usuário:', user.email);
       
-      // Tentar buscar da tabela profiles primeiro
+      // Verificar se temos uma sessão válida antes de tentar acessar dados
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.log('Sessão inválida ou ausente, criando perfil simples');
+        const simpleProfile = createSimpleProfile(user);
+        setProfile(simpleProfile);
+        return;
+      }
+      
+      // Tentar buscar da tabela profiles apenas se temos sessão válida
       const { data: dbProfile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -75,37 +85,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Perfil encontrado no banco:', dbProfile);
         setProfile(dbProfile);
       } else {
-        console.log('Perfil não encontrado no banco, criando perfil simples');
-        // Se não encontrar no banco, criar perfil simples baseado nos dados do usuário
+        console.log('Perfil não encontrado no banco ou erro de acesso, criando perfil simples');
+        // Se não encontrar no banco ou houver erro de acesso, criar perfil simples
         const simpleProfile = createSimpleProfile(user);
         setProfile(simpleProfile);
         
-        // Tentar criar no banco (se a tabela existir)
-        try {
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: user.id,
-              email: user.email || '',
-              name: simpleProfile.name,
-              role: simpleProfile.role,
-              status: simpleProfile.status,
-              commands_used: 0,
-              last_access: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-          
-          if (!insertError) {
-            console.log('Perfil criado no banco com sucesso');
+        // Tentar criar no banco apenas se temos sessão válida (se a tabela existir)
+        if (session) {
+          try {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                email: user.email || '',
+                name: simpleProfile.name,
+                role: simpleProfile.role,
+                status: simpleProfile.status,
+                commands_used: 0,
+                last_access: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            
+            if (!insertError) {
+              console.log('Perfil criado no banco com sucesso');
+            }
+          } catch (createError) {
+            console.log('Não foi possível criar perfil no banco (normal em desenvolvimento):', createError);
           }
-        } catch (createError) {
-          console.log('Não foi possível criar perfil no banco:', createError);
         }
       }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
-      // Em caso de erro, criar perfil simples
+      // Em caso de erro, sempre criar perfil simples
       const simpleProfile = createSimpleProfile(user);
       setProfile(simpleProfile);
     }
@@ -118,29 +130,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Verificar sessão atual
     const getInitialSession = async () => {
       try {
         console.log('Verificando sessão inicial...');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Erro ao verificar sessão:', error);
-          setLoading(false);
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+          }
           return;
         }
         
-        if (session?.user) {
+        if (session?.user && mounted) {
           console.log('Sessão encontrada para:', session.user.email);
           setUser(session.user);
           await loadUserProfile(session.user);
         } else {
           console.log('Nenhuma sessão ativa encontrada');
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
         }
       } catch (error) {
         console.error('Erro inesperado ao verificar sessão:', error);
+        if (mounted) {
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -148,6 +177,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       console.log('Auth state changed:', event, session?.user?.email);
       
       try {
@@ -160,16 +191,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
-          // Não recarregar perfil no refresh do token
+          // Não recarregar perfil no refresh do token para evitar chamadas desnecessárias
         }
       } catch (error) {
         console.error('Erro ao processar mudança de auth:', error);
+        // Em caso de erro, limpar estado
+        setUser(null);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -179,15 +214,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('Tentando fazer login com:', email);
       
-      // Verificar se o usuário existe primeiro
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('email, status')
-        .eq('email', email)
-        .single();
+      // Verificar se o usuário existe primeiro (apenas se conseguirmos acessar)
+      try {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('email, status')
+          .eq('email', email)
+          .single();
 
-      if (existingProfile && existingProfile.status !== 'ativo') {
-        throw new Error('Sua conta está inativa. Entre em contato com o administrador.');
+        if (existingProfile && existingProfile.status !== 'ativo') {
+          throw new Error('Sua conta está inativa. Entre em contato com o administrador.');
+        }
+      } catch (profileError) {
+        // Se não conseguir verificar o perfil, continuar com o login
+        console.log('Não foi possível verificar perfil (continuando com login):', profileError);
       }
 
       // Tentar fazer login

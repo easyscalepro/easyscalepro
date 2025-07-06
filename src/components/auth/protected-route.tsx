@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, Shield, Lock, AlertTriangle } from 'lucide-react';
+import { Loader2, Shield, Lock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,12 +20,42 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
+  // Verificar sessão independentemente
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Erro ao verificar sessão:', error);
+          setSessionError('Erro na verificação de sessão');
+        } else if (!session && !loading) {
+          console.log('Nenhuma sessão encontrada');
+          setSessionError('Sessão ausente');
+        } else {
+          setSessionError(null);
+        }
+      } catch (error) {
+        console.error('Erro inesperado ao verificar sessão:', error);
+        setSessionError('Erro inesperado na sessão');
+      } finally {
+        setSessionChecked(true);
+      }
+    };
+
+    if (!sessionChecked) {
+      checkSession();
+    }
+  }, [loading, sessionChecked]);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        // Usuário não logado - redirecionar para login
-        console.log('Usuário não logado, redirecionando para login');
+    if (!loading && sessionChecked) {
+      if (!user || sessionError) {
+        // Usuário não logado ou erro de sessão - redirecionar para login
+        console.log('Usuário não logado ou erro de sessão, redirecionando para login');
         router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         return;
       }
@@ -43,10 +74,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
     }
-  }, [user, profile, loading, router, pathname, requireAdmin]);
+  }, [user, profile, loading, sessionChecked, sessionError, router, pathname, requireAdmin]);
 
   // Mostrar loading enquanto verifica autenticação
-  if (loading) {
+  if (loading || !sessionChecked) {
     return fallback || (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
@@ -68,6 +99,42 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Erro de sessão
+  if (sessionError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 flex items-center justify-center">
+        <div className="text-center space-y-6 p-8 max-w-md">
+          <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30  rounded-full flex items-center justify-center mx-auto shadow-lg">
+            <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="space-y-3">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Sessão Expirada
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Sua sessão de autenticação expirou ou está ausente. Faça login novamente para continuar.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => router.push('/login')}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Ir para Login
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Recarregar
+              </button>
             </div>
           </div>
         </div>

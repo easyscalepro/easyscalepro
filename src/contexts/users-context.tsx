@@ -45,30 +45,40 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Verificar se há sessão válida
+  const checkSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Erro ao verificar sessão:', error);
+        return null;
+      }
+      
+      return session;
+    } catch (error) {
+      console.error('Erro inesperado ao verificar sessão:', error);
+      return null;
+    }
+  };
+
   // Carregar usuários do Supabase
   const loadUsers = async () => {
     try {
       console.log('🔄 Carregando usuários do Supabase...');
       setError(null);
       
-      // Verificar se o usuário está autenticado
-      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      // Verificar se há sessão válida antes de tentar acessar dados
+      const session = await checkSession();
       
-      if (authError) {
-        console.error('❌ Erro de autenticação:', authError);
-        setError('Erro de autenticação');
+      if (!session) {
+        console.log('⚠️ Nenhuma sessão ativa - não é possível carregar usuários');
+        setError('Sessão de autenticação ausente. Faça login para acessar os dados.');
         setUsers([]);
         return;
       }
 
-      if (!currentUser) {
-        console.log('⚠️ Usuário não autenticado');
-        setError('Usuário não autenticado');
-        setUsers([]);
-        return;
-      }
-
-      console.log('✅ Usuário autenticado:', currentUser.email);
+      console.log('✅ Sessão válida encontrada para:', session.user.email);
 
       // Tentar carregar perfis
       const { data: profiles, error: profilesError } = await supabase
@@ -86,7 +96,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const { data: userProfile, error: userProfileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', currentUser.id)
+            .eq('id', session.user.id)
             .single();
 
           if (userProfileError) {
@@ -117,7 +127,13 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     } catch (error: any) {
       console.error('💥 Erro inesperado ao carregar usuários:', error);
-      setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
+      
+      // Verificar se é erro de sessão ausente
+      if (error.message?.includes('Auth session missing') || error.message?.includes('AuthSessionMissingError')) {
+        setError('Sessão de autenticação expirou. Faça login novamente.');
+      } else {
+        setError(`Erro inesperado: ${error.message || 'Erro desconhecido'}`);
+      }
       setUsers([]);
     } finally {
       setLoading(false);
@@ -183,6 +199,12 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('➕ Adicionando usuário ao contexto:', userData.email);
       
+      // Verificar sessão antes de recarregar
+      const session = await checkSession();
+      if (!session) {
+        throw new Error('Sessão de autenticação ausente');
+      }
+      
       // Recarregar a lista de usuários
       await loadUsers();
       
@@ -196,6 +218,12 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateUser = async (id: string, updates: Partial<User>) => {
     try {
       console.log('✏️ Atualizando usuário:', id, updates);
+      
+      // Verificar sessão antes de atualizar
+      const session = await checkSession();
+      if (!session) {
+        throw new Error('Sessão de autenticação ausente');
+      }
       
       // Preparar dados para o Supabase
       const supabaseUpdates: any = {
@@ -238,6 +266,12 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteUser = async (id: string) => {
     try {
       console.log('🗑️ Deletando usuário:', id);
+      
+      // Verificar sessão antes de deletar
+      const session = await checkSession();
+      if (!session) {
+        throw new Error('Sessão de autenticação ausente');
+      }
       
       // Deletar do Supabase
       const { error } = await supabase
