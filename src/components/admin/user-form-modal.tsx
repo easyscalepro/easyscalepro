@@ -25,7 +25,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   user,
   mode
 }) => {
-  const { addUser, updateUser } = useUsers();
+  const { refreshUsers } = useUsers();
   const { user: currentUser, profile } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -111,86 +111,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       return adminUser.user;
 
     } catch (error: any) {
-      console.error('❌ Falha na Admin API, tentando signup normal:', error);
-      
-      // Fallback para signup normal se Admin API falhar
-      return await createUserWithSignupFallback(email, password, userData);
-    }
-  };
-
-  const createUserWithSignupFallback = async (email: string, password: string, userData: any) => {
-    console.log('🔄 Fallback: Criando usuário com signup normal...');
-    
-    try {
-      // Salvar sessão atual
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      // Fazer signup do novo usuário
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            name: userData.name,
-            company: userData.company,
-            phone: userData.phone
-          }
-        }
-      });
-
-      if (signupError) {
-        console.error('❌ Erro no signup:', signupError);
-        throw signupError;
-      }
-
-      if (!signupData.user) {
-        throw new Error('Usuário não foi criado');
-      }
-
-      console.log('✅ Usuário criado com signup:', {
-        id: signupData.user.id,
-        email: signupData.user.email,
-        confirmed: signupData.user.email_confirmed_at
-      });
-
-      // Se o email não foi confirmado, tentar confirmar via Admin API
-      if (!signupData.user.email_confirmed_at) {
-        console.log('📧 Tentando confirmar email via Admin API...');
-        
-        try {
-          const { data: confirmedUser, error: confirmError } = await supabase.auth.admin.updateUserById(
-            signupData.user.id,
-            { email_confirm: true }
-          );
-
-          if (!confirmError && confirmedUser) {
-            console.log('✅ Email confirmado via Admin API');
-            signupData.user.email_confirmed_at = new Date().toISOString();
-          } else {
-            console.warn('⚠️ Não foi possível confirmar email via Admin API:', confirmError);
-          }
-        } catch (confirmError) {
-          console.warn('⚠️ Erro ao confirmar email:', confirmError);
-        }
-      }
-
-      // Fazer logout do novo usuário e restaurar sessão do admin
-      await supabase.auth.signOut();
-      
-      if (currentSession) {
-        await supabase.auth.setSession(currentSession);
-      }
-
-      return signupData.user;
-
-    } catch (error: any) {
-      console.error('❌ Falha no signup fallback:', error);
+      console.error('❌ Falha na Admin API:', error);
       throw error;
     }
   };
 
   const createUserProfile = async (userId: string, userData: any) => {
-    console.log('👤 Criando perfil na tabela profiles...');
+    console.log('👤 Criando/atualizando perfil na tabela profiles...');
     
     try {
       const profileData = {
@@ -288,7 +215,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log('🚀 Iniciando processo de criação de usuário...', { 
+    console.log('🚀 Iniciando processo de criação/edição de usuário...', { 
       mode, 
       email: formData.email,
       name: formData.name 
@@ -363,23 +290,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           toast.loading('Criando usuário no sistema de autenticação...', { id: 'create-user' });
           authUser = await createUserWithAdminAPI(formData.email, formData.password, formData);
           
-          // 2. Criar perfil na tabela profiles
-          toast.loading('Salvando perfil no banco de dados...', { id: 'create-user' });
+          // 2. Criar/atualizar perfil na tabela profiles
+          toast.loading('Salvando perfil completo no banco de dados...', { id: 'create-user' });
           profileResult = await createUserProfile(authUser.id, formData);
-
-          // 3. Adicionar ao contexto local
-          addUser({
-            id: profileResult.id,
-            name: profileResult.name,
-            email: profileResult.email,
-            status: profileResult.status,
-            role: profileResult.role,
-            phone: profileResult.phone,
-            company: profileResult.company,
-            commandsUsed: profileResult.commands_used,
-            lastAccess: 'Agora',
-            joinedAt: new Date().toISOString().split('T')[0]
-          });
 
           toast.dismiss('create-user');
           toast.success('✅ Usuário criado com sucesso!', {
@@ -402,6 +315,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               duration: 10000
             });
           }, 2000);
+
+          // Atualizar lista de usuários
+          await refreshUsers();
 
         } catch (error: any) {
           console.error('💥 Erro durante criação:', error);
@@ -432,10 +348,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             toast.error('❌ Erro na senha', {
               description: 'A senha deve ter pelo menos 6 caracteres'
             });
-          } else if (error.message?.includes('Email not confirmed')) {
-            toast.error('❌ Email não confirmado', {
-              description: 'Houve um problema na confirmação automática do email. Tente novamente.'
-            });
           } else if (error.message?.includes('permission') || error.message?.includes('RLS')) {
             toast.error('❌ Erro de permissão', {
               description: 'Problema nas políticas de segurança do banco'
@@ -453,6 +365,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         console.log('✏️ Modo: Editar usuário existente');
         
         try {
+          toast.loading('Atualizando dados do usuário...', { id: 'update-user' });
+
           // Atualizar perfil existente
           const { data: updatedProfile, error: updateError } = await supabase
             .from('profiles')
@@ -472,19 +386,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             throw updateError;
           }
 
-          // Atualizar contexto local
-          updateUser(user.id, {
-            name: formData.name,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone,
-            company: formData.company
-          });
-
+          toast.dismiss('update-user');
           toast.success('✅ Usuário atualizado com sucesso!');
+
+          // Atualizar lista de usuários
+          await refreshUsers();
           
         } catch (error: any) {
           console.error('💥 Erro ao atualizar usuário:', error);
+          toast.dismiss('update-user');
           toast.error('❌ Erro ao atualizar usuário: ' + error.message);
           return;
         }
@@ -523,6 +433,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 <p className="text-green-700 dark:text-green-300 text-xs mt-1">
                   O usuário será criado com email confirmado automaticamente e poderá fazer login imediatamente.
                 </p>
+              
               </div>
             </div>
           </div>

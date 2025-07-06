@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
   id: string;
@@ -19,11 +20,13 @@ export interface User {
 
 interface UsersContextType {
   users: User[];
-  addUser: (user: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => void;
-  updateUser: (id: string, user: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  loading: boolean;
+  addUser: (user: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => Promise<void>;
+  updateUser: (id: string, user: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
   getUserById: (id: string) => User | undefined;
-  toggleUserStatus: (id: string) => void;
+  toggleUserStatus: (id: string) => Promise<void>;
+  refreshUsers: () => Promise<void>;
 }
 
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
@@ -36,123 +39,203 @@ export const useUsers = () => {
   return context;
 };
 
-const initialUsers: User[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao@empresa.com',
-    status: 'ativo',
-    role: 'user',
-    lastAccess: '30 min atrás',
-    commandsUsed: 45,
-    joinedAt: '2024-01-10',
-    company: 'Empresa ABC Ltda',
-    phone: '(11) 99999-9999'
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@startup.com',
-    status: 'ativo',
-    role: 'admin',
-    lastAccess: '2 horas atrás',
-    commandsUsed: 78,
-    joinedAt: '2024-01-08',
-    company: 'Startup XYZ',
-    phone: '(11) 88888-8888'
-  },
-  {
-    id: '3',
-    name: 'Pedro Costa',
-    email: 'pedro@pme.com',
-    status: 'inativo',
-    role: 'user',
-    lastAccess: '1 semana atrás',
-    commandsUsed: 23,
-    joinedAt: '2024-01-05',
-    company: 'PME Solutions',
-    phone: '(11) 77777-7777'
-  },
-  {
-    id: '4',
-    name: 'Ana Oliveira',
-    email: 'ana@consultoria.com',
-    status: 'suspenso',
-    role: 'moderator',
-    lastAccess: '3 dias atrás',
-    commandsUsed: 156,
-    joinedAt: '2023-12-20',
-    company: 'Consultoria Pro',
-    phone: '(11) 66666-6666'
-  }
-];
-
 export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const savedUsers = localStorage.getItem('easyscale_users');
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      setUsers(initialUsers);
-      localStorage.setItem('easyscale_users', JSON.stringify(initialUsers));
+  // Carregar usuários do Supabase
+  const loadUsers = async () => {
+    try {
+      console.log('🔄 Carregando usuários do Supabase...');
+      
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erro ao carregar usuários:', error);
+        throw error;
+      }
+
+      console.log('✅ Usuários carregados:', profiles?.length || 0);
+
+      // Converter dados do Supabase para formato do contexto
+      const formattedUsers: User[] = (profiles || []).map(profile => ({
+        id: profile.id,
+        name: profile.name || profile.email,
+        email: profile.email,
+        status: profile.status || 'ativo',
+        role: profile.role || 'user',
+        lastAccess: formatLastAccess(profile.last_access),
+        commandsUsed: profile.commands_used || 0,
+        joinedAt: formatDate(profile.created_at),
+        avatar: profile.avatar_url,
+        phone: profile.phone,
+        company: profile.company
+      }));
+
+      setUsers(formattedUsers);
+    } catch (error: any) {
+      console.error('💥 Erro ao carregar usuários:', error);
+      toast.error('Erro ao carregar usuários: ' + error.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Formatar data de último acesso
+  const formatLastAccess = (timestamp: string | null): string => {
+    if (!timestamp) return 'Nunca';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return 'Agora';
+    if (diffMins < 60) return `${diffMins} min atrás`;
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffDays < 7) return `${diffDays} dias atrás`;
+    
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  // Formatar data de criação
+  const formatDate = (timestamp: string | null): string => {
+    if (!timestamp) return new Date().toISOString().split('T')[0];
+    return new Date(timestamp).toISOString().split('T')[0];
+  };
+
+  // Carregar usuários ao inicializar
+  useEffect(() => {
+    loadUsers();
   }, []);
 
-  const saveUsers = (newUsers: User[]) => {
-    setUsers(newUsers);
-    localStorage.setItem('easyscale_users', JSON.stringify(newUsers));
+  const addUser = async (userData: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => {
+    try {
+      console.log('➕ Adicionando usuário ao contexto:', userData.email);
+      
+      // Não precisamos inserir no Supabase aqui, pois isso é feito no UserFormModal
+      // Apenas recarregar a lista de usuários
+      await loadUsers();
+      
+      toast.success('Usuário adicionado com sucesso!');
+    } catch (error: any) {
+      console.error('❌ Erro ao adicionar usuário:', error);
+      toast.error('Erro ao adicionar usuário: ' + error.message);
+    }
   };
 
-  const addUser = (userData: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => {
-    const newUser: User = {
-      ...userData,
-      id: Date.now().toString(),
-      joinedAt: new Date().toISOString().split('T')[0],
-      commandsUsed: 0,
-      lastAccess: 'Nunca'
-    };
-    
-    const newUsers = [...users, newUser];
-    saveUsers(newUsers);
-    toast.success('Usuário criado com sucesso!');
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    try {
+      console.log('✏️ Atualizando usuário:', id, updates);
+      
+      // Preparar dados para o Supabase
+      const supabaseUpdates: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.name !== undefined) supabaseUpdates.name = updates.name;
+      if (updates.status !== undefined) supabaseUpdates.status = updates.status;
+      if (updates.role !== undefined) supabaseUpdates.role = updates.role;
+      if (updates.phone !== undefined) supabaseUpdates.phone = updates.phone;
+      if (updates.company !== undefined) supabaseUpdates.company = updates.company;
+      if (updates.avatar !== undefined) supabaseUpdates.avatar_url = updates.avatar;
+      if (updates.commandsUsed !== undefined) supabaseUpdates.commands_used = updates.commandsUsed;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(supabaseUpdates)
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Erro ao atualizar no Supabase:', error);
+        throw error;
+      }
+
+      // Atualizar estado local
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === id ? { ...user, ...updates } : user
+        )
+      );
+
+      console.log('✅ Usuário atualizado com sucesso');
+      toast.success('Usuário atualizado com sucesso!');
+    } catch (error: any) {
+      console.error('💥 Erro ao atualizar usuário:', error);
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    }
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    const newUsers = users.map(user => 
-      user.id === id ? { ...user, ...updates } : user
-    );
-    saveUsers(newUsers);
-    toast.success('Usuário atualizado com sucesso!');
-  };
+  const deleteUser = async (id: string) => {
+    try {
+      console.log('🗑️ Deletando usuário:', id);
+      
+      // Deletar do Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
 
-  const deleteUser = (id: string) => {
-    const newUsers = users.filter(user => user.id !== id);
-    saveUsers(newUsers);
-    toast.success('Usuário excluído com sucesso!');
+      if (error) {
+        console.error('❌ Erro ao deletar do Supabase:', error);
+        throw error;
+      }
+
+      // Tentar deletar do Auth também (pode falhar se não tiver Admin API)
+      try {
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+        if (authError) {
+          console.warn('⚠️ Não foi possível deletar do Auth:', authError);
+        } else {
+          console.log('✅ Usuário deletado do Auth também');
+        }
+      } catch (authError) {
+        console.warn('⚠️ Erro ao deletar do Auth (sem Admin API):', authError);
+      }
+
+      // Atualizar estado local
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== id));
+
+      console.log('✅ Usuário deletado com sucesso');
+      toast.success('Usuário excluído com sucesso!');
+    } catch (error: any) {
+      console.error('💥 Erro ao deletar usuário:', error);
+      toast.error('Erro ao excluir usuário: ' + error.message);
+    }
   };
 
   const getUserById = (id: string) => {
     return users.find(user => user.id === id);
   };
 
-  const toggleUserStatus = (id: string) => {
+  const toggleUserStatus = async (id: string) => {
     const user = getUserById(id);
     if (user) {
       const newStatus = user.status === 'ativo' ? 'inativo' : 'ativo';
-      updateUser(id, { status: newStatus });
+      await updateUser(id, { status: newStatus });
     }
+  };
+
+  const refreshUsers = async () => {
+    setLoading(true);
+    await loadUsers();
   };
 
   return (
     <UsersContext.Provider value={{
       users,
+      loading,
       addUser,
       updateUser,
       deleteUser,
       getUserById,
-      toggleUserStatus
+      toggleUserStatus,
+      refreshUsers
     }}>
       {children}
     </UsersContext.Provider>
