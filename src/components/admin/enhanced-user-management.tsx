@@ -34,6 +34,7 @@ import { UserSyncButton } from './user-sync-button';
 import { ManualUserSync } from './manual-user-sync';
 import { UserCreationTest } from './user-creation-test';
 import { LoginTest } from './login-test';
+import { DatabaseCheck } from './database-check';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -200,6 +201,9 @@ export const EnhancedUserManagement: React.FC = () => {
     <div className="space-y-6">
       {/* Componente de sincronização manual */}
       <ManualUserSync />
+
+      {/* Componente de verificação do banco */}
+      <DatabaseCheck />
 
       {/* Componentes de teste */}
       {profile?.role === 'admin' && (
