@@ -44,7 +44,6 @@ export function ThemeToggle() {
           variant="ghost" 
           size="sm" 
           className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
-          onClick={() => console.log('Theme toggle clicked')}
         >
           {resolvedTheme === 'dark' ? (
             <Moon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" />
@@ -59,12 +58,12 @@ export function ThemeToggle() {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-40"
-        onOpenChange={(open) => console.log('Dropdown open state:', open)}
+        className="w-40 z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+        sideOffset={5}
       >
         <DropdownMenuItem 
           onClick={() => handleThemeChange("light")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2"
+          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
           <Sun className="h-4 w-4" />
           <span>Claro</span>
@@ -72,7 +71,7 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("dark")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2"
+          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
           <Moon className="h-4 w-4" />
           <span>Escuro</span>
@@ -80,7 +79,7 @@ export function ThemeToggle() {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("system")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2"
+          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
           <Monitor className="h-4 w-4" />
           <span>Sistema</span>

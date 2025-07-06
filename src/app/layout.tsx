@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased theme-transition`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased theme-transition portal-fix`}
       >
         <ThemeProvider
           attribute="class"
@@ -41,7 +41,9 @@ export default function RootLayout({
           <AuthProvider>
             <CommandsProvider>
               <UsersProvider>
-                {children}
+                <div id="app-root" className="relative z-0">
+                  {children}
+                </div>
                 <Toaster />
               </UsersProvider>
             </CommandsProvider>
