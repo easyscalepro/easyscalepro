@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { User, Save, X, Eye, EyeOff, RefreshCw, Database, CheckCircle, Lock, Shield, AlertTriangle } from 'lucide-react';
+import { User, Save, X, Eye, EyeOff, RefreshCw, Database, CheckCircle, Lock, Shield, AlertTriangle, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth/auth-provider';
@@ -125,25 +125,22 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
     
-    if (password.length < 8) {
-      errors.push('Deve ter pelo menos 8 caracteres');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Deve conter pelo menos uma letra maiúscula');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Deve conter pelo menos uma letra minúscula');
-    }
-    if (!/\d/.test(password)) {
-      errors.push('Deve conter pelo menos um número');
+    // Validação mais flexível para admin
+    if (password.length < 6) {
+      errors.push('Deve ter pelo menos 6 caracteres');
     }
     
     return errors;
   };
 
   const handlePasswordChange = async () => {
-    if (!passwordData.newPassword || !passwordData.confirmPassword) {
-      toast.error('Todos os campos de senha são obrigatórios');
+    if (!passwordData.newPassword) {
+      toast.error('Digite a nova senha');
+      return false;
+    }
+
+    if (!passwordData.confirmPassword) {
+      toast.error('Confirme a nova senha');
       return false;
     }
 
@@ -162,6 +159,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
     try {
       console.log('🔐 Alterando senha do usuário via admin...');
+      toast.loading('Alterando senha...', { id: 'change-password' });
 
       // Usar Admin API para alterar senha
       const { error: updateError } = await supabase.auth.admin.updateUserById(
@@ -171,12 +169,16 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
       if (updateError) {
         console.error('❌ Erro ao alterar senha:', updateError);
+        toast.dismiss('change-password');
         toast.error('Erro ao alterar senha: ' + updateError.message);
         return false;
       }
 
       console.log('✅ Senha alterada com sucesso via admin');
-      toast.success('Senha alterada com sucesso!');
+      toast.dismiss('change-password');
+      toast.success('✅ Senha alterada com sucesso!', {
+        description: `Nova senha definida para ${profile?.name || profile?.email}`
+      });
       
       // Limpar campos de senha
       setPasswordData({ newPassword: '', confirmPassword: '' });
@@ -186,6 +188,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
     } catch (error: any) {
       console.error('💥 Erro inesperado ao alterar senha:', error);
+      toast.dismiss('change-password');
       toast.error('Erro inesperado ao alterar senha');
       return false;
     } finally {
@@ -502,8 +505,8 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
             <div className="border-t pt-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-green-500" />
-                  <Label className="text-sm font-semibold">Alterar Senha do Usuário</Label>
+                  <Key className="h-4 w-4 text-blue-500" />
+                  <Label className="text-sm font-semibold">Redefinir Senha do Usuário</Label>
                 </div>
                 <Switch
                   checked={showPasswordSection}
@@ -512,15 +515,15 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
               </div>
 
               {showPasswordSection && (
-                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>Como admin, você pode redefinir a senha deste usuário</span>
+                <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                    <Shield className="h-4 w-4" />
+                    <span>Defina uma nova senha para <strong>{profile.name || profile.email}</strong></span>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="newPassword">Nova Senha</Label>
+                      <Label htmlFor="newPassword" className="font-medium">Nova Senha</Label>
                       <Button
                         type="button"
                         onClick={generateNewPassword}
@@ -529,7 +532,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                         className="text-xs text-blue-600 hover:text-blue-700"
                       >
                         <RefreshCw className="h-3 w-3 mr-1" />
-                        Gerar
+                        Gerar Senha
                       </Button>
                     </div>
                     <div className="relative">
@@ -538,7 +541,8 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                         type={showNewPasswords.new ? 'text' : 'password'}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                        placeholder="Digite a nova senha"
+                        placeholder="Digite a senha que você escolher"
+                        className="bg-white dark:bg-gray-700"
                       />
                       <button
                         type="button"
@@ -551,14 +555,15 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <Label htmlFor="confirmPassword" className="font-medium">Confirmar Senha</Label>
                     <div className="relative">
                       <Input
                         id="confirmPassword"
                         type={showNewPasswords.confirm ? 'text' : 'password'}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                        placeholder="Confirme a nova senha"
+                        placeholder="Digite a mesma senha novamente"
+                        className="bg-white dark:bg-gray-700"
                       />
                       <button
                         type="button"
@@ -570,21 +575,43 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p>Requisitos da senha:</p>
-                    <ul className="list-disc list-inside space-y-0.5 ml-2">
-                      <li>Pelo menos 8 caracteres</li>
-                      <li>Uma letra maiúscula e uma minúscula</li>
-                      <li>Pelo menos um número</li>
-                    </ul>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="text-xs text-green-700 dark:text-green-300">
+                      <p className="font-medium mb-1">✅ Liberdade Total do Admin:</p>
+                      <ul className="space-y-0.5">
+                        <li>• Você pode escolher qualquer senha</li>
+                        <li>• Mínimo de apenas 6 caracteres</li>
+                        <li>• A senha será salva diretamente no Supabase</li>
+                        <li>• O usuário poderá fazer login imediatamente</li>
+                      </ul>
+                    </div>
                   </div>
 
                   {isChangingPassword && (
-                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                    <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
                       <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      Alterando senha...
+                      Salvando nova senha no banco de dados...
                     </div>
                   )}
+
+                  <Button
+                    type="button"
+                    onClick={handlePasswordChange}
+                    disabled={isChangingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Salvar Nova Senha
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
