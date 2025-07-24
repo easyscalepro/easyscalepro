@@ -130,9 +130,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             console.log('🔐 Tentando criar no Auth...');
             toast.loading('Criando usuário com autenticação...', { id: 'create-user' });
             
-            // Salvar sessão atual
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            
             // Tentar Admin API primeiro
             try {
               const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
@@ -150,34 +147,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 userId = adminUser.user.id;
                 authCreated = true;
                 console.log('✅ Usuário criado via Admin API');
+              } else {
+                console.warn('⚠️ Admin API falhou:', adminError);
               }
             } catch (adminError) {
-              console.warn('⚠️ Admin API falhou, tentando signup...');
-              
-              // Fallback para signup
-              const { data: signupData, error: signupError } = await supabase.auth.signUp({
-                email: formData.email,
-                password: formData.password,
-                options: {
-                  data: {
-                    name: formData.name,
-                    company: formData.company,
-                    phone: formData.phone
-                  }
-                }
-              });
-
-              if (!signupError && signupData.user) {
-                userId = signupData.user.id;
-                authCreated = true;
-                console.log('✅ Usuário criado via signup');
-                
-                // Restaurar sessão admin
-                await supabase.auth.signOut();
-                if (currentSession) {
-                  await supabase.auth.setSession(currentSession);
-                }
-              }
+              console.warn('⚠️ Admin API não disponível, usando ID gerado');
             }
           } catch (authError) {
             console.warn('⚠️ Criação no Auth falhou:', authError);
@@ -187,26 +161,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         // Se não conseguiu criar no Auth ou não quer criar com Auth, gerar ID único
         if (!userId) {
           userId = crypto.randomUUID();
-          console.log('📝 Usando ID gerado para perfil apenas');
+          console.log('📝 Usando ID gerado para perfil apenas:', userId);
         }
 
-        // Criar perfil na tabela profiles (SEMPRE)
+        // Criar perfil na tabela profiles (SEMPRE) - DADOS SIMPLIFICADOS
         console.log('👤 Criando perfil na tabela profiles...');
-        toast.loading('Salvando perfil na tabela...', { id: 'create-user' });
+        toast.loading('Salvando perfil...', { id: 'create-user' });
         
+        // Dados mínimos e limpos para inserção
         const profileData = {
           id: userId,
-          email: formData.email,
-          name: formData.name,
+          email: formData.email.trim().toLowerCase(),
+          name: formData.name.trim(),
           role: formData.role,
           status: formData.status,
-          phone: formData.phone || null,
-          company: formData.company || null,
+          phone: formData.phone.trim() || null,
+          company: formData.company.trim() || null,
           commands_used: 0,
           last_access: new Date().toISOString(),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+
+        console.log('📋 Dados do perfil a serem inseridos:', profileData);
 
         const { data: profileResult, error: profileError } = await supabase
           .from('profiles')
@@ -215,21 +192,31 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           .single();
 
         if (profileError) {
-          console.error('❌ Erro ao criar perfil:', profileError);
+          console.error('❌ Erro detalhado ao criar perfil:', {
+            error: profileError,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code
+          });
           
-          // Mensagem de erro melhorada
+          // Mensagem de erro melhorada baseada no código
           let errorMessage = 'Falha ao salvar perfil na tabela profiles';
           
-          if (profileError.message) {
-            if (profileError.message.includes('duplicate key')) {
-              errorMessage = 'Este usuário já existe na tabela profiles';
-            } else if (profileError.message.includes('permission')) {
-              errorMessage = 'Sem permissão para criar perfil na tabela profiles';
-            } else if (profileError.message.includes('violates')) {
-              errorMessage = 'Dados inválidos para criação do perfil';
-            } else {
-              errorMessage = `Erro na tabela profiles: ${profileError.message}`;
-            }
+          if (profileError.code === '23505') {
+            errorMessage = 'Este email já existe na tabela profiles';
+          } else if (profileError.code === '42501') {
+            errorMessage = 'Sem permissão para inserir na tabela profiles. Verifique as políticas RLS.';
+          } else if (profileError.code === '23502') {
+            errorMessage = 'Dados obrigatórios em falta. Verifique se todos os campos necessários estão preenchidos.';
+          } else if (profileError.message?.includes('duplicate key')) {
+            errorMessage = 'Este usuário já existe na tabela profiles';
+          } else if (profileError.message?.includes('permission')) {
+            errorMessage = 'Sem permissão para criar perfil na tabela profiles';
+          } else if (profileError.message?.includes('violates')) {
+            errorMessage = 'Dados inválidos para criação do perfil';
+          } else if (profileError.message) {
+            errorMessage = `Erro na tabela profiles: ${profileError.message}`;
           }
           
           throw new Error(errorMessage);
@@ -264,37 +251,49 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         
         toast.loading('Atualizando dados do usuário...', { id: 'update-user' });
 
+        const updateData = {
+          name: formData.name.trim(),
+          status: formData.status,
+          role: formData.role,
+          phone: formData.phone.trim() || null,
+          company: formData.company.trim() || null,
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('📋 Dados de atualização:', updateData);
+
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
-          .update({
-            name: formData.name,
-            status: formData.status,
-            role: formData.role,
-            phone: formData.phone || null,
-            company: formData.company || null,
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', user.id)
           .select()
           .single();
 
         if (updateError) {
-          console.error('❌ Erro ao atualizar perfil:', updateError);
+          console.error('❌ Erro detalhado ao atualizar perfil:', {
+            error: updateError,
+            message: updateError.message,
+            details: updateError.details,
+            hint: updateError.hint,
+            code: updateError.code
+          });
           
           let errorMessage = 'Falha ao atualizar perfil na tabela profiles';
           
-          if (updateError.message) {
-            if (updateError.message.includes('permission')) {
-              errorMessage = 'Sem permissão para atualizar este perfil';
-            } else if (updateError.message.includes('violates')) {
-              errorMessage = 'Dados inválidos para atualização do perfil';
-            } else {
-              errorMessage = `Erro na atualização: ${updateError.message}`;
-            }
+          if (updateError.code === '42501') {
+            errorMessage = 'Sem permissão para atualizar este perfil';
+          } else if (updateError.message?.includes('permission')) {
+            errorMessage = 'Sem permissão para atualizar este perfil';
+          } else if (updateError.message?.includes('violates')) {
+            errorMessage = 'Dados inválidos para atualização do perfil';
+          } else if (updateError.message) {
+            errorMessage = `Erro na atualização: ${updateError.message}`;
           }
           
           throw new Error(errorMessage);
         }
+
+        console.log('✅ Perfil atualizado:', updatedProfile);
 
         toast.dismiss('update-user');
         toast.success('✅ Usuário atualizado com sucesso!');
@@ -315,7 +314,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       if (error.message) {
         if (error.message.includes('já existe')) {
           userFriendlyMessage = 'Este email já está cadastrado no sistema';
-        } else if (error.message.includes('permissão')) {
+        } else if (error.message.includes('permissão') || error.message.includes('permission')) {
           userFriendlyMessage = 'Você não tem permissão para esta operação';
         } else if (error.message.includes('profiles')) {
           userFriendlyMessage = 'Erro ao acessar a tabela de usuários';
