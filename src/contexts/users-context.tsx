@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { checkSession, withRequiredAuth, withOptionalAuth } from '@/lib/supabase-utils';
@@ -45,23 +45,92 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  // Carregar usuários do Supabase
-  const loadUsers = async () => {
+  // Função para formatar dados do usuário
+  const formatUser = useCallback((profile: any): User => {
+    return {
+      id: profile.id,
+      name: profile.name || profile.email || 'Usuário',
+      email: profile.email || '',
+      status: profile.status || 'ativo',
+      role: profile.role || 'user',
+      lastAccess: formatLastAccess(profile.last_access),
+      commandsUsed: profile.commands_used || 0,
+      joinedAt: formatDate(profile.created_at),
+      avatar: profile.avatar_url,
+      phone: profile.phone,
+      company: profile.company
+    };
+  }, []);
+
+  // Formatar data de último acesso
+  const formatLastAccess = useCallback((timestamp: string | null): string => {
+    if (!timestamp) return 'Nunca';
+    
     try {
-      console.log('🔄 Iniciando carregamento de usuários...');
-      setError(null);
-      setLoading(true);
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMins < 1) return 'Agora';
+      if (diffMins < 60) return `${diffMins} min atrás`;
+      if (diffHours < 24) return `${diffHours}h atrás`;
+      if (diffDays < 7) return `${diffDays} dias atrás`;
       
-      // Primeiro, verificar se temos uma sessão válida
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      return 'Data inválida';
+    }
+  }, []);
+
+  // Formatar data de criação
+  const formatDate = useCallback((timestamp: string | null): string => {
+    if (!timestamp) return new Date().toISOString().split('T')[0];
+    try {
+      return new Date(timestamp).toISOString().split('T')[0];
+    } catch (error) {
+      return new Date().toISOString().split('T')[0];
+    }
+  }, []);
+
+  // Carregar usuários do Supabase - com proteção contra loops
+  const loadUsers = useCallback(async (isManualRefresh = false) => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (loadingRef.current && !isManualRefresh) {
+      console.log('⚠️ Carregamento já em andamento, ignorando...');
+      return;
+    }
+
+    if (!mountedRef.current) {
+      console.log('⚠️ Componente desmontado, cancelando carregamento...');
+      return;
+    }
+
+    try {
+      loadingRef.current = true;
+      console.log('🔄 Iniciando carregamento de usuários...', isManualRefresh ? '(manual)' : '(automático)');
+      
+      if (isManualRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      
+      // Verificar sessão
       const session = await checkSession();
       console.log('📋 Sessão verificada:', session ? 'Válida' : 'Inválida');
       
-      // Tentar carregar usuários com diferentes estratégias
       let profiles: any[] = [];
       let loadMethod = '';
       
-      // Estratégia 1: Tentar carregar todos os perfis (se tiver permissão)
+      // Estratégia 1: Tentar carregar todos os perfis
       try {
         console.log('🔍 Tentando carregar todos os perfis...');
         
@@ -75,17 +144,14 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           loadMethod = 'todos_perfis';
           console.log('✅ Carregados todos os perfis:', profiles.length);
         } else if (allProfilesError) {
-          console.warn('⚠️ Erro ao carregar todos os perfis:', allProfilesError);
           throw allProfilesError;
         }
       } catch (allProfilesError: any) {
         console.warn('⚠️ Falha ao carregar todos os perfis:', allProfilesError.message);
         
-        // Estratégia 2: Carregar apenas perfil do usuário atual (se houver sessão)
+        // Estratégia 2: Carregar apenas perfil do usuário atual
         if (session) {
           try {
-            console.log('🔍 Tentando carregar perfil do usuário atual...');
-            
             const { data: userProfile, error: userProfileError } = await supabase
               .from('profiles')
               .select('*')
@@ -97,16 +163,13 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               loadMethod = 'perfil_atual';
               console.log('✅ Carregado perfil do usuário atual:', userProfile.email);
             } else {
-              console.warn('⚠️ Erro ao carregar perfil do usuário:', userProfileError);
               throw userProfileError;
             }
           } catch (userProfileError: any) {
             console.warn('⚠️ Falha ao carregar perfil do usuário:', userProfileError.message);
             
-            // Estratégia 3: Criar perfil básico se não existir
+            // Estratégia 3: Criar perfil básico
             try {
-              console.log('🔧 Tentando criar perfil básico...');
-              
               const basicProfile = {
                 id: session.user.id,
                 email: session.user.email || '',
@@ -134,152 +197,89 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             } catch (createError: any) {
               console.error('❌ Falha ao criar perfil básico:', createError.message);
-              // Não lançar erro aqui - continuar sem perfis
-              console.log('⚠️ Continuando sem perfis devido a erro na criação');
+              profiles = [];
+              loadMethod = 'lista_vazia_erro';
             }
           }
         } else {
-          // Estratégia 4: Sem sessão - tentar carregar perfis públicos ou continuar vazio
-          console.log('ℹ️ Sem sessão ativa - tentando carregar dados públicos...');
-          
-          try {
-            // Tentar uma consulta simples para verificar se consegue acessar a tabela
-            const { data: publicProfiles, error: publicError } = await supabase
-              .from('profiles')
-              .select('id, email, name, role, status, created_at')
-              .limit(5);
-
-            if (!publicError && publicProfiles) {
-              profiles = publicProfiles;
-              loadMethod = 'perfis_publicos';
-              console.log('✅ Carregados perfis públicos:', profiles.length);
-            } else {
-              console.warn('⚠️ Não foi possível carregar perfis públicos:', publicError);
-              // Não lançar erro - continuar com lista vazia
-              profiles = [];
-              loadMethod = 'lista_vazia';
-              console.log('ℹ️ Continuando com lista vazia de usuários');
-            }
-          } catch (publicError) {
-            console.warn('⚠️ Erro ao tentar carregar perfis públicos:', publicError);
-            // Não lançar erro - continuar com lista vazia
-            profiles = [];
-            loadMethod = 'lista_vazia_erro';
-            console.log('ℹ️ Continuando com lista vazia devido a erro');
-          }
+          // Sem sessão - lista vazia
+          profiles = [];
+          loadMethod = 'sem_sessao';
+          console.log('ℹ️ Sem sessão - lista vazia');
         }
       }
 
-      // Converter dados do Supabase para formato do contexto
-      if (profiles.length > 0) {
-        const formattedUsers: User[] = profiles.map(formatUser);
-        setUsers(formattedUsers);
-        console.log(`✅ ${formattedUsers.length} usuário(s) carregado(s) via ${loadMethod}`);
-      } else {
-        console.log('ℹ️ Nenhum perfil encontrado - lista vazia');
-        setUsers([]);
+      // Atualizar estado apenas se o componente ainda estiver montado
+      if (mountedRef.current) {
+        if (profiles.length > 0) {
+          const formattedUsers: User[] = profiles.map(formatUser);
+          setUsers(formattedUsers);
+          console.log(`✅ ${formattedUsers.length} usuário(s) carregado(s) via ${loadMethod}`);
+        } else {
+          setUsers([]);
+          console.log('ℹ️ Lista de usuários vazia');
+        }
       }
 
     } catch (error: any) {
       console.error('💥 Erro ao carregar usuários:', error);
       
-      // Tratamento específico de erros - não falhar completamente
-      let errorMessage = 'Não foi possível carregar usuários';
-      
-      if (error.message?.includes('permission') || error.message?.includes('RLS')) {
-        errorMessage = 'Sem permissão para acessar dados de usuários. Faça login como administrador.';
-      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-      } else if (error.message?.includes('table') || error.message?.includes('relation')) {
-        errorMessage = 'Tabela de usuários não encontrada. Entre em contato com o administrador.';
-      } else if (error.message?.includes('auth') || error.message?.includes('session')) {
-        errorMessage = 'Problemas de autenticação. Tente fazer login novamente.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (mountedRef.current) {
+        let errorMessage = 'Não foi possível carregar usuários';
+        
+        if (error.message?.includes('permission') || error.message?.includes('RLS')) {
+          errorMessage = 'Sem permissão para acessar dados de usuários. Faça login como administrador.';
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        } else if (error.message?.includes('table') || error.message?.includes('relation')) {
+          errorMessage = 'Tabela de usuários não encontrada. Entre em contato com o administrador.';
+        } else if (error.message?.includes('auth') || error.message?.includes('session')) {
+          errorMessage = 'Problemas de autenticação. Tente fazer login novamente.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        setUsers([]);
       }
-      
-      setError(errorMessage);
-      setUsers([]); // Lista vazia em caso de erro
     } finally {
-      setLoading(false);
+      loadingRef.current = false;
+      if (mountedRef.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
-  };
+  }, [formatUser]);
 
-  // Função para formatar dados do usuário
-  const formatUser = (profile: any): User => {
-    return {
-      id: profile.id,
-      name: profile.name || profile.email || 'Usuário',
-      email: profile.email || '',
-      status: profile.status || 'ativo',
-      role: profile.role || 'user',
-      lastAccess: formatLastAccess(profile.last_access),
-      commandsUsed: profile.commands_used || 0,
-      joinedAt: formatDate(profile.created_at),
-      avatar: profile.avatar_url,
-      phone: profile.phone,
-      company: profile.company
-    };
-  };
-
-  // Formatar data de último acesso
-  const formatLastAccess = (timestamp: string | null): string => {
-    if (!timestamp) return 'Nunca';
-    
-    try {
-      const date = new Date(timestamp);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-      if (diffMins < 1) return 'Agora';
-      if (diffMins < 60) return `${diffMins} min atrás`;
-      if (diffHours < 24) return `${diffHours}h atrás`;
-      if (diffDays < 7) return `${diffDays} dias atrás`;
-      
-      return date.toLocaleDateString('pt-BR');
-    } catch (error) {
-      return 'Data inválida';
-    }
-  };
-
-  // Formatar data de criação
-  const formatDate = (timestamp: string | null): string => {
-    if (!timestamp) return new Date().toISOString().split('T')[0];
-    try {
-      return new Date(timestamp).toISOString().split('T')[0];
-    } catch (error) {
-      return new Date().toISOString().split('T')[0];
-    }
-  };
-
-  // Carregar usuários ao inicializar
+  // Carregar usuários apenas uma vez na inicialização
   useEffect(() => {
-    loadUsers();
-  }, []);
+    mountedRef.current = true;
+    loadUsers(false);
 
-  const addUser = async (userData: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []); // Dependências vazias para carregar apenas uma vez
+
+  const addUser = useCallback(async (userData: Omit<User, 'id' | 'joinedAt' | 'commandsUsed' | 'lastAccess'>) => {
     try {
       console.log('➕ Adicionando usuário ao contexto:', userData.email);
       
       // Recarregar a lista de usuários
-      await loadUsers();
+      await loadUsers(true);
       
       toast.success('Usuário adicionado com sucesso!');
     } catch (error: any) {
       console.error('❌ Erro ao adicionar usuário:', error);
       toast.error('Erro ao adicionar usuário: ' + error.message);
     }
-  };
+  }, [loadUsers]);
 
-  const updateUser = async (id: string, updates: Partial<User>) => {
+  const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
     try {
       console.log('✏️ Atualizando usuário:', id, updates);
       
       await withRequiredAuth(async () => {
-        // Preparar dados para o Supabase
         const supabaseUpdates: any = {
           updated_at: new Date().toISOString()
         };
@@ -318,14 +318,13 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('💥 Erro ao atualizar usuário:', error);
       toast.error('Erro ao atualizar usuário: ' + error.message);
     }
-  };
+  }, []);
 
-  const deleteUser = async (id: string) => {
+  const deleteUser = useCallback(async (id: string) => {
     try {
       console.log('🗑️ Deletando usuário:', id);
       
       await withRequiredAuth(async () => {
-        // Deletar do Supabase
         const { error } = await supabase
           .from('profiles')
           .delete()
@@ -336,7 +335,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           throw error;
         }
 
-        // Tentar deletar do Auth também (pode falhar se não tiver Admin API)
         try {
           const { error: authError } = await supabase.auth.admin.deleteUser(id);
           if (authError) {
@@ -351,7 +349,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return true;
       });
 
-      // Atualizar estado local
       setUsers(prevUsers => prevUsers.filter(user => user.id !== id));
 
       console.log('✅ Usuário deletado com sucesso');
@@ -360,30 +357,35 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('💥 Erro ao deletar usuário:', error);
       toast.error('Erro ao excluir usuário: ' + error.message);
     }
-  };
+  }, []);
 
-  const getUserById = (id: string) => {
+  const getUserById = useCallback((id: string) => {
     return users.find(user => user.id === id);
-  };
+  }, [users]);
 
-  const toggleUserStatus = async (id: string) => {
+  const toggleUserStatus = useCallback(async (id: string) => {
     const user = getUserById(id);
     if (user) {
       const newStatus = user.status === 'ativo' ? 'inativo' : 'ativo';
       await updateUser(id, { status: newStatus });
     }
-  };
+  }, [getUserById, updateUser]);
 
-  const refreshUsers = async () => {
+  // Função de refresh com debounce para evitar múltiplas chamadas
+  const refreshUsers = useCallback(async () => {
+    if (isRefreshing || loadingRef.current) {
+      console.log('⚠️ Refresh já em andamento, ignorando...');
+      return;
+    }
+
     console.log('🔄 Atualizando lista de usuários...');
-    setLoading(true);
-    await loadUsers();
-  };
+    await loadUsers(true);
+  }, [isRefreshing, loadUsers]);
 
   return (
     <UsersContext.Provider value={{
       users,
-      loading,
+      loading: loading || isRefreshing,
       error,
       addUser,
       updateUser,
