@@ -133,7 +133,21 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
     return errors;
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    console.log('🔐 Iniciando alteração de senha...');
+    console.log('📋 Dados:', {
+      userId: profile?.id,
+      email: profile?.email,
+      newPasswordLength: passwordData.newPassword?.length,
+      confirmPasswordLength: passwordData.confirmPassword?.length
+    });
+
+    // Validações básicas
     if (!passwordData.newPassword) {
       toast.error('Digite a nova senha');
       return false;
@@ -155,42 +169,123 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
       return false;
     }
 
+    if (!profile?.id) {
+      toast.error('ID do usuário não encontrado');
+      return false;
+    }
+
     setIsChangingPassword(true);
 
     try {
-      console.log('🔐 Alterando senha do usuário via admin...');
+      console.log('🔐 Tentando alterar senha via Admin API...');
       toast.loading('Alterando senha...', { id: 'change-password' });
 
-      // Usar Admin API para alterar senha
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        profile!.id,
-        { password: passwordData.newPassword }
-      );
+      // Método 1: Tentar usar Admin API
+      try {
+        const { data: adminData, error: adminError } = await supabase.auth.admin.updateUserById(
+          profile.id,
+          { password: passwordData.newPassword }
+        );
 
-      if (updateError) {
-        console.error('❌ Erro ao alterar senha:', updateError);
+        if (adminError) {
+          console.warn('⚠️ Admin API falhou:', adminError);
+          throw adminError;
+        }
+
+        console.log('✅ Senha alterada via Admin API:', adminData);
         toast.dismiss('change-password');
-        toast.error('Erro ao alterar senha: ' + updateError.message);
-        return false;
+        toast.success('✅ Senha alterada com sucesso!', {
+          description: `Nova senha definida para ${profile?.name || profile?.email}`
+        });
+        
+        // Limpar campos de senha
+        setPasswordData({ newPassword: '', confirmPassword: '' });
+        setShowPasswordSection(false);
+        
+        return true;
+
+      } catch (adminError: any) {
+        console.warn('⚠️ Admin API não disponível, tentando método alternativo...');
+        
+        // Método 2: Fallback - Criar um novo usuário temporário para resetar senha
+        try {
+          console.log('🔄 Tentando método alternativo...');
+          
+          // Primeiro, verificar se o usuário existe no auth
+          const { data: existingUser, error: getUserError } = await supabase.auth.admin.getUserById(profile.id);
+          
+          if (getUserError || !existingUser.user) {
+            console.log('👤 Usuário não existe no Auth, criando...');
+            
+            // Criar usuário no Auth se não existir
+            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+              email: profile.email,
+              password: passwordData.newPassword,
+              email_confirm: true,
+              user_metadata: {
+                name: profile.name
+              }
+            });
+
+            if (createError) {
+              throw createError;
+            }
+
+            console.log('✅ Usuário criado no Auth com nova senha');
+            
+          } else {
+            console.log('👤 Usuário existe no Auth, atualizando senha...');
+            
+            // Tentar novamente a atualização
+            const { error: retryError } = await supabase.auth.admin.updateUserById(
+              profile.id,
+              { password: passwordData.newPassword }
+            );
+
+            if (retryError) {
+              throw retryError;
+            }
+          }
+
+          console.log('✅ Senha alterada com sucesso via método alternativo');
+          toast.dismiss('change-password');
+          toast.success('✅ Senha alterada com sucesso!', {
+            description: `Nova senha definida para ${profile?.name || profile?.email}`
+          });
+          
+          // Limpar campos de senha
+          setPasswordData({ newPassword: '', confirmPassword: '' });
+          setShowPasswordSection(false);
+          
+          return true;
+
+        } catch (fallbackError: any) {
+          console.error('❌ Método alternativo também falhou:', fallbackError);
+          throw fallbackError;
+        }
       }
 
-      console.log('✅ Senha alterada com sucesso via admin');
-      toast.dismiss('change-password');
-      toast.success('✅ Senha alterada com sucesso!', {
-        description: `Nova senha definida para ${profile?.name || profile?.email}`
-      });
-      
-      // Limpar campos de senha
-      setPasswordData({ newPassword: '', confirmPassword: '' });
-      setShowPasswordSection(false);
-      
-      return true;
-
     } catch (error: any) {
-      console.error('💥 Erro inesperado ao alterar senha:', error);
+      console.error('💥 Erro ao alterar senha:', error);
       toast.dismiss('change-password');
-      toast.error('Erro inesperado ao alterar senha');
+      
+      let errorMessage = 'Erro inesperado ao alterar senha';
+      
+      if (error.message) {
+        if (error.message.includes('Invalid API key')) {
+          errorMessage = 'Erro de permissão: Chave de API inválida';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'Usuário não encontrado no sistema de autenticação';
+        } else if (error.message.includes('Password')) {
+          errorMessage = 'Erro na validação da senha';
+        } else {
+          errorMessage = `Erro: ${error.message}`;
+        }
+      }
+      
+      toast.error(errorMessage);
       return false;
+      
     } finally {
       setIsChangingPassword(false);
     }
@@ -308,14 +403,6 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
       } else if (mode === 'edit' && profile) {
         console.log('✏️ Editando usuário...');
         toast.loading('Atualizando usuário...', { id: 'update-user' });
-
-        // Se há alteração de senha pendente, fazer primeiro
-        if (showPasswordSection && (passwordData.newPassword || passwordData.confirmPassword)) {
-          const passwordSuccess = await handlePasswordChange();
-          if (!passwordSuccess) {
-            return; // Parar se a alteração de senha falhou
-          }
-        }
 
         const updateData = {
           name: formData.name.trim(),
@@ -594,24 +681,24 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                     </div>
                   )}
 
-                  <Button
+                  <button
                     type="button"
                     onClick={handlePasswordChange}
                     disabled={isChangingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow h-9 px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
                   >
                     {isChangingPassword ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Salvando...
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Salvando no Banco...
                       </>
                     ) : (
                       <>
-                        <Lock className="h-4 w-4 mr-2" />
+                        <Lock className="h-4 w-4" />
                         Salvar Nova Senha
                       </>
                     )}
-                  </Button>
+                  </button>
                 </div>
               )}
             </div>
