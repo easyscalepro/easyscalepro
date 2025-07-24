@@ -25,7 +25,10 @@ import {
   Users,
   Shield,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Database,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +43,7 @@ interface Profile {
   phone: string | null;
   role: 'admin' | 'user' | 'moderator';
   status: 'ativo' | 'inativo' | 'suspenso';
+  avatar_url: string | null;
   commands_used: number;
   last_access: string | null;
   created_at: string;
@@ -50,18 +54,52 @@ export const UserManagementDashboard: React.FC = () => {
   const { profile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [roleFilter, setRoleFilter] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [selectedProfile, setSelectedProfile] = useState<Profile | undefined>(undefined);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+
+  // Verificar conexão
+  const checkConnection = useCallback(async () => {
+    try {
+      setConnectionStatus('checking');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.warn('Problema de conexão:', error);
+        setConnectionStatus('disconnected');
+        return false;
+      } else {
+        setConnectionStatus('connected');
+        return true;
+      }
+    } catch (error) {
+      console.error('Erro de conexão:', error);
+      setConnectionStatus('disconnected');
+      return false;
+    }
+  }, []);
 
   // Carregar perfis do Supabase
   const loadProfiles = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       console.log('🔄 Carregando perfis da tabela profiles...');
+
+      // Verificar conexão primeiro
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        throw new Error('Sem conexão com o banco de dados');
+      }
 
       const { data, error } = await supabase
         .from('profiles')
@@ -69,21 +107,47 @@ export const UserManagementDashboard: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Erro ao carregar perfis:', error);
-        toast.error('Erro ao carregar usuários: ' + error.message);
-        return;
+        console.error('❌ Erro detalhado ao carregar perfis:', {
+          error: error,
+          message: error?.message || 'Erro desconhecido',
+          details: error?.details || 'Sem detalhes',
+          hint: error?.hint || 'Sem dicas',
+          code: error?.code || 'Sem código'
+        });
+
+        let errorMessage = 'Erro ao carregar usuários';
+        
+        if (error.code === '42501') {
+          errorMessage = 'Sem permissão para acessar a tabela de usuários. Verifique as políticas RLS.';
+        } else if (error.code === '42P01') {
+          errorMessage = 'Tabela profiles não encontrada. Entre em contato com o administrador.';
+        } else if (error.message?.includes('permission')) {
+          errorMessage = 'Sem permissão para acessar dados de usuários';
+        } else if (error.message?.includes('relation') || error.message?.includes('table')) {
+          errorMessage = 'Tabela de usuários não configurada corretamente';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Perfis carregados:', data?.length || 0);
       setProfiles(data || []);
 
+      if (!data || data.length === 0) {
+        console.log('ℹ️ Tabela profiles está vazia');
+        toast.info('Nenhum usuário encontrado. Crie o primeiro usuário!');
+      }
+
     } catch (error: any) {
       console.error('💥 Erro geral ao carregar perfis:', error);
-      toast.error('Erro ao carregar usuários');
+      setError(error.message || 'Erro desconhecido ao carregar usuários');
+      setProfiles([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkConnection]);
 
   useEffect(() => {
     loadProfiles();
@@ -183,30 +247,39 @@ export const UserManagementDashboard: React.FC = () => {
     }
   };
 
+  // Exportar sem usar clipboard - usar download direto
   const handleExportUsers = () => {
-    const csvContent = [
-      ['Nome', 'Email', 'Status', 'Função', 'Empresa', 'Telefone', 'Comandos Usados', 'Último Acesso', 'Criado em'],
-      ...filteredProfiles.map(profile => [
-        profile.name || '',
-        profile.email,
-        profile.status,
-        profile.role,
-        profile.company || '',
-        profile.phone || '',
-        profile.commands_used?.toString() || '0',
-        profile.last_access ? new Date(profile.last_access).toLocaleString('pt-BR') : 'Nunca',
-        new Date(profile.created_at).toLocaleString('pt-BR')
-      ])
-    ].map(row => row.join(',')).join('\n');
+    try {
+      const csvContent = [
+        ['Nome', 'Email', 'Status', 'Função', 'Empresa', 'Telefone', 'Comandos Usados', 'Último Acesso', 'Criado em'],
+        ...filteredProfiles.map(profile => [
+          profile.name || '',
+          profile.email,
+          profile.status,
+          profile.role,
+          profile.company || '',
+          profile.phone || '',
+          profile.commands_used?.toString() || '0',
+          profile.last_access ? new Date(profile.last_access).toLocaleString('pt-BR') : 'Nunca',
+          new Date(profile.created_at).toLocaleString('pt-BR')
+        ])
+      ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Lista de usuários exportada com sucesso!');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Lista de usuários exportada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      toast.error('Erro ao exportar lista de usuários');
+    }
   };
 
   // Badges
@@ -262,8 +335,138 @@ export const UserManagementDashboard: React.FC = () => {
     }
   };
 
+  // Se há erro, mostrar interface de erro
+  if (error) {
+    return (
+      <div className="space-y-6">
+        {/* Status de conexão */}
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+              {connectionStatus === 'connected' ? (
+                <Wifi className="h-5 w-5 text-green-600" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-red-600" />
+              )}
+              Status da Conexão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'connected' ? 'bg-green-500' : 
+                connectionStatus === 'checking' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+              }`}></div>
+              <span className="text-sm">
+                {connectionStatus === 'connected' && 'Conectado ao Supabase'}
+                {connectionStatus === 'checking' && 'Verificando conexão...'}
+                {connectionStatus === 'disconnected' && 'Problema de conexão'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <AlertTriangle className="h-5 w-5" />
+              Erro ao Carregar Usuários
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg">
+                <p className="text-red-700 dark:text-red-300 font-medium">
+                  {error}
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  onClick={loadProfiles}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Tentar Novamente
+                </Button>
+                
+                <Button
+                  onClick={checkConnection}
+                  variant="outline"
+                  className="border-red-300 text-red-600"
+                >
+                  <Wifi className="h-4 w-4 mr-2" />
+                  Verificar Conexão
+                </Button>
+                
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="border-red-300 text-red-600"
+                >
+                  Recarregar Página
+                </Button>
+              </div>
+              
+              <div className="bg-red-100 dark:bg-red-900/30 p-4 rounded-lg">
+                <h4 className="font-semibold text-red-900 dark:text-red-100 mb-2">
+                  Possíveis Soluções:
+                </h4>
+                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  <li>• Verifique se você está logado corretamente</li>
+                  <li>• Confirme se tem permissões adequadas</li>
+                  <li>• Verifique sua conexão com a internet</li>
+                  <li>• Tente fazer logout e login novamente</li>
+                  <li>• Entre em contato com o administrador se o problema persistir</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botão para criar primeiro usuário mesmo com erro */}
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+          <CardContent className="p-6 text-center">
+            <Database className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Tabela Vazia ou Inacessível
+            </h3>
+            <p className="text-blue-700 dark:text-blue-300 mb-4">
+              A tabela de usuários pode estar vazia ou com problemas de acesso.
+            </p>
+            <Button 
+              onClick={handleCreateUser}
+              className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tentar Criar Usuário
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Status de conexão */}
+      <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Wifi className="h-5 w-5 text-green-600" />
+            <div>
+              <div className="font-semibold text-green-800 dark:text-green-200">
+                Sistema Conectado
+              </div>
+              <div className="text-sm text-green-600 dark:text-green-300">
+                {profiles.length} usuário(s) carregado(s) com sucesso
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-gray-200">
@@ -353,16 +556,14 @@ export const UserManagementDashboard: React.FC = () => {
                 <Download className="h-4 w-4 mr-2" />
                 Exportar
               </Button>
-              {profile?.role === 'admin' && (
-                <Button 
-                  onClick={handleCreateUser}
-                  size="sm"
-                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Novo Usuário
-                </Button>
-              )}
+              <Button 
+                onClick={handleCreateUser}
+                size="sm"
+                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Novo Usuário
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -504,17 +705,15 @@ export const UserManagementDashboard: React.FC = () => {
                         >
                           {profile.status === 'ativo' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                         </Button>
-                        {profile?.role === 'admin' && (
-                          <Button
-                            onClick={() => handleDeleteUser(profile.id, profile.name || profile.email)}
-                            size="sm"
-                            variant="outline"
-                            className="border-red-300 text-red-600 hover:bg-red-50"
-                            title="Excluir usuário"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          onClick={() => handleDeleteUser(profile.id, profile.name || profile.email)}
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          title="Excluir usuário"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -540,15 +739,13 @@ export const UserManagementDashboard: React.FC = () => {
                   : 'Comece criando o primeiro usuário da plataforma'
                 }
               </p>
-              {(!searchTerm && statusFilter === 'todos' && roleFilter === 'todos' && profile?.role === 'admin') && (
-                <Button 
-                  onClick={handleCreateUser}
-                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Criar Primeiro Usuário
-                </Button>
-              )}
+              <Button 
+                onClick={handleCreateUser}
+                className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar Primeiro Usuário
+              </Button>
             </div>
           )}
 
