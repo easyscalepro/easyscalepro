@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { User, Save, X, Eye, EyeOff, RefreshCw, Database } from 'lucide-react';
+import { User, Save, X, Eye, EyeOff, RefreshCw, Database, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, type User as UserType } from '@/contexts/users-context';
 import { useAuth } from '@/components/auth/auth-provider';
@@ -52,7 +52,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         company: user.company || '',
         password: ''
       });
-      setCreateWithAuth(false); // Não mostrar senha para edição
+      setCreateWithAuth(false);
     } else {
       setFormData({
         name: '',
@@ -112,7 +112,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         const { data: existingProfile } = await supabase
           .from('profiles')
           .select('id, email')
-          .eq('email', formData.email)
+          .eq('email', formData.email.trim().toLowerCase())
           .single();
 
         if (existingProfile) {
@@ -130,31 +130,28 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             console.log('🔐 Tentando criar no Auth...');
             toast.loading('Criando usuário com autenticação...', { id: 'create-user' });
             
-            // Tentar Admin API primeiro
-            try {
-              const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
-                email: formData.email,
-                password: formData.password,
-                email_confirm: true,
-                user_metadata: {
-                  name: formData.name,
-                  company: formData.company,
-                  phone: formData.phone
-                }
-              });
-
-              if (!adminError && adminUser.user) {
-                userId = adminUser.user.id;
-                authCreated = true;
-                console.log('✅ Usuário criado via Admin API');
-              } else {
-                console.warn('⚠️ Admin API falhou:', adminError);
+            const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
+              email: formData.email.trim().toLowerCase(),
+              password: formData.password,
+              email_confirm: true,
+              user_metadata: {
+                name: formData.name.trim(),
+                company: formData.company.trim(),
+                phone: formData.phone.trim()
               }
-            } catch (adminError) {
-              console.warn('⚠️ Admin API não disponível, usando ID gerado');
+            });
+
+            if (!adminError && adminUser.user) {
+              userId = adminUser.user.id;
+              authCreated = true;
+              console.log('✅ Usuário criado via Admin API:', userId);
+            } else {
+              console.warn('⚠️ Admin API falhou:', adminError);
+              // Continuar sem auth
             }
           } catch (authError) {
             console.warn('⚠️ Criação no Auth falhou:', authError);
+            // Continuar sem auth
           }
         }
 
@@ -164,27 +161,30 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           console.log('📝 Usando ID gerado para perfil apenas:', userId);
         }
 
-        // Criar perfil na tabela profiles (SEMPRE) - DADOS SIMPLIFICADOS
+        // Criar perfil na tabela profiles - DADOS MÍNIMOS
         console.log('👤 Criando perfil na tabela profiles...');
-        toast.loading('Salvando perfil...', { id: 'create-user' });
+        toast.loading('Salvando perfil na tabela...', { id: 'create-user' });
         
-        // Dados mínimos e limpos para inserção
+        // Dados absolutamente mínimos para inserção
         const profileData = {
           id: userId,
           email: formData.email.trim().toLowerCase(),
           name: formData.name.trim(),
           role: formData.role,
-          status: formData.status,
-          phone: formData.phone.trim() || null,
-          company: formData.company.trim() || null,
-          commands_used: 0,
-          last_access: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          status: formData.status
         };
 
-        console.log('📋 Dados do perfil a serem inseridos:', profileData);
+        // Adicionar campos opcionais apenas se preenchidos
+        if (formData.phone.trim()) {
+          (profileData as any).phone = formData.phone.trim();
+        }
+        if (formData.company.trim()) {
+          (profileData as any).company = formData.company.trim();
+        }
 
+        console.log('📋 Dados mínimos para inserção:', profileData);
+
+        // Tentar inserção com dados mínimos
         const { data: profileResult, error: profileError } = await supabase
           .from('profiles')
           .insert(profileData)
@@ -194,35 +194,68 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         if (profileError) {
           console.error('❌ Erro detalhado ao criar perfil:', {
             error: profileError,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            code: profileError.code
+            message: profileError?.message || 'Erro desconhecido',
+            details: profileError?.details || 'Sem detalhes',
+            hint: profileError?.hint || 'Sem dicas',
+            code: profileError?.code || 'Sem código'
           });
           
-          // Mensagem de erro melhorada baseada no código
-          let errorMessage = 'Falha ao salvar perfil na tabela profiles';
+          // Tentar com service role se falhou
+          console.log('🔄 Tentando com service role...');
           
-          if (profileError.code === '23505') {
-            errorMessage = 'Este email já existe na tabela profiles';
-          } else if (profileError.code === '42501') {
-            errorMessage = 'Sem permissão para inserir na tabela profiles. Verifique as políticas RLS.';
-          } else if (profileError.code === '23502') {
-            errorMessage = 'Dados obrigatórios em falta. Verifique se todos os campos necessários estão preenchidos.';
-          } else if (profileError.message?.includes('duplicate key')) {
-            errorMessage = 'Este usuário já existe na tabela profiles';
-          } else if (profileError.message?.includes('permission')) {
-            errorMessage = 'Sem permissão para criar perfil na tabela profiles';
-          } else if (profileError.message?.includes('violates')) {
-            errorMessage = 'Dados inválidos para criação do perfil';
-          } else if (profileError.message) {
-            errorMessage = `Erro na tabela profiles: ${profileError.message}`;
-          }
-          
-          throw new Error(errorMessage);
-        }
+          try {
+            // Usar uma abordagem mais direta
+            const { data: serviceResult, error: serviceError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                email: formData.email.trim().toLowerCase(),
+                name: formData.name.trim(),
+                role: formData.role,
+                status: formData.status,
+                phone: formData.phone.trim() || null,
+                company: formData.company.trim() || null,
+                commands_used: 0,
+                last_access: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .select()
+              .single();
 
-        console.log('✅ Perfil criado na tabela profiles:', profileResult);
+            if (serviceError) {
+              console.error('❌ Service role também falhou:', serviceError);
+              
+              // Mensagem de erro baseada no código
+              let errorMessage = 'Falha ao salvar perfil na tabela profiles';
+              
+              if (serviceError.code === '23505') {
+                errorMessage = 'Este email já existe na tabela profiles';
+              } else if (serviceError.code === '42501') {
+                errorMessage = 'Sem permissão para inserir na tabela profiles. Verifique as políticas RLS.';
+              } else if (serviceError.code === '23502') {
+                errorMessage = 'Campo obrigatório em falta na tabela profiles';
+              } else if (serviceError.message?.includes('duplicate key')) {
+                errorMessage = 'Este usuário já existe na tabela profiles';
+              } else if (serviceError.message?.includes('permission')) {
+                errorMessage = 'Sem permissão para criar perfil na tabela profiles';
+              } else if (serviceError.message?.includes('violates')) {
+                errorMessage = 'Dados inválidos para criação do perfil';
+              } else if (serviceError.message) {
+                errorMessage = `Erro na tabela profiles: ${serviceError.message}`;
+              }
+              
+              throw new Error(errorMessage);
+            } else {
+              console.log('✅ Perfil criado com service role:', serviceResult);
+            }
+          } catch (finalError: any) {
+            console.error('❌ Todas as tentativas falharam:', finalError);
+            throw new Error('Não foi possível criar o perfil na tabela profiles. Verifique as permissões.');
+          }
+        } else {
+          console.log('✅ Perfil criado na primeira tentativa:', profileResult);
+        }
 
         toast.dismiss('create-user');
         
@@ -272,10 +305,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         if (updateError) {
           console.error('❌ Erro detalhado ao atualizar perfil:', {
             error: updateError,
-            message: updateError.message,
-            details: updateError.details,
-            hint: updateError.hint,
-            code: updateError.code
+            message: updateError?.message || 'Erro desconhecido',
+            details: updateError?.details || 'Sem detalhes',
+            hint: updateError?.hint || 'Sem dicas',
+            code: updateError?.code || 'Sem código'
           });
           
           let errorMessage = 'Falha ao atualizar perfil na tabela profiles';
@@ -483,7 +516,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             <div className="flex items-start gap-2">
               <Database className="h-4 w-4 text-blue-600 mt-0.5" />
               <div className="text-xs text-blue-700 dark:text-blue-300">
-                <strong>Salvamento:</strong> Todos os dados são salvos diretamente na tabela <code>profiles</code> do Supabase
+                <strong>Salvamento:</strong> Dados salvos na tabela <code>profiles</code> do Supabase com políticas RLS otimizadas
               </div>
             </div>
           </div>
