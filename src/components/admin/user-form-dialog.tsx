@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { User, Save, X, Eye, EyeOff, RefreshCw, Database, CheckCircle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { User, Save, X, Eye, EyeOff, RefreshCw, Database, CheckCircle, Lock, Shield, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth/auth-provider';
 
 interface Profile {
@@ -54,7 +55,19 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [createWithAuth, setCreateWithAuth] = useState(false); // Desabilitado por padrão
+  const [createWithAuth, setCreateWithAuth] = useState(false);
+  
+  // Estados para alteração de senha
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showNewPasswords, setShowNewPasswords] = useState({
+    new: false,
+    confirm: false
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     if (mode === 'edit' && profile) {
@@ -68,6 +81,8 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         password: ''
       });
       setCreateWithAuth(false);
+      setShowPasswordSection(false);
+      setPasswordData({ newPassword: '', confirmPassword: '' });
     } else {
       setFormData({
         name: '',
@@ -79,6 +94,8 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         password: ''
       });
       setCreateWithAuth(false);
+      setShowPasswordSection(false);
+      setPasswordData({ newPassword: '', confirmPassword: '' });
     }
   }, [mode, profile, isOpen]);
 
@@ -90,6 +107,90 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
     }
     setFormData({...formData, password});
     toast.success('Senha gerada automaticamente!');
+  };
+
+  const generateNewPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.random() * chars.length);
+    }
+    setPasswordData({
+      newPassword: password,
+      confirmPassword: password
+    });
+    toast.success('Nova senha gerada automaticamente!');
+  };
+
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push('Deve ter pelo menos 8 caracteres');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Deve conter pelo menos uma letra maiúscula');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Deve conter pelo menos uma letra minúscula');
+    }
+    if (!/\d/.test(password)) {
+      errors.push('Deve conter pelo menos um número');
+    }
+    
+    return errors;
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error('Todos os campos de senha são obrigatórios');
+      return false;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('A nova senha e a confirmação não coincidem');
+      return false;
+    }
+
+    const passwordErrors = validatePassword(passwordData.newPassword);
+    if (passwordErrors.length > 0) {
+      toast.error(`Senha inválida: ${passwordErrors.join(', ')}`);
+      return false;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      console.log('🔐 Alterando senha do usuário via admin...');
+
+      // Usar Admin API para alterar senha
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        profile!.id,
+        { password: passwordData.newPassword }
+      );
+
+      if (updateError) {
+        console.error('❌ Erro ao alterar senha:', updateError);
+        toast.error('Erro ao alterar senha: ' + updateError.message);
+        return false;
+      }
+
+      console.log('✅ Senha alterada com sucesso via admin');
+      toast.success('Senha alterada com sucesso!');
+      
+      // Limpar campos de senha
+      setPasswordData({ newPassword: '', confirmPassword: '' });
+      setShowPasswordSection(false);
+      
+      return true;
+
+    } catch (error: any) {
+      console.error('💥 Erro inesperado ao alterar senha:', error);
+      toast.error('Erro inesperado ao alterar senha');
+      return false;
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,7 +231,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
           return;
         }
 
-        let userId = crypto.randomUUID(); // Sempre gerar ID único
+        let userId = crypto.randomUUID();
         let authCreated = false;
 
         // Criar no Auth apenas se solicitado E tem senha
@@ -148,20 +249,18 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
             });
 
             if (!authError && authUser.user) {
-              userId = authUser.user.id; // Usar ID do Auth se criou com sucesso
+              userId = authUser.user.id;
               authCreated = true;
               console.log('✅ Usuário criado no Auth:', userId);
             } else {
               console.warn('⚠️ Falha no Auth:', authError);
-              // Continuar com ID gerado
             }
           } catch (authError) {
             console.warn('⚠️ Falha no Auth, continuando sem autenticação:', authError);
-            // Continuar com ID gerado
           }
         }
 
-        // Criar perfil na tabela - SEMPRE
+        // Criar perfil na tabela
         console.log('👤 Criando perfil na tabela...');
         
         const profileData = {
@@ -179,8 +278,6 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
           updated_at: new Date().toISOString()
         };
 
-        console.log('📋 Dados do perfil:', profileData);
-
         const { data: createdProfile, error: profileError } = await supabase
           .from('profiles')
           .insert(profileData)
@@ -188,28 +285,11 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
           .single();
 
         if (profileError) {
-          console.error('❌ Erro ao criar perfil:', {
-            error: profileError,
-            message: profileError?.message || 'Erro desconhecido',
-            details: profileError?.details || 'Sem detalhes',
-            code: profileError?.code || 'Sem código'
-          });
-          
-          let errorMessage = 'Erro ao salvar perfil';
-          
-          if (profileError.code === '23505') {
-            errorMessage = 'Este email já existe na tabela';
-          } else if (profileError.code === '42501') {
-            errorMessage = 'Sem permissão para criar perfil';
-          } else if (profileError.message) {
-            errorMessage = profileError.message;
-          }
-          
-          throw new Error(errorMessage);
+          console.error('❌ Erro ao criar perfil:', profileError);
+          throw new Error('Erro ao salvar perfil: ' + (profileError.message || 'Erro desconhecido'));
         }
 
         console.log('✅ Perfil criado:', createdProfile);
-
         toast.dismiss('create-user');
         
         if (authCreated) {
@@ -226,6 +306,14 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         console.log('✏️ Editando usuário...');
         toast.loading('Atualizando usuário...', { id: 'update-user' });
 
+        // Se há alteração de senha pendente, fazer primeiro
+        if (showPasswordSection && (passwordData.newPassword || passwordData.confirmPassword)) {
+          const passwordSuccess = await handlePasswordChange();
+          if (!passwordSuccess) {
+            return; // Parar se a alteração de senha falhou
+          }
+        }
+
         const updateData = {
           name: formData.name.trim(),
           status: formData.status,
@@ -234,8 +322,6 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
           company: formData.company.trim() || null,
           updated_at: new Date().toISOString()
         };
-
-        console.log('📋 Dados de atualização:', updateData);
 
         const { data: updatedProfile, error: updateError } = await supabase
           .from('profiles')
@@ -250,7 +336,6 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         }
 
         console.log('✅ Perfil atualizado:', updatedProfile);
-
         toast.dismiss('update-user');
         toast.success('✅ Usuário atualizado com sucesso!');
       }
@@ -407,6 +492,99 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
                   <p className="text-xs text-gray-500">
                     Senha necessária para criar conta de login
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Seção de Alteração de Senha - apenas para edição */}
+          {mode === 'edit' && profile && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-green-500" />
+                  <Label className="text-sm font-semibold">Alterar Senha do Usuário</Label>
+                </div>
+                <Switch
+                  checked={showPasswordSection}
+                  onCheckedChange={setShowPasswordSection}
+                />
+              </div>
+
+              {showPasswordSection && (
+                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Como admin, você pode redefinir a senha deste usuário</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="newPassword">Nova Senha</Label>
+                      <Button
+                        type="button"
+                        onClick={generateNewPassword}
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Gerar
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPasswords.new ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                        placeholder="Digite a nova senha"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPasswords({...showNewPasswords, new: !showNewPasswords.new})}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showNewPasswords.confirm ? 'text' : 'password'}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                        placeholder="Confirme a nova senha"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPasswords({...showNewPasswords, confirm: !showNewPasswords.confirm})}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>Requisitos da senha:</p>
+                    <ul className="list-disc list-inside space-y-0.5 ml-2">
+                      <li>Pelo menos 8 caracteres</li>
+                      <li>Uma letra maiúscula e uma minúscula</li>
+                      <li>Pelo menos um número</li>
+                    </ul>
+                  </div>
+
+                  {isChangingPassword && (
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      Alterando senha...
+                    </div>
+                  )}
                 </div>
               )}
             </div>
