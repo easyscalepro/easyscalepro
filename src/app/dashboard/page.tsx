@@ -1,148 +1,263 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useCommands } from '@/contexts/commands-context';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/components/auth/auth-provider';
 import { useRouter } from 'next/navigation';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
-import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
-import { DashboardStats } from '@/components/dashboard/dashboard-stats';
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Search, Filter } from 'lucide-react';
+import { LoadingScreen } from '@/components/loading-screen';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { 
+  Users, 
+  Command, 
+  Activity, 
+  TrendingUp,
+  UserPlus,
+  Settings,
+  BarChart3,
+  Zap
+} from 'lucide-react';
 
 export default function DashboardPage() {
-  const { commands, incrementViews } = useCommands();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Todas');
-  const [selectedLevel, setSelectedLevel] = useState('Todos');
-  const [filteredCommands, setFilteredCommands] = useState(commands);
-  const [isGridVisible, setIsGridVisible] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    let filtered = commands;
-
-    if (searchTerm) {
-      filtered = filtered.filter(command =>
-        command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        command.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (command.tags && command.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-      );
+    if (!loading && !user) {
+      router.push('/login');
     }
+  }, [user, loading, router]);
 
-    if (selectedCategory !== 'Todas') {
-      filtered = filtered.filter(command => command.category === selectedCategory);
+  // Simular carregamento da página
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Simular carregamento de dados
+  useEffect(() => {
+    if (!pageLoading) {
+      const timer = setTimeout(() => {
+        setDataLoading(false);
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
+  }, [pageLoading]);
 
-    if (selectedLevel !== 'Todos') {
-      filtered = filtered.filter(command => command.level === selectedLevel);
-    }
+  if (loading || pageLoading) {
+    return (
+      <LoadingScreen 
+        message="Carregando dashboard..."
+        submessage="Preparando sua área de trabalho"
+      />
+    );
+  }
 
-    setFilteredCommands(filtered);
-    
-    // Trigger grid animation when commands change
-    setIsGridVisible(false);
-    setTimeout(() => setIsGridVisible(true), 100);
-  }, [searchTerm, selectedCategory, selectedLevel, commands]);
+  if (!user) {
+    return null;
+  }
 
-  const handleViewDetails = (id: string) => {
-    incrementViews(id);
-    router.push(`/command/${id}`);
-  };
+  if (dataLoading) {
+    return (
+      <LoadingScreen 
+        message="Carregando dados..."
+        submessage="Buscando informações atualizadas"
+      />
+    );
+  }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
-        <DashboardHeader />
-        
-        <main className="container mx-auto px-6 py-12 max-w-7xl relative overflow-hidden">
-          {/* Decorative background elements */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Floating geometric shapes */}
-            <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-xl animate-pulse"></div>
-            <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-xl animate-pulse delay-1000"></div>
-            <div className="absolute bottom-40 left-1/4 w-40 h-40 bg-gradient-to-br from-amber-400/10 to-orange-400/10 rounded-full blur-xl animate-pulse delay-2000"></div>
-            
-            {/* Grid pattern */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
-          </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-[#0F1115] mb-2">
+            Bem-vindo, {profile?.name || 'Usuário'}!
+          </h1>
+          <p className="text-gray-600">
+            Aqui está um resumo da sua atividade na plataforma EasyScale
+          </p>
+        </div>
 
-          {/* Stats */}
-          <DashboardStats />
-
-          {/* Filters */}
-          <ModernCommandFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            selectedLevel={selectedLevel}
-            onLevelChange={setSelectedLevel}
-          />
-
-          {/* Results Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {filteredCommands.length} comandos encontrados
-              </h2>
-            </div>
-            {searchTerm && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Resultados para "{searchTerm}"
-              </div>
-            )}
-          </div>
-
-          {/* Enhanced Commands Grid */}
-          {filteredCommands.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCommands.map((command, index) => (
-                <div
-                  key={command.id}
-                  className={`transform transition-all duration-700 ${
-                    isGridVisible 
-                      ? 'translate-y-0 opacity-100' 
-                      : 'translate-y-8 opacity-0'
-                  }`}
-                  style={{ 
-                    transitionDelay: `${index * 100}ms`,
-                    animationFillMode: 'both'
-                  }}
-                >
-                  <ModernCommandCard
-                    {...command}
-                    onViewDetails={handleViewDetails}
-                  />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Command className="h-6 w-6 text-blue-600" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Search className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+                <div>
+                  <div className="text-2xl font-bold text-[#0F1115]">
+                    {profile?.commands_used || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Comandos Usados</div>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Nenhum comando encontrado
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
-                Tente ajustar seus filtros ou buscar por outros termos para encontrar o comando perfeito
-              </p>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('Todas');
-                  setSelectedLevel('Todos');
-                }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-              >
-                Limpar Filtros
-              </button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-[#0F1115]">+15%</div>
+                  <div className="text-sm text-gray-600">Crescimento</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <Activity className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-[#0F1115]">Ativo</div>
+                  <div className="text-sm text-gray-600">Status</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <Zap className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-[#0F1115]">Pro</div>
+                  <div className="text-sm text-gray-600">Plano</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Command className="h-5 w-5 text-[#2563EB]" />
+                Ações Rápidas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  onClick={() => router.push('/commands')}
+                  className="h-20 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] flex-col"
+                >
+                  <Command className="h-6 w-6 mb-2" />
+                  Comandos
+                </Button>
+                
+                {profile?.role === 'admin' && (
+                  <Button 
+                    onClick={() => router.push('/admin/users')}
+                    variant="outline"
+                    className="h-20 border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white flex-col"
+                  >
+                    <Users className="h-6 w-6 mb-2" />
+                    Usuários
+                  </Button>
+                )}
+                
+                <Button 
+                  onClick={() => router.push('/analytics')}
+                  variant="outline"
+                  className="h-20 border-gray-300 text-gray-600 hover:bg-gray-50 flex-col"
+                >
+                  <BarChart3 className="h-6 w-6 mb-2" />
+                  Analytics
+                </Button>
+                
+                <Button 
+                  onClick={() => router.push('/settings')}
+                  variant="outline"
+                  className="h-20 border-gray-300 text-gray-600 hover:bg-gray-50 flex-col"
+                >
+                  <Settings className="h-6 w-6 mb-2" />
+                  Configurações
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-[#2563EB]" />
+                Atividade Recente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Login realizado</div>
+                    <div className="text-xs text-gray-500">Agora</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Comando executado</div>
+                    <div className="text-xs text-gray-500">2 horas atrás</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Perfil atualizado</div>
+                    <div className="text-xs text-gray-500">1 dia atrás</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Welcome Message */}
+        <Card className="border-gray-200 bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Pronto para aumentar sua produtividade?
+                </h2>
+                <p className="text-blue-100 mb-4">
+                  Explore nossos comandos especializados e transforme seu negócio
+                </p>
+                <Button 
+                  onClick={() => router.push('/commands')}
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115]"
+                >
+                  Explorar Comandos
+                </Button>
+              </div>
+              <div className="hidden md:block">
+                <Command className="h-24 w-24 text-blue-200" />
+              </div>
             </div>
-          )}
-        </main>
+          </CardContent>
+        </Card>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 }
