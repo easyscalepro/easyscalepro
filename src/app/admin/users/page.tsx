@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/admin-layout';
-import { EnhancedUserManagement } from '@/components/admin/enhanced-user-management';
+import { UserManagementDashboard } from '@/components/admin/user-management-dashboard';
 
 export default function AdminUsersPage() {
   const { user, loading } = useAuth();
@@ -36,14 +36,14 @@ export default function AdminUsersPage() {
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#0F1115] mb-2">
-            Gerenciar Usuários
+            Gerenciamento de Usuários
           </h1>
           <p className="text-gray-600">
-            Visualize e gerencie todos os usuários da plataforma
+            Gerencie todos os usuários cadastrados na plataforma
           </p>
         </div>
 
-        <EnhancedUserManagement />
+        <UserManagementDashboard />
       </div>
     </AdminLayout>
   );
