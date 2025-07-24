@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { checkSession, withAuth, withOptionalAuth } from '@/lib/supabase-utils';
+import { checkSession, withRequiredAuth, withOptionalAuth } from '@/lib/supabase-utils';
 
 export interface User {
   id: string;
@@ -250,7 +250,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('✏️ Atualizando usuário:', id, updates);
       
-      await withAuth(async () => {
+      await withRequiredAuth(async () => {
         // Preparar dados para o Supabase
         const supabaseUpdates: any = {
           updated_at: new Date().toISOString()
@@ -296,7 +296,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('🗑️ Deletando usuário:', id);
       
-      await withAuth(async () => {
+      await withRequiredAuth(async () => {
         // Deletar do Supabase
         const { error } = await supabase
           .from('profiles')
