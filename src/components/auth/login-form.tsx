@@ -19,36 +19,13 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-
-  // Simular carregamento inicial da página
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Redirecionar se já estiver logado
   useEffect(() => {
     if (user) {
-      setPageLoading(true);
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      router.push('/dashboard');
     }
   }, [user, router]);
-
-  // Mostrar loading da página
-  if (pageLoading) {
-    return (
-      <LoadingScreen 
-        message="Carregando página de login..."
-        submessage="Preparando interface de autenticação"
-      />
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +40,7 @@ export const LoginForm: React.FC = () => {
     try {
       await signIn(email, password);
       toast.success('Login realizado com sucesso!');
-      
-      // Mostrar loading durante redirecionamento
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      router.push('/dashboard');
       
     } catch (error: any) {
       console.error('Erro no login:', error);

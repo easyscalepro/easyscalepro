@@ -1,13 +1,34 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { DashboardStats } from '@/components/admin/dashboard-stats';
 import { RecentActivity } from '@/components/admin/recent-activity';
 import { UsageChart } from '@/components/admin/usage-chart';
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { LoadingScreen } from '@/components/loading-screen';
 
 export default function AdminDashboard() {
+  const [pageLoading, setPageLoading] = useState(true);
+
+  // Simular carregamento da página
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (pageLoading) {
+    return (
+      <LoadingScreen 
+        message="Carregando dashboard administrativo..."
+        submessage="Preparando área de administração"
+      />
+    );
+  }
+
   return (
     <ProtectedRoute requireAdmin={true}>
       <AdminLayout>

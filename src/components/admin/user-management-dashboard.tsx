@@ -35,7 +35,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 import { UserFormDialog } from './user-form-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
-import Image from 'next/image';
 
 interface Profile {
   id: string;
@@ -154,6 +153,16 @@ export const UserManagementDashboard: React.FC = () => {
   useEffect(() => {
     loadProfiles();
   }, [loadProfiles]);
+
+  // Mostrar loading personalizado
+  if (loading) {
+    return (
+      <LoadingScreen 
+        message="Carregando usuários..."
+        submessage="Buscando dados na tabela profiles"
+      />
+    );
+  }
 
   // Filtrar perfis
   const filteredProfiles = profiles.filter(profile => {
@@ -337,16 +346,6 @@ export const UserManagementDashboard: React.FC = () => {
     }
   };
 
-  // Mostrar loading personalizado
-  if (loading) {
-    return (
-      <LoadingScreen 
-        message="Carregando usuários..."
-        submessage="Buscando dados na tabela profiles"
-      />
-    );
-  }
-
   // Se há erro, mostrar interface de erro
   if (error) {
     return (
@@ -440,15 +439,7 @@ export const UserManagementDashboard: React.FC = () => {
         {/* Botão para criar primeiro usuário mesmo com erro */}
         <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 relative">
-              <Image
-                src="https://wlynpc uqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
-                alt="EasyScale Logo"
-                fill
-                className="object-contain opacity-50"
-                sizes="64px"
-              />
-            </div>
+            <Database className="h-12 w-12 mx-auto mb-4 text-blue-600" />
             <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
               Tabela Vazia ou Inacessível
             </h3>
