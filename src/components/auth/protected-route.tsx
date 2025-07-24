@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, Shield, Lock, AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
-import { checkSession, quickConnectionCheck } from '@/lib/supabase-utils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,88 +19,53 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [sessionChecked, setSessionChecked] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [checkComplete, setCheckComplete] = useState(false);
 
-  // Verificar conexão e sessão independentemente
   useEffect(() => {
-    const checkConnectionAndSession = async () => {
-      try {
-        console.log('🔍 ProtectedRoute: Verificando conexão e sessão...');
-        
-        // Usar verificação rápida de conexão
-        const isConnected = await quickConnectionCheck();
-        setConnectionStatus(isConnected ? 'connected' : 'disconnected');
-        
-        if (!isConnected) {
-          console.warn('⚠️ Sem conexão com Supabase');
-          setSessionError('Sem conexão com o servidor');
-          setSessionChecked(true);
+    // Timeout de segurança para evitar loading infinito
+    const safetyTimeout = setTimeout(() => {
+      console.log('⏰ ProtectedRoute: Timeout de segurança - finalizando verificação');
+      setCheckComplete(true);
+    }, 8000); // 8 segundos máximo
+
+    // Aguardar o AuthProvider terminar de carregar
+    if (!loading) {
+      console.log('🔍 ProtectedRoute: AuthProvider terminou, verificando acesso...');
+      
+      // Pequeno delay para garantir que o estado está estável
+      setTimeout(() => {
+        if (!user) {
+          console.log('🔄 Redirecionando para login - usuário não autenticado');
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
           return;
         }
-        
-        // Verificar sessão apenas se não estiver carregando no AuthProvider
-        if (!loading) {
-          const session = await checkSession();
-          
-          if (!session && !user) {
-            console.log('ℹ️ Nenhuma sessão encontrada no ProtectedRoute');
-            setSessionError('Sessão não encontrada');
-          } else if (session || user) {
-            console.log('✅ Sessão válida encontrada no ProtectedRoute');
-            setSessionError(null);
-          }
+
+        if (profile && profile.status !== 'ativo') {
+          console.log('🚫 Usuário com status inativo:', profile.status);
+          router.push('/login?error=account_suspended');
+          return;
         }
-        
-      } catch (error) {
-        console.warn('⚠️ Erro ao verificar sessão no ProtectedRoute:', error);
-        // Não definir erro de sessão se for apenas um problema de verificação
-        // setSessionError('Erro na verificação de sessão');
-      } finally {
-        setSessionChecked(true);
-      }
+
+        if (requireAdmin && profile && profile.role !== 'admin') {
+          console.log('🚫 Acesso negado - requer admin');
+          router.push('/dashboard?error=access_denied');
+          return;
+        }
+
+        // Tudo OK
+        console.log('✅ ProtectedRoute: Acesso autorizado');
+        setCheckComplete(true);
+        clearTimeout(safetyTimeout);
+      }, 500);
+    }
+
+    return () => {
+      clearTimeout(safetyTimeout);
     };
-
-    if (!sessionChecked) {
-      checkConnectionAndSession();
-    }
-  }, [loading, sessionChecked, user]);
-
-  useEffect(() => {
-    // Aguardar o AuthProvider terminar de carregar
-    if (!loading && sessionChecked && connectionStatus !== 'checking') {
-      // Se não há conexão, não redirecionar
-      if (connectionStatus === 'disconnected') {
-        console.log('⚠️ Sem conexão - não redirecionando');
-        return;
-      }
-      
-      // Se o AuthProvider já carregou e não há usuário, redirecionar
-      if (!user && !sessionError) {
-        console.log('🔄 Redirecionando para login - usuário não autenticado');
-        router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-        return;
-      }
-
-      if (profile && profile.status !== 'ativo') {
-        // Usuário suspenso ou inativo
-        console.log('🚫 Usuário com status inativo:', profile.status);
-        router.push('/login?error=account_suspended');
-        return;
-      }
-
-      if (requireAdmin && profile && profile.role !== 'admin') {
-        // Rota requer admin mas usuário não é admin
-        console.log('🚫 Acesso negado - requer admin');
-        router.push('/dashboard?error=access_denied');
-        return;
-      }
-    }
-  }, [user, profile, loading, sessionChecked, sessionError, connectionStatus, router, pathname, requireAdmin]);
+  }, [user, profile, loading, router, pathname, requireAdmin]);
 
   // Mostrar loading enquanto verifica autenticação
-  if (loading || !sessionChecked || connectionStatus === 'checking') {
+  if (loading || !checkComplete) {
     return fallback || (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
@@ -117,48 +81,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               Verificando autenticação...
             </h3>
             <p className="text-gray-600 dark:text-gray-400 max-w-md">
-              Aguarde enquanto validamos seu acesso e carregamos suas informações
+              Aguarde enquanto validamos seu acesso
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Erro de conexão - apenas se realmente não conseguir conectar
-  if (connectionStatus === 'disconnected') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 flex items-center justify-center">
-        <div className="text-center space-y-6 p-8 max-w-md">
-          <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto shadow-lg">
-            <WifiOff className="w-10 h-10 text-orange-600 dark:text-orange-400" />
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Problema de Conexão
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Não foi possível conectar ao servidor. Isso pode ser temporário.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Tentar Novamente
-              </button>
-              <button
-                onClick={() => router.push('/login')}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
-              >
-                Ir para Login
-              </button>
             </div>
           </div>
         </div>
@@ -179,7 +107,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               Acesso Restrito
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Você precisa estar logado para acessar esta página. Faça login para continuar.
+              Você precisa estar logado para acessar esta página.
             </p>
             <button
               onClick={() => router.push('/login')}
@@ -207,24 +135,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
               {profile.status === 'suspenso' 
-                ? 'Sua conta foi suspensa. Entre em contato com o suporte para reativação.'
-                : 'Sua conta está inativa. Entre em contato com o suporte para ativação.'
+                ? 'Sua conta foi suspensa. Entre em contato com o suporte.'
+                : 'Sua conta está inativa. Entre em contato com o suporte.'
               }
             </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => router.push('/login')}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Voltar ao Login
-              </button>
-              <button
-                onClick={() => window.location.href = 'mailto:suporte@easyscale.com'}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Contatar Suporte
-              </button>
-            </div>
+            <button
+              onClick={() => router.push('/login')}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Voltar ao Login
+            </button>
           </div>
         </div>
       </div>
@@ -244,7 +164,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               Acesso Negado
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Você não tem permissão para acessar esta área. Esta seção é restrita a administradores.
+              Esta seção é restrita a administradores.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
