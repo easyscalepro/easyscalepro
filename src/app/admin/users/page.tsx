@@ -5,6 +5,7 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import { UserManagementDashboard } from '@/components/admin/user-management-dashboard';
+import { LoadingScreen } from '@/components/loading-screen';
 
 export default function AdminUsersPage() {
   const { user, loading } = useAuth();
@@ -18,12 +19,10 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
-        </div>
-      </div>
+      <LoadingScreen 
+        message="Carregando área de usuários..."
+        submessage="Preparando o painel de gerenciamento"
+      />
     );
   }
 

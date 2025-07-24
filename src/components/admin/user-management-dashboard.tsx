@@ -34,6 +34,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/auth-provider';
 import { UserFormDialog } from './user-form-dialog';
+import { LoadingScreen } from '@/components/loading-screen';
+import Image from 'next/image';
 
 interface Profile {
   id: string;
@@ -335,6 +337,16 @@ export const UserManagementDashboard: React.FC = () => {
     }
   };
 
+  // Mostrar loading personalizado
+  if (loading) {
+    return (
+      <LoadingScreen 
+        message="Carregando usuários..."
+        submessage="Buscando dados na tabela profiles"
+      />
+    );
+  }
+
   // Se há erro, mostrar interface de erro
   if (error) {
     return (
@@ -428,7 +440,15 @@ export const UserManagementDashboard: React.FC = () => {
         {/* Botão para criar primeiro usuário mesmo com erro */}
         <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
           <CardContent className="p-6 text-center">
-            <Database className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+            <div className="w-16 h-16 mx-auto mb-4 relative">
+              <Image
+                src="https://wlynpc uqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
+                alt="EasyScale Logo"
+                fill
+                className="object-contain opacity-50"
+                sizes="64px"
+              />
+            </div>
             <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
               Tabela Vazia ou Inacessível
             </h3>
@@ -746,13 +766,6 @@ export const UserManagementDashboard: React.FC = () => {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Criar Primeiro Usuário
               </Button>
-            </div>
-          )}
-
-          {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB] mx-auto mb-4"></div>
-              <p className="text-gray-600">Carregando usuários...</p>
             </div>
           )}
         </CardContent>
