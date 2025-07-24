@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = async (user: User) => {
     try {
-      console.log('Carregando perfil para usuário:', user.email);
+      console.log('📋 Carregando perfil para usuário:', user.email);
       
       // Tentar buscar da tabela profiles usando withOptionalAuth
       const dbProfile = await withOptionalAuth(
@@ -74,25 +74,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', user.id)
             .single();
 
-          if (error) throw error;
+          if (error) {
+            console.warn('⚠️ Perfil não encontrado no banco:', error.message);
+            return null;
+          }
           return data;
         },
         null // fallback para null
       );
 
       if (dbProfile) {
-        console.log('✅ Perfil encontrado no banco:', dbProfile);
+        console.log('✅ Perfil encontrado no banco:', dbProfile.email);
         setProfile(dbProfile);
       } else {
-        console.log('📝 Criando perfil simples');
+        console.log('📝 Criando perfil simples para:', user.email);
         // Se não encontrar no banco, criar perfil simples
         const simpleProfile = createSimpleProfile(user);
         setProfile(simpleProfile);
         
-        // Tentar criar no banco se possível
+        // Tentar criar no banco se possível (sem bloquear se falhar)
         try {
           const session = await checkSession();
           if (session) {
+            console.log('💾 Tentando salvar perfil no banco...');
             await supabase
               .from('profiles')
               .insert({
@@ -107,14 +111,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updated_at: new Date().toISOString()
               });
             
-            console.log('✅ Perfil criado no banco com sucesso');
+            console.log('✅ Perfil salvo no banco com sucesso');
           }
         } catch (createError) {
-          console.log('⚠️ Não foi possível criar perfil no banco:', createError);
+          console.log('⚠️ Não foi possível salvar perfil no banco (continuando):', createError);
+          // Não falhar aqui - continuar com perfil simples
         }
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar perfil:', error);
+      console.warn('⚠️ Erro ao carregar perfil (usando fallback):', error);
       // Em caso de erro, sempre criar perfil simples
       const simpleProfile = createSimpleProfile(user);
       setProfile(simpleProfile);
@@ -142,14 +147,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           await loadUserProfile(session.user);
         } else {
-          console.log('⚠️ Nenhuma sessão ativa encontrada');
+          console.log('ℹ️ Nenhuma sessão ativa encontrada');
           if (mounted) {
             setUser(null);
             setProfile(null);
           }
         }
       } catch (error) {
-        console.error('💥 Erro inesperado ao verificar sessão:', error);
+        console.warn('⚠️ Erro ao verificar sessão inicial (continuando sem auth):', error);
         if (mounted) {
           setUser(null);
           setProfile(null);
@@ -167,10 +172,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      console.log('🔄 Auth state changed:', event, session?.user?.email || 'sem usuário');
       
       try {
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🔐 Usuário logado:', session.user.email);
           setUser(session.user);
           await loadUserProfile(session.user);
         } else if (event === 'SIGNED_OUT') {
@@ -178,11 +184,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setProfile(null);
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          console.log('🔄 Token renovado para:', session.user.email);
           setUser(session.user);
           // Não recarregar perfil no refresh do token para evitar chamadas desnecessárias
         }
       } catch (error) {
-        console.error('💥 Erro ao processar mudança de auth:', error);
+        console.warn('⚠️ Erro ao processar mudança de auth (limpando estado):', error);
         // Em caso de erro, limpar estado
         setUser(null);
         setProfile(null);
@@ -215,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (profileError) {
         // Se não conseguir verificar o perfil, continuar com o login
-        console.log('⚠️ Não foi possível verificar perfil (continuando com login):', profileError);
+        console.log('⚠️ Não foi possível verificar perfil (continuando com login)');
       }
 
       // Tentar fazer login
@@ -225,12 +232,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error('❌ Erro no login:', error);
+        console.error('❌ Erro no login:', error.message);
         throw error;
       }
 
       if (!data.user) {
-        throw new Error('Falha na autenticação');
+        throw new Error('Falha na autenticação - usuário não retornado');
       }
 
       console.log('✅ Login realizado com sucesso para:', data.user.email);
@@ -256,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('👋 Iniciando processo de logout no AuthProvider...');
+      console.log('👋 Iniciando processo de logout...');
       
       // Limpar estado imediatamente para melhor UX
       setUser(null);
@@ -268,7 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('✅ Logout concluído com sucesso');
       
     } catch (error: any) {
-      console.error('💥 Erro no logout do AuthProvider:', error);
+      console.warn('⚠️ Erro no logout (estado limpo mesmo assim):', error);
       
       // Mesmo com erro, garantir que o estado seja limpo
       setUser(null);

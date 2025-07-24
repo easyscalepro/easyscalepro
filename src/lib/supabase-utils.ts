@@ -1,75 +1,84 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Session, User } from '@supabase/supabase-js';
 
-// Função para verificar se há sessão válida
-export const checkSession = async () => {
+/**
+ * Verifica se há uma sessão ativa de forma segura
+ */
+export const checkSession = async (): Promise<Session | null> => {
   try {
+    console.log('🔍 Verificando sessão...');
+    
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Erro ao verificar sessão:', error);
+      console.warn('⚠️ Erro ao verificar sessão:', error.message);
       return null;
     }
     
-    return session;
+    if (session) {
+      console.log('✅ Sessão ativa encontrada para:', session.user.email);
+      return session;
+    } else {
+      console.log('ℹ️ Nenhuma sessão ativa encontrada');
+      return null;
+    }
   } catch (error) {
-    console.error('Erro inesperado ao verificar sessão:', error);
+    console.error('💥 Erro inesperado ao verificar sessão:', error);
     return null;
   }
 };
 
-// Função wrapper para queries que requerem autenticação
-export const withAuth = async <T>(
-  operation: () => Promise<T>,
-  fallback?: T
+/**
+ * Executa uma função com autenticação opcional
+ * Se não houver sessão, retorna o fallback
+ */
+export const withOptionalAuth = async <T>(
+  fn: () => Promise<T>,
+  fallback: T
 ): Promise<T> => {
   try {
     const session = await checkSession();
     
     if (!session) {
-      throw new Error('Sessão de autenticação ausente. Faça login novamente.');
-    }
-    
-    return await operation();
-  } catch (error: any) {
-    if (error.message?.includes('Auth session missing') || 
-        error.message?.includes('AuthSessionMissingError')) {
-      throw new Error('Sessão de autenticação expirou. Faça login novamente.');
-    }
-    
-    if (fallback !== undefined) {
-      console.warn('Operação falhou, usando fallback:', error.message);
+      console.log('📝 Sem sessão - usando fallback');
       return fallback;
     }
     
-    throw error;
+    return await fn();
+  } catch (error) {
+    console.warn('⚠️ Erro na execução com auth opcional:', error);
+    return fallback;
   }
 };
 
-// Função para queries que podem funcionar sem autenticação
-export const withOptionalAuth = async <T>(
-  operation: () => Promise<T>,
-  fallback: T
+/**
+ * Executa uma função que requer autenticação
+ * Lança erro se não houver sessão
+ */
+export const withRequiredAuth = async <T>(
+  fn: () => Promise<T>
 ): Promise<T> => {
-  try {
-    return await operation();
-  } catch (error: any) {
-    if (error.message?.includes('Auth session missing') || 
-        error.message?.includes('AuthSessionMissingError') ||
-        error.message?.includes('permission')) {
-      console.warn('Operação sem autenticação, usando fallback:', error.message);
-      return fallback;
-    }
-    
-    throw error;
+  const session = await checkSession();
+  
+  if (!session) {
+    throw new Error('Autenticação necessária para esta operação');
   }
+  
+  return await fn();
 };
 
-// Função para verificar se o usuário atual é admin
+/**
+ * Verifica se o usuário atual é admin
+ */
 export const isCurrentUserAdmin = async (): Promise<boolean> => {
   try {
     const session = await checkSession();
-    if (!session) return false;
     
+    if (!session) {
+      return false;
+    }
+    
+    // Verificar na tabela profiles
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -78,31 +87,37 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
     
     return profile?.role === 'admin';
   } catch (error) {
-    console.warn('Não foi possível verificar role do usuário:', error);
+    console.warn('⚠️ Erro ao verificar se é admin:', error);
     return false;
   }
 };
 
-// Função para obter o perfil do usuário atual
-export const getCurrentUserProfile = async () => {
+/**
+ * Obtém o usuário atual de forma segura
+ */
+export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const session = await checkSession();
-    if (!session) return null;
-    
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-    
-    if (error) {
-      console.warn('Erro ao buscar perfil:', error);
-      return null;
-    }
-    
-    return profile;
+    return session?.user || null;
   } catch (error) {
-    console.warn('Erro ao obter perfil do usuário:', error);
+    console.error('💥 Erro ao obter usuário atual:', error);
     return null;
+  }
+};
+
+/**
+ * Verifica se há conexão com o Supabase
+ */
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count')
+      .limit(1);
+    
+    return !error;
+  } catch (error) {
+    console.error('💥 Erro de conexão com Supabase:', error);
+    return false;
   }
 };
