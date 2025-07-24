@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, Shield, Lock, AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
-import { checkSession, checkSupabaseConnection } from '@/lib/supabase-utils';
+import { checkSession, quickConnectionCheck } from '@/lib/supabase-utils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -30,8 +30,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       try {
         console.log('🔍 ProtectedRoute: Verificando conexão e sessão...');
         
-        // Verificar conexão primeiro
-        const isConnected = await checkSupabaseConnection();
+        // Usar verificação rápida de conexão
+        const isConnected = await quickConnectionCheck();
         setConnectionStatus(isConnected ? 'connected' : 'disconnected');
         
         if (!isConnected) {
@@ -41,20 +41,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           return;
         }
         
-        // Verificar sessão
-        const session = await checkSession();
-        
-        if (!session && !loading) {
-          console.log('ℹ️ Nenhuma sessão encontrada no ProtectedRoute');
-          setSessionError('Sessão não encontrada');
-        } else if (session) {
-          console.log('✅ Sessão válida encontrada no ProtectedRoute');
-          setSessionError(null);
+        // Verificar sessão apenas se não estiver carregando no AuthProvider
+        if (!loading) {
+          const session = await checkSession();
+          
+          if (!session && !user) {
+            console.log('ℹ️ Nenhuma sessão encontrada no ProtectedRoute');
+            setSessionError('Sessão não encontrada');
+          } else if (session || user) {
+            console.log('✅ Sessão válida encontrada no ProtectedRoute');
+            setSessionError(null);
+          }
         }
         
       } catch (error) {
         console.warn('⚠️ Erro ao verificar sessão no ProtectedRoute:', error);
-        setSessionError('Erro na verificação de sessão');
+        // Não definir erro de sessão se for apenas um problema de verificação
+        // setSessionError('Erro na verificação de sessão');
       } finally {
         setSessionChecked(true);
       }
@@ -63,9 +66,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!sessionChecked) {
       checkConnectionAndSession();
     }
-  }, [loading, sessionChecked]);
+  }, [loading, sessionChecked, user]);
 
   useEffect(() => {
+    // Aguardar o AuthProvider terminar de carregar
     if (!loading && sessionChecked && connectionStatus !== 'checking') {
       // Se não há conexão, não redirecionar
       if (connectionStatus === 'disconnected') {
@@ -73,8 +77,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return;
       }
       
-      if (!user || sessionError) {
-        // Usuário não logado ou erro de sessão - redirecionar para login
+      // Se o AuthProvider já carregou e não há usuário, redirecionar
+      if (!user && !sessionError) {
         console.log('🔄 Redirecionando para login - usuário não autenticado');
         router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         return;
@@ -126,7 +130,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Erro de conexão
+  // Erro de conexão - apenas se realmente não conseguir conectar
   if (connectionStatus === 'disconnected') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 flex items-center justify-center">
@@ -136,10 +140,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           </div>
           <div className="space-y-3">
             <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Sem Conexão
+              Problema de Conexão
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.
+              Não foi possível conectar ao servidor. Isso pode ser temporário.
             </p>
             <div className="flex gap-3 justify-center">
               <button
@@ -149,41 +153,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                 <RefreshCw className="h-4 w-4" />
                 Tentar Novamente
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Erro de sessão (mas com conexão)
-  if (sessionError && connectionStatus === 'connected') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 flex items-center justify-center">
-        <div className="text-center space-y-6 p-8 max-w-md">
-          <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto shadow-lg">
-            <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Sessão Expirada
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Sua sessão de autenticação expirou. Faça login novamente para continuar.
-            </p>
-            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => router.push('/login')}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
               >
                 Ir para Login
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Recarregar
               </button>
             </div>
           </div>
