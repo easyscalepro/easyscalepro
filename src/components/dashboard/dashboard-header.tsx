@@ -27,15 +27,22 @@ export const DashboardHeader: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = async () => {
-    console.log('Iniciando logout do DashboardHeader...');
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🔴 Botão de logout clicado!');
     
     try {
       // Mostrar loading
       toast.loading('Fazendo logout...', { id: 'logout' });
       
+      console.log('🔄 Chamando signOut...');
+      
       // Fazer logout
       await signOut();
+      
+      console.log('✅ SignOut concluído, redirecionando...');
       
       // Limpar toast de loading
       toast.dismiss('logout');
@@ -47,7 +54,7 @@ export const DashboardHeader: React.FC = () => {
       toast.success('Logout realizado com sucesso!');
       
     } catch (error: any) {
-      console.error('Erro no logout:', error);
+      console.error('❌ Erro no logout:', error);
       
       // Limpar toast de loading
       toast.dismiss('logout');
@@ -234,22 +241,15 @@ export const DashboardHeader: React.FC = () => {
               </div>
             </div>
             
-            {/* Enhanced Logout Button */}
-            <div className="relative group">
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                type="button"
-                className="border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-900/20 dark:hover:to-pink-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all duration-300 rounded-xl px-4 py-2 font-semibold group-hover:scale-105 z-20"
-              >
-                <LogOut className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                Sair
-              </Button>
-              
-              {/* Glow effect */}
-              <div className="absolute -inset-2 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
-            </div>
+            {/* BOTÃO DE LOGOUT SIMPLIFICADO */}
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              type="button"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
           </div>
         </div>
       </div>
