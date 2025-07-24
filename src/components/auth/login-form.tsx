@@ -1,184 +1,345 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EasyScaleLogoLarge } from '@/components/easyscale-logo-large';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { LoadingScreen } from '@/components/loading-screen';
-import Image from 'next/image';
+import { signUp } from '@/lib/auth';
 
 export const LoginForm: React.FC = () => {
-  const { signIn, user } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signIn, user } = useAuth();
 
-  // Redirecionar se já estiver logado
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
+  const error = searchParams.get('error');
+
   useEffect(() => {
+    // Se já está logado, redirecionar
     if (user) {
-      router.push('/dashboard');
+      router.push(redirectPath);
     }
-  }, [user, router]);
+
+    // Mostrar erros da URL
+    if (error === 'account_suspended') {
+      toast.error('Sua conta foi suspensa. Entre em contato com o suporte.');
+    } else if (error === 'access_denied') {
+      toast.error('Você não tem permissão para acessar essa área.');
+    }
+  }, [user, router, redirectPath, error]);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email.trim() || !password.trim()) {
-      toast.error('Por favor, preencha todos os campos');
-      return;
-    }
-
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      await signIn(email, password);
-      toast.success('Login realizado com sucesso!');
-      router.push('/dashboard');
-      
-    } catch (error: any) {
-      console.error('Erro no login:', error);
-      
-      let errorMessage = 'Erro ao fazer login';
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Email ou senha incorretos';
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Email não confirmado. Verifique sua caixa de entrada';
-      } else if (error.message?.includes('Too many requests')) {
-        errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos';
-      } else if (error.message) {
-        errorMessage = error.message;
+      // Validações básicas
+      if (!email.trim()) {
+        toast.error('Email é obrigatório');
+        return;
       }
+
+      if (!validateEmail(email)) {
+        toast.error('Por favor, insira um email válido');
+        return;
+      }
+
+      if (!password.trim()) {
+        toast.error('Senha é obrigatória');
+        return;
+      }
+
+      if (isSignUp) {
+        // Cadastro
+        if (!name.trim()) {
+          toast.error('Nome é obrigatório');
+          return;
+        }
+
+        if (password.length < 6) {
+          toast.error('A senha deve ter pelo menos 6 caracteres');
+          return;
+        }
+
+        toast.loading('Criando sua conta...', { id: 'auth' });
+
+        await signUp(email, password, name);
+        
+        toast.dismiss('auth');
+        toast.success('Conta criada com sucesso!', {
+          description: 'Você pode fazer login agora com suas credenciais.'
+        });
+        
+        setIsSignUp(false);
+        setName('');
+        setLoginAttempts(0);
+        
+      } else {
+        // Login
+        if (loginAttempts >= 3) {
+          toast.error('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+          return;
+        }
+
+        toast.loading('Fazendo login...', { id: 'auth' });
+
+        try {
+          await signIn(email, password);
+          
+          toast.dismiss('auth');
+          toast.success('Login realizado com sucesso!');
+          
+          // Reset tentativas em caso de sucesso
+          setLoginAttempts(0);
+          
+          // Redirecionar será feito pelo AuthProvider
+          router.push(redirectPath);
+          
+        } catch (loginError: any) {
+          setLoginAttempts(prev => prev + 1);
+          throw loginError;
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro de autenticação:', error);
       
-      toast.error(errorMessage);
+      toast.dismiss('auth');
+      
+      // Tratamento específico de erros
+      const errorMessage = error.message || 'Erro desconhecido';
+      
+      if (errorMessage.includes('Invalid login credentials') || errorMessage.includes('Email ou senha incorretos')) {
+        toast.error('Email ou senha incorretos', {
+          description: `Tentativa ${loginAttempts + 1} de 3. Verifique suas credenciais.`
+        });
+      } else if (errorMessage.includes('Email not confirmed') || errorMessage.includes('não confirmado')) {
+        toast.error('Email não confirmado', {
+          description: 'Verifique sua caixa de entrada e confirme seu email antes de fazer login.'
+        });
+      } else if (errorMessage.includes('User already registered') || errorMessage.includes('já está cadastrado')) {
+        toast.error('Este email já está cadastrado', {
+          description: 'Tente fazer login ou use outro email.'
+        });
+      } else if (errorMessage.includes('Password should be at least 6 characters')) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
+      } else if (errorMessage.includes('Too many requests') || errorMessage.includes('Muitas tentativas')) {
+        toast.error('Muitas tentativas de login', {
+          description: 'Aguarde alguns minutos antes de tentar novamente.'
+        });
+      } else if (errorMessage.includes('inativa')) {
+        toast.error('Conta inativa', {
+          description: 'Entre em contato com o administrador para reativar sua conta.'
+        });
+      } else {
+        toast.error('Erro na autenticação', {
+          description: errorMessage
+        });
+      }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Mostrar loading durante login
-  if (isLoading) {
-    return (
-      <LoadingScreen 
-        message="Fazendo login..."
-        submessage="Verificando suas credenciais"
-      />
-    );
-  }
+  const handleForgotPassword = () => {
+    if (!email) {
+      toast.error('Digite seu email primeiro para recuperar a senha');
+      return;
+    }
+    
+    toast.info('Funcionalidade de recuperação de senha em desenvolvimento');
+  };
+
+  const handleTestLogin = () => {
+    setEmail('teste@gmail.com');
+    setPassword('123456');
+    toast.info('Credenciais de teste preenchidas');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 relative">
-            <Image
-              src="https://wlynpcuqlqynsutkpvmq.supabase.co/storage/v1/object/public/media/app-7/images/1751664569198-jws9j1rdj.png"
-              alt="EasyScale Logo"
-              fill
-              className="object-contain"
-              sizes="80px"
-              priority
-            />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            EasyScale
-          </h1>
-          <p className="text-blue-200">
-            Comandos ChatGPT para PMEs
-          </p>
-        </div>
-
-        <Card className="border-gray-200 shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold text-[#0F1115]">
-              Fazer Login
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    className="pl-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Sua senha"
-                    className="pl-10 pr-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-semibold text-lg"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-[#0F1115] border-t-transparent rounded-full animate-spin"></div>
-                    Entrando...
-                  </div>
-                ) : (
-                  <>
-                    <LogIn className="h-5 w-5 mr-2" />
-                    Entrar
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Esqueceu sua senha?{' '}
-                <button className="text-[#2563EB] hover:underline font-medium">
-                  Recuperar senha
-                </button>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="mt-6 text-center">
-          <p className="text-blue-200 text-sm">
-            © 2024 EasyScale. Todos os direitos reservados.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
       </div>
+
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-white dark:bg-gray-800">
+        <CardHeader className="text-center space-y-4 pb-8">
+          <div className="flex justify-center">
+            <EasyScaleLogoLarge size="lg" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl font-bold text-[#0F1115] dark:text-gray-100">
+              {isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300 mt-2">
+              {isSignUp 
+                ? 'Acesse mais de 1.000 comandos de ChatGPT para PMEs'
+                : 'Faça login para acessar seus comandos'
+              }
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Aviso de erro se houver */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <span className="text-sm text-red-700 dark:text-red-300">
+                {error === 'account_suspended' && 'Conta suspensa'}
+                {error === 'access_denied' && 'Acesso negado'}
+              </span>
+            </div>
+          )}
+
+          {/* Botão de teste (apenas em desenvolvimento) */}
+          {!isSignUp && (
+            <div className="mb-4">
+              <Button
+                type="button"
+                onClick={handleTestLogin}
+                variant="outline"
+                size="sm"
+                className="w-full border-green-300 text-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Usar Credenciais de Teste
+              </Button>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-[#0F1115] dark:text-gray-200 font-medium">
+                  Nome Completo
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  className="h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  required={isSignUp}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-[#0F1115] dark:text-gray-200 font-medium">
+                E-mail
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="pl-10 h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-[#0F1115] dark:text-gray-200 font-medium">
+                Senha
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10 pr-10 h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  required
+                  minLength={isSignUp ? 6 : 1}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {isSignUp && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  A senha deve ter pelo menos 6 caracteres
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-semibold text-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#0F1115] border-t-transparent rounded-full animate-spin"></div>
+                  {isSignUp ? 'Criando conta...' : 'Entrando...'}
+                </div>
+              ) : (
+                isSignUp ? 'Criar Conta' : 'Entrar'
+              )}
+            </Button>
+
+            {!isSignUp && (
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors"
+              >
+                Esqueci minha senha
+              </button>
+            )}
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setName('');
+                  setEmail('');
+                  setPassword('');
+                  setLoginAttempts(0);
+                }}
+                className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
+              >
+                {isSignUp 
+                  ? 'Já tem uma conta? Faça login'
+                  : 'Não tem conta? Criar conta'
+                }
+              </button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

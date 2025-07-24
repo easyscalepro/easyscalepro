@@ -1,43 +1,39 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/auth-provider';
-import { LoadingScreen } from '@/components/loading-screen';
 
-export default function HomePage() {
+export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [pageLoading, setPageLoading] = useState(true);
 
-  // Simular carregamento da página
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPageLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Redirecionar baseado no status de autenticação
-  useEffect(() => {
-    if (!loading && !pageLoading) {
+    if (!loading) {
       if (user) {
         router.push('/dashboard');
       } else {
         router.push('/login');
       }
     }
-  }, [user, loading, pageLoading, router]);
+  }, [user, loading, router]);
 
-  if (loading || pageLoading) {
-    return (
-      <LoadingScreen 
-        message="Carregando EasyScale..."
-        submessage="Inicializando plataforma"
-      />
-    );
-  }
-
-  return null;
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 rounded-full"></div>
+          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Carregando EasyScale...
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Preparando sua experiência
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
