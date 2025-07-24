@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export const signIn = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -14,14 +14,24 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
+  console.log('🔄 Executando signOut no auth.ts...');
   
-  if (error) {
-    console.warn('Erro no logout:', error);
-    // Não lançar erro para não bloquear o logout
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.warn('⚠️ Erro no logout do Supabase:', error);
+      // Não lançar erro para não bloquear o logout
+    } else {
+      console.log('✅ Logout do Supabase executado com sucesso');
+    }
+    
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Erro inesperado no logout:', error);
+    // Mesmo com erro, retornar true para não bloquear o logout
+    return true;
   }
-  
-  return true;
 };
 
 export const signUp = async (email: string, password: string, metadata?: any) => {

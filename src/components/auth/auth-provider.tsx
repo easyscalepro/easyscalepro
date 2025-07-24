@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { signIn as authSignIn, signOut as authSignOut } from '@/lib/auth';
 import type { User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -276,7 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('👋 Iniciando processo de logout...');
+      console.log('👋 Iniciando processo de logout no AuthProvider...');
       
       // Limpar estado imediatamente para melhor UX
       setUser(null);
@@ -286,7 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Tentar fazer logout no Supabase
       await authSignOut();
       
-      console.log('✅ Logout concluído com sucesso');
+      console.log('✅ Logout concluído com sucesso no AuthProvider');
       
     } catch (error: any) {
       console.warn('⚠️ Erro no logout (estado limpo mesmo assim):', error);
