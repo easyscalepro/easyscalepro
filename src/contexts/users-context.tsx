@@ -81,7 +81,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (allProfilesError: any) {
         console.warn('⚠️ Falha ao carregar todos os perfis:', allProfilesError.message);
         
-        // Estratégia 2: Carregar apenas perfil do usuário atual
+        // Estratégia 2: Carregar apenas perfil do usuário atual (se houver sessão)
         if (session) {
           try {
             console.log('🔍 Tentando carregar perfil do usuário atual...');
@@ -134,11 +134,39 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             } catch (createError: any) {
               console.error('❌ Falha ao criar perfil básico:', createError.message);
-              throw new Error('Não foi possível carregar ou criar perfil de usuário');
+              // Não lançar erro aqui - continuar sem perfis
+              console.log('⚠️ Continuando sem perfis devido a erro na criação');
             }
           }
         } else {
-          throw new Error('Sessão de autenticação não encontrada');
+          // Estratégia 4: Sem sessão - tentar carregar perfis públicos ou continuar vazio
+          console.log('ℹ️ Sem sessão ativa - tentando carregar dados públicos...');
+          
+          try {
+            // Tentar uma consulta simples para verificar se consegue acessar a tabela
+            const { data: publicProfiles, error: publicError } = await supabase
+              .from('profiles')
+              .select('id, email, name, role, status, created_at')
+              .limit(5);
+
+            if (!publicError && publicProfiles) {
+              profiles = publicProfiles;
+              loadMethod = 'perfis_publicos';
+              console.log('✅ Carregados perfis públicos:', profiles.length);
+            } else {
+              console.warn('⚠️ Não foi possível carregar perfis públicos:', publicError);
+              // Não lançar erro - continuar com lista vazia
+              profiles = [];
+              loadMethod = 'lista_vazia';
+              console.log('ℹ️ Continuando com lista vazia de usuários');
+            }
+          } catch (publicError) {
+            console.warn('⚠️ Erro ao tentar carregar perfis públicos:', publicError);
+            // Não lançar erro - continuar com lista vazia
+            profiles = [];
+            loadMethod = 'lista_vazia_erro';
+            console.log('ℹ️ Continuando com lista vazia devido a erro');
+          }
         }
       }
 
@@ -148,30 +176,30 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setUsers(formattedUsers);
         console.log(`✅ ${formattedUsers.length} usuário(s) carregado(s) via ${loadMethod}`);
       } else {
-        console.warn('⚠️ Nenhum perfil encontrado');
+        console.log('ℹ️ Nenhum perfil encontrado - lista vazia');
         setUsers([]);
       }
 
     } catch (error: any) {
       console.error('💥 Erro ao carregar usuários:', error);
       
-      // Tratamento específico de erros
-      let errorMessage = 'Erro desconhecido ao carregar usuários';
+      // Tratamento específico de erros - não falhar completamente
+      let errorMessage = 'Não foi possível carregar usuários';
       
       if (error.message?.includes('permission') || error.message?.includes('RLS')) {
-        errorMessage = 'Sem permissão para acessar dados de usuários. Verifique suas credenciais.';
+        errorMessage = 'Sem permissão para acessar dados de usuários. Faça login como administrador.';
       } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
         errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
-      } else if (error.message?.includes('auth') || error.message?.includes('session')) {
-        errorMessage = 'Sessão expirada. Faça login novamente.';
       } else if (error.message?.includes('table') || error.message?.includes('relation')) {
         errorMessage = 'Tabela de usuários não encontrada. Entre em contato com o administrador.';
+      } else if (error.message?.includes('auth') || error.message?.includes('session')) {
+        errorMessage = 'Problemas de autenticação. Tente fazer login novamente.';
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       setError(errorMessage);
-      setUsers([]);
+      setUsers([]); // Lista vazia em caso de erro
     } finally {
       setLoading(false);
     }
