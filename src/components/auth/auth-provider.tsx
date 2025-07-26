@@ -46,6 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
+    // Evitar chamadas durante o build
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -92,6 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Só executar no cliente
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     // Verificar sessão inicial
     const getInitialSession = async () => {
       try {
@@ -135,6 +145,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // Durante o build, retornar estado inicial
+  if (typeof window === 'undefined') {
+    return (
+      <AuthContext.Provider value={{
+        user: null,
+        profile: null,
+        loading: false,
+        signIn,
+        signOut
+      }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{

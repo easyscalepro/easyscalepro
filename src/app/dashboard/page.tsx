@@ -1,148 +1,89 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useCommands } from '@/contexts/commands-context';
-import { useRouter } from 'next/navigation';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { ModernCommandFilters } from '@/components/dashboard/modern-command-filters';
-import { ModernCommandCard } from '@/components/dashboard/modern-command-card';
-import { DashboardStats } from '@/components/dashboard/dashboard-stats';
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Search, Filter } from 'lucide-react';
+import { useAuth } from "@/components/auth/auth-provider";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { commands, incrementViews } = useCommands();
+  const { user, profile, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Todas');
-  const [selectedLevel, setSelectedLevel] = useState('Todos');
-  const [filteredCommands, setFilteredCommands] = useState(commands);
-  const [isGridVisible, setIsGridVisible] = useState(false);
 
   useEffect(() => {
-    let filtered = commands;
+    setMounted(true);
+  }, []);
 
-    if (searchTerm) {
-      filtered = filtered.filter(command =>
-        command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        command.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (command.tags && command.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-      );
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login');
     }
+  }, [mounted, loading, user, router]);
 
-    if (selectedCategory !== 'Todas') {
-      filtered = filtered.filter(command => command.category === selectedCategory);
-    }
+  if (!mounted || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
-    if (selectedLevel !== 'Todos') {
-      filtered = filtered.filter(command => command.level === selectedLevel);
-    }
-
-    setFilteredCommands(filtered);
-    
-    // Trigger grid animation when commands change
-    setIsGridVisible(false);
-    setTimeout(() => setIsGridVisible(true), 100);
-  }, [searchTerm, selectedCategory, selectedLevel, commands]);
-
-  const handleViewDetails = (id: string) => {
-    incrementViews(id);
-    router.push(`/command/${id}`);
-  };
+  if (!user) {
+    return null;
+  }
 
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
-        <DashboardHeader />
-        
-        <main className="container mx-auto px-6 py-12 max-w-7xl relative overflow-hidden">
-          {/* Decorative background elements */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Floating geometric shapes */}
-            <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-xl animate-pulse"></div>
-            <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-xl animate-pulse delay-1000"></div>
-            <div className="absolute bottom-40 left-1/4 w-40 h-40 bg-gradient-to-br from-amber-400/10 to-orange-400/10 rounded-full blur-xl animate-pulse delay-2000"></div>
-            
-            {/* Grid pattern */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)]"></div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-gray-600">
+            Bem-vindo, {profile?.name || user.email}!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-2">Comandos Utilizados</h3>
+            <p className="text-3xl font-bold text-blue-600">
+              {profile?.commands_used || 0}
+            </p>
           </div>
 
-          {/* Stats */}
-          <DashboardStats />
-
-          {/* Filters */}
-          <ModernCommandFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            selectedLevel={selectedLevel}
-            onLevelChange={setSelectedLevel}
-          />
-
-          {/* Results Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {filteredCommands.length} comandos encontrados
-              </h2>
-            </div>
-            {searchTerm && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Resultados para "{searchTerm}"
-              </div>
-            )}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-2">Status da Conta</h3>
+            <p className="text-lg capitalize text-green-600">
+              {profile?.status || 'Ativo'}
+            </p>
           </div>
 
-          {/* Enhanced Commands Grid */}
-          {filteredCommands.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCommands.map((command, index) => (
-                <div
-                  key={command.id}
-                  className={`transform transition-all duration-700 ${
-                    isGridVisible 
-                      ? 'translate-y-0 opacity-100' 
-                      : 'translate-y-8 opacity-0'
-                  }`}
-                  style={{ 
-                    transitionDelay: `${index * 100}ms`,
-                    animationFillMode: 'both'
-                  }}
-                >
-                  <ModernCommandCard
-                    {...command}
-                    onViewDetails={handleViewDetails}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Search className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Nenhum comando encontrado
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto">
-                Tente ajustar seus filtros ou buscar por outros termos para encontrar o comando perfeito
-              </p>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('Todas');
-                  setSelectedLevel('Todos');
-                }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-              >
-                Limpar Filtros
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-2">Tipo de Usuário</h3>
+            <p className="text-lg capitalize">
+              {profile?.role || 'User'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold mb-4">Ações Rápidas</h3>
+            <div className="space-y-2">
+              <button className="w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors">
+                Explorar Comandos
+              </button>
+              <button className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors">
+                Meus Favoritos
+              </button>
+              <button className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors">
+                Configurações
               </button>
             </div>
-          )}
-        </main>
+          </div>
+        </div>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 }
