@@ -1,6 +1,9 @@
 import { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/login-form';
 
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+
 function LoginFormWrapper() {
   return <LoginForm />;
 }

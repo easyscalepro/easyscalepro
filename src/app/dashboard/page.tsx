@@ -4,6 +4,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth();
   const [mounted, setMounted] = useState(false);

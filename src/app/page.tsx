@@ -4,7 +4,6 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { useEffect, useState } from "react";
 
 export default function HomePage() {
-  const { user, profile, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -21,6 +20,12 @@ export default function HomePage() {
       </div>
     );
   }
+
+  return <HomeContent />;
+}
+
+function HomeContent() {
+  const { user, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -53,6 +58,14 @@ export default function HomePage() {
               <p className="text-sm text-gray-500">
                 Role: {profile?.role || 'user'}
               </p>
+              <div className="mt-4">
+                <a 
+                  href="/dashboard" 
+                  className="inline-block bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Ir para Dashboard
+                </a>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
