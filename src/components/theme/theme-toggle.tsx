@@ -19,23 +19,25 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  const handleThemeChange = (newTheme: string) => {
-    console.log('Mudando tema para:', newTheme);
-    setTheme(newTheme);
-  };
-
+  // Evitar hydration mismatch
   if (!mounted) {
     return (
       <Button 
         variant="ghost" 
         size="sm" 
         className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        disabled
       >
-        <div className="h-4 w-4" />
+        <Sun className="h-4 w-4" />
         <span className="sr-only">Alternar tema</span>
       </Button>
     );
   }
+
+  const handleThemeChange = (newTheme: string) => {
+    console.log('Mudando tema para:', newTheme);
+    setTheme(newTheme);
+  };
 
   return (
     <DropdownMenu>
@@ -43,47 +45,41 @@ export function ThemeToggle() {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
+          className="w-9 h-9 p-0 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Alternar tema"
         >
           {resolvedTheme === 'dark' ? (
-            <Moon className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" />
+            <Moon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           ) : (
-            <Sun className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors" />
+            <Sun className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           )}
-          <span className="sr-only">Alternar tema</span>
-          
-          {/* Glow effect */}
-          <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10"></div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-40 z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+        className="min-w-[120px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
         sideOffset={5}
       >
         <DropdownMenuItem 
           onClick={() => handleThemeChange("light")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
-          <Sun className="h-4 w-4" />
+          <Sun className="mr-2 h-4 w-4" />
           <span>Claro</span>
-          {theme === 'light' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("dark")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
-          <Moon className="h-4 w-4" />
+          <Moon className="mr-2 h-4 w-4" />
           <span>Escuro</span>
-          {theme === 'dark' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => handleThemeChange("system")}
-          className="cursor-pointer flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700"
+          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700"
         >
-          <Monitor className="h-4 w-4" />
+          <Monitor className="mr-2 h-4 w-4" />
           <span>Sistema</span>
-          {theme === 'system' && <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
