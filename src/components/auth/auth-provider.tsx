@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<SimpleProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
   const createSimpleProfile = (user: User): SimpleProfile => {
     // Emails que devem ser admin
@@ -120,21 +119,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    let initializationTimeout: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
 
-    // Timeout de segurança para garantir que o loading seja resolvido
+    // Timeout de segurança para evitar loading infinito
     const safetyTimeout = setTimeout(() => {
-      if (mounted && !initialized) {
-        console.log('⏰ Timeout de segurança do AuthProvider - finalizando loading');
+      if (mounted) {
+        console.log('⏰ Timeout de segurança - finalizando loading');
         setLoading(false);
-        setInitialized(true);
       }
-    }, 8000); // 8 segundos máximo
+    }, 10000); // 10 segundos máximo
 
     // Verificar sessão atual
     const getInitialSession = async () => {
       try {
-        console.log('🔍 AuthProvider: Verificando sessão inicial...');
+        console.log('🔍 Verificando sessão inicial...');
         
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -144,7 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(null);
             setProfile(null);
             setLoading(false);
-            setInitialized(true);
           }
           return;
         }
@@ -169,18 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } finally {
         if (mounted) {
           setLoading(false);
-          setInitialized(true);
           clearTimeout(safetyTimeout);
         }
       }
     };
 
-    // Inicializar após um pequeno delay para evitar race conditions
-    initializationTimeout = setTimeout(() => {
-      if (mounted) {
-        getInitialSession();
-      }
-    }, 100);
+    getInitialSession();
 
     // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -188,10 +179,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'sem usuário');
       
+      // Limpar timeout anterior
+      if (timeoutId) clearTimeout(timeoutId);
+      
       try {
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('🔐 Usuário logado:', session.user.email);
-          setLoading(true);
+          setLoading(true); // Mostrar loading durante carregamento do perfil
           setUser(session.user);
           await loadUserProfile(session.user);
           setLoading(false);
@@ -217,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       mounted = false;
       clearTimeout(safetyTimeout);
-      clearTimeout(initializationTimeout);
+      if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
