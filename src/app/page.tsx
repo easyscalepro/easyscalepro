@@ -1,37 +1,64 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth/auth-provider';
+import { useAuth } from "@/components/auth/auth-provider";
 
-export default function Home() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+export default function HomePage() {
+  const { user, profile, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push('/dashboard');
-      } else {
-        router.push('/login');
-      }
-    }
-  }, [user, loading, router]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 rounded-full"></div>
-          <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Carregando EasyScale...
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Preparando sua experiência
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            EasyScale - Comandos ChatGPT para PMEs
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            Acesse mais de 1.000 comandos especializados de ChatGPT para impulsionar seu negócio
           </p>
+          
+          {user ? (
+            <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold mb-4">Bem-vindo!</h2>
+              <p className="text-gray-600 mb-2">
+                Olá, <span className="font-medium">{profile?.name || user.email}</span>
+              </p>
+              <p className="text-sm text-gray-500">
+                Role: {profile?.role || 'user'}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold mb-4">Faça Login</h2>
+              <p className="text-gray-600 mb-4">
+                Entre na sua conta para acessar os comandos
+              </p>
+              <div className="space-y-2">
+                <a 
+                  href="/login" 
+                  className="block w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Fazer Login
+                </a>
+                <a 
+                  href="/signup" 
+                  className="block w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Criar Conta
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
