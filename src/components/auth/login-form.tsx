@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,8 @@ import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/components/auth/auth-provider';
 import { signUp } from '@/lib/auth';
 
-export const LoginForm: React.FC = () => {
+// Componente separado que usa useSearchParams
+function LoginFormWithParams() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -341,5 +342,45 @@ export const LoginForm: React.FC = () => {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Fallback para o Suspense
+function LoginFormFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-white dark:bg-gray-800">
+        <CardHeader className="text-center space-y-4 pb-8">
+          <div className="flex justify-center">
+            <EasyScaleLogoLarge size="lg" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl font-bold text-[#0F1115] dark:text-gray-100">
+              Carregando...
+            </CardTitle>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 dark:text-gray-300">Preparando formulário...</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Componente principal que exporta
+export const LoginForm: React.FC = () => {
+  return (
+    <Suspense fallback={<LoginFormFallback />}>
+      <LoginFormWithParams />
+    </Suspense>
   );
 };

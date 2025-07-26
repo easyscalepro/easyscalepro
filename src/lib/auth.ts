@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase';
 
-export const signIn = async (email: string, password: string) => {
+export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    password
+    password,
   });
 
   if (error) {
@@ -11,36 +11,17 @@ export const signIn = async (email: string, password: string) => {
   }
 
   return data;
-};
+}
 
-export const signOut = async () => {
-  console.log('🔄 Executando signOut no auth.ts...');
-  
-  try {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.warn('⚠️ Erro no logout do Supabase:', error);
-      // Não lançar erro para não bloquear o logout
-    } else {
-      console.log('✅ Logout do Supabase executado com sucesso');
-    }
-    
-    return true;
-  } catch (error) {
-    console.warn('⚠️ Erro inesperado no logout:', error);
-    // Mesmo com erro, retornar true para não bloquear o logout
-    return true;
-  }
-};
-
-export const signUp = async (email: string, password: string, metadata?: any) => {
+export async function signUp(email: string, password: string, name: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: metadata
-    }
+      data: {
+        name: name,
+      },
+    },
   });
 
   if (error) {
@@ -48,14 +29,22 @@ export const signUp = async (email: string, password: string, metadata?: any) =>
   }
 
   return data;
-};
+}
 
-export const resetPassword = async (email: string) => {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
 
   if (error) {
     throw error;
   }
+}
 
-  return data;
-};
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
