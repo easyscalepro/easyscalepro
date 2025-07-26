@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
 /**
@@ -25,6 +25,63 @@ export const checkSession = async (): Promise<Session | null> => {
   } catch (error) {
     console.error('💥 Erro inesperado ao verificar sessão:', error);
     return null;
+  }
+};
+
+/**
+ * Verifica conexão com o Supabase - VERSÃO MELHORADA
+ */
+export const checkSupabaseConnection = async (): Promise<boolean> => {
+  try {
+    console.log('🌐 Verificando conexão com Supabase...');
+    
+    // Teste 1: Verificar se consegue fazer uma query básica no auth
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (!sessionError) {
+        console.log('✅ Conexão com Auth confirmada');
+        return true;
+      } else {
+        console.warn('⚠️ Erro no Auth:', sessionError.message);
+      }
+    } catch (authError) {
+      console.warn('⚠️ Erro no teste de Auth:', authError);
+    }
+    
+    // Teste 2: Fallback - tentar uma operação muito básica
+    try {
+      // Tentar acessar qualquer endpoint do Supabase
+      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': supabase.supabaseKey,
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        }
+      });
+      
+      if (response.ok || response.status === 404 || response.status === 401) {
+        // 404 ou 401 significa que o servidor está respondendo
+        console.log('✅ Conexão básica confirmada via fetch');
+        return true;
+      }
+    } catch (fetchError) {
+      console.warn('⚠️ Erro no teste de fetch:', fetchError);
+    }
+    
+    // Teste 3: Último recurso - verificar se o objeto supabase existe
+    if (supabase && supabase.supabaseUrl && supabase.supabaseKey) {
+      console.log('✅ Cliente Supabase configurado corretamente');
+      return true;
+    }
+    
+    console.error('❌ Todos os testes de conexão falharam');
+    return false;
+    
+  } catch (error) {
+    console.error('💥 Erro crítico na verificação de conexão:', error);
+    // Em caso de erro crítico, assumir que está conectado para não bloquear
+    return true;
   }
 };
 
@@ -106,86 +163,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 /**
- * Verifica se há conexão com o Supabase - VERSÃO MELHORADA
- */
-export const checkSupabaseConnection = async (): Promise<boolean> => {
-  try {
-    console.log('🌐 Verificando conexão com Supabase...');
-    
-    // Teste 1: Verificar se consegue fazer uma query básica no auth
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (!sessionError) {
-        console.log('✅ Conexão com Auth confirmada');
-        
-        // Se tem sessão, testar acesso à tabela profiles
-        if (session) {
-          try {
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .select('id')
-              .limit(1);
-            
-            if (!profileError) {
-              console.log('✅ Conexão com Database confirmada');
-              return true;
-            } else {
-              console.warn('⚠️ Erro no Database, mas Auth OK:', profileError.message);
-              // Mesmo com erro no database, se auth funciona, consideramos conectado
-              return true;
-            }
-          } catch (dbError) {
-            console.warn('⚠️ Erro no Database, mas Auth OK:', dbError);
-            // Auth funciona, então consideramos conectado
-            return true;
-          }
-        } else {
-          console.log('✅ Conexão OK (sem sessão ativa)');
-          return true;
-        }
-      }
-    } catch (authError) {
-      console.warn('⚠️ Erro no teste de Auth:', authError);
-    }
-    
-    // Teste 2: Fallback - tentar uma operação muito básica
-    try {
-      // Tentar acessar qualquer endpoint do Supabase
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/`, {
-        method: 'HEAD',
-        headers: {
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`
-        }
-      });
-      
-      if (response.ok || response.status === 404 || response.status === 401) {
-        // 404 ou 401 significa que o servidor está respondendo
-        console.log('✅ Conexão básica confirmada via fetch');
-        return true;
-      }
-    } catch (fetchError) {
-      console.warn('⚠️ Erro no teste de fetch:', fetchError);
-    }
-    
-    // Teste 3: Último recurso - verificar se o objeto supabase existe
-    if (supabase && supabase.supabaseUrl && supabase.supabaseKey) {
-      console.log('✅ Cliente Supabase configurado corretamente');
-      return true;
-    }
-    
-    console.error('❌ Todos os testes de conexão falharam');
-    return false;
-    
-  } catch (error) {
-    console.error('💥 Erro crítico na verificação de conexão:', error);
-    // Em caso de erro crítico, assumir que está conectado para não bloquear
-    return true;
-  }
-};
-
-/**
  * Verifica conexão de forma mais rápida (para uso em componentes)
  */
 export const quickConnectionCheck = async (): Promise<boolean> => {
@@ -197,5 +174,31 @@ export const quickConnectionCheck = async (): Promise<boolean> => {
     console.warn('⚠️ Quick check falhou:', error);
     // Em caso de erro, assumir conectado
     return true;
+  }
+};
+
+/**
+ * Força reconexão com o Supabase
+ */
+export const forceReconnect = async (): Promise<boolean> => {
+  try {
+    console.log('🔄 Forçando reconexão...');
+    
+    // Limpar sessão local
+    await supabase.auth.signOut();
+    
+    // Tentar nova conexão
+    const isConnected = await checkSupabaseConnection();
+    
+    if (isConnected) {
+      console.log('✅ Reconexão bem-sucedida');
+    } else {
+      console.error('❌ Falha na reconexão');
+    }
+    
+    return isConnected;
+  } catch (error) {
+    console.error('💥 Erro na reconexão:', error);
+    return false;
   }
 };
