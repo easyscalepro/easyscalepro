@@ -179,7 +179,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (data) {
         console.log('✅ Comandos carregados:', data.length)
         // Mapear os dados do banco para o formato esperado pelo frontend
-        const mappe dCommands = data.map(cmd => ({
+        const mappedCommands = data.map(cmd => ({
           id: cmd.id,
           title: cmd.title,
           description: cmd.description,
