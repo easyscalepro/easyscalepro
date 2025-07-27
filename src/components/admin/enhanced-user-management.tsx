@@ -351,6 +351,7 @@ export const EnhancedUserManagement: React.FC = () => {
   };
 
   const handleEditUser = (user: any) => {
+    console.log('Editando usuário:', user);
     setModalMode('edit');
     setSelectedUser(user);
     setIsModalOpen(true);
@@ -375,11 +376,13 @@ export const EnhancedUserManagement: React.FC = () => {
 
   // Novas funções para edição avançada
   const handlePasswordEdit = (user: any) => {
+    console.log('Editando senha do usuário:', user);
     setUserForPasswordEdit(user);
     setPasswordModalOpen(true);
   };
 
   const handleQuickEdit = (user: any) => {
+    console.log('Edição rápida do usuário:', user);
     setUserForQuickEdit(user);
     setQuickEditModalOpen(true);
   };
@@ -790,133 +793,132 @@ export const EnhancedUserManagement: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {user.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium text-[#0F1115]">{user.name}</div>
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {user.email}
+                {filteredUsers.map((user) => {
+                  console.log('Renderizando usuário:', user);
+                  return (
+                    <TableRow key={user.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {user.name?.charAt(0).toUpperCase()}
                           </div>
-                          {user.phone && (
+                          <div>
+                            <div className="font-medium text-[#0F1115]">{user.name}</div>
                             <div className="text-sm text-gray-500 flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {user.phone}
+                              <Mail className="h-3 w-3" />
+                              {user.email}
                             </div>
-                          )}
+                            {user.phone && (
+                              <div className="text-sm text-gray-500 flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {user.phone}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(user.status)}
-                    </TableCell>
-                    <TableCell>
-                      {getRoleBadge(user.role)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Building className="h-3 w-3 text-gray-400" />
-                        {user.company || 'Não informado'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Activity className="h-3 w-3" />
-                          {user.commandsUsed || 0} comandos
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(user.status)}
+                      </TableCell>
+                      <TableCell>
+                        {getRoleBadge(user.role)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Building className="h-3 w-3 text-gray-400" />
+                          {user.company || 'Não informado'}
                         </div>
-                        <div className="flex items-center gap-1 text-gray-500">
-                          <Calendar className="h-3 w-3" />
-                          {user.lastAccess || 'Nunca'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Activity className="h-3 w-3" />
+                            {user.commandsUsed || 0} comandos
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <Calendar className="h-3 w-3" />
+                            {user.lastAccess || 'Nunca'}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Desde {user.joinedAt || 'N/A'}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          Desde {user.joinedAt || 'N/A'}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
-                      <div className="flex gap-1 flex-wrap">
-                        {/* Edição completa de dados */}
-                        <Button
-                          onClick={() => handleEditUser(user)}
-                          size="sm"
-                          variant="outline"
-                          className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
-                          title="Editar dados completos"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                      </TableCell>
+                      <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
+                        <div className="flex gap-1 flex-wrap min-w-[300px]">
+                          {/* 1. Edição completa de dados - AZUL */}
+                          <Button
+                            onClick={() => handleEditUser(user)}
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600"
+                            title="Editar dados completos"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
 
-                        {/* Edição rápida de status e função */}
-                        <Button
-                          onClick={() => handleQuickEdit(user)}
-                          size="sm"
-                          variant="outline"
-                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
-                          title="Edição rápida (Status/Função)"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                          {/* 2. Edição rápida de status e função - ROXO */}
+                          <Button
+                            onClick={() => handleQuickEdit(user)}
+                            size="sm"
+                            variant="outline"
+                            className="border-purple-500 text-purple-600 hover:bg-purple-50 hover:border-purple-600"
+                            title="Edição rápida (Status/Função)"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
 
-                        {/* Edição de senha */}
-                        {profile?.role === 'admin' && (
+                          {/* 3. Edição de senha - LARANJA (apenas admin) */}
                           <Button
                             onClick={() => handlePasswordEdit(user)}
                             size="sm"
                             variant="outline"
-                            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-50 hover:border-orange-600"
                             title="Alterar senha"
                           >
                             <Key className="h-4 w-4" />
                           </Button>
-                        )}
 
-                        {/* Toggle de status */}
-                        <Button
-                          onClick={() => handleToggleStatus(user.id, user.status, user.name)}
-                          size="sm"
-                          variant="outline"
-                          className={user.status === 'ativo' 
-                            ? "border-orange-500 text-orange-600 hover:bg-orange-50"
-                            : "border-green-500 text-green-600 hover:bg-green-50"
-                          }
-                          title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
-                        >
-                          {user.status === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                        </Button>
+                          {/* 4. Toggle de status - LARANJA/VERDE */}
+                          <Button
+                            onClick={() => handleToggleStatus(user.id, user.status, user.name)}
+                            size="sm"
+                            variant="outline"
+                            className={user.status === 'ativo' 
+                              ? "border-orange-500 text-orange-600 hover:bg-orange-50 hover:border-orange-600"
+                              : "border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600"
+                            }
+                            title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
+                          >
+                            {user.status === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
 
-                        {/* Enviar email */}
-                        <Button
-                          onClick={() => handleSendEmail(user.email, user.name)}
-                          size="sm"
-                          variant="outline"
-                          className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                          title="Enviar email"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
+                          {/* 5. Enviar email - AZUL CLARO */}
+                          <Button
+                            onClick={() => handleSendEmail(user.email, user.name)}
+                            size="sm"
+                            variant="outline"
+                            className="border-cyan-400 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-500"
+                            title="Enviar email"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
 
-                        {/* Deletar usuário (apenas admin) */}
-                        {profile?.role === 'admin' && (
+                          {/* 6. Deletar usuário - VERMELHO (apenas admin) */}
                           <Button
                             onClick={() => handleDeleteUser(user.id, user.name)}
                             size="sm"
                             variant="outline"
-                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
                             title="Excluir usuário"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
