@@ -24,24 +24,19 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-// Função helper para converter erros do Supabase em Error objects
-const createErrorFromSupabaseError = (error: any, defaultMessage: string = 'Erro desconhecido'): Error => {
+// Função helper para converter erros em Error instances
+const createErrorFromAuth = (error: any, defaultMessage: string): Error => {
   if (error instanceof Error) {
     return error;
-  }
-  
-  if (typeof error === 'string') {
-    return new Error(error);
   }
   
   if (error && typeof error === 'object') {
     const message = error.message || error.error_description || error.msg || defaultMessage;
     const newError = new Error(message);
     
-    // Preservar propriedades importantes do erro original
+    // Preservar propriedades úteis do erro original
     if (error.code) (newError as any).code = error.code;
-    if (error.details) (newError as any).details = error.details;
-    if (error.hint) (newError as any).hint = error.hint;
+    if (error.status) (newError as any).status = error.status;
     
     return newError;
   }
@@ -152,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('⏰ Timeout de segurança - finalizando loading de autenticação');
         setLoading(false);
       }
-    }, 10000); // 10 segundos máximo
+    }, 10000); // 10 segundos má ximo
 
     // Verificar sessão atual
     const getInitialSession = async () => {
@@ -255,7 +250,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
 
         if (existingProfile && existingProfile.status !== 'ativo') {
-          throw new Error('Sua conta está inativa. Entre em contato com o administrador.');
+          const errorInstance = new Error('Sua conta está inativa. Entre em contato com o administrador.');
+          throw errorInstance;
         }
       } catch (profileError) {
         // Se não conseguir verificar o perfil, continuar com o login
@@ -270,11 +266,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('❌ Erro no login:', error.message);
-        throw createErrorFromSupabaseError(error, 'Erro ao fazer login');
+        const errorInstance = createErrorFromAuth(error, 'Erro ao fazer login');
+        throw errorInstance;
       }
 
       if (!data.user) {
-        throw new Error('Falha na autenticação - usuário não retornado');
+        const errorInstance = new Error('Falha na autenticação - usuário não retornado');
+        throw errorInstance;
       }
 
       console.log('✅ Login realizado com sucesso para:', data.user.email);
@@ -285,16 +283,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('💥 Erro no login:', error);
       setLoading(false); // Parar loading em caso de erro
       
-      if (error.message?.includes('Invalid login credentials')) {
+      // Converter para Error instance se necessário
+      const errorInstance = error instanceof Error ? error : createErrorFromAuth(error, 'Erro inesperado no login');
+      
+      if (errorInstance.message?.includes('Invalid login credentials')) {
         throw new Error('Email ou senha incorretos. Verifique suas credenciais e tente novamente.');
-      } else if (error.message?.includes('Email not confirmed')) {
+      } else if (errorInstance.message?.includes('Email not confirmed')) {
         throw new Error('Email não confirmado. Verifique sua caixa de entrada e confirme seu email.');
-      } else if (error.message?.includes('Too many requests')) {
+      } else if (errorInstance.message?.includes('Too many requests')) {
         throw new Error('Muitas tentativas de login. Aguarde alguns minutos e tente novamente.');
-      } else if (error.message?.includes('inativa')) {
-        throw new Error(error.message);
+      } else if (errorInstance.message?.includes('inativa')) {
+        throw errorInstance;
       } else {
-        throw createErrorFromSupabaseError(error, 'Erro ao fazer login. Verifique sua conexão e tente novamente.');
+        throw new Error('Erro ao fazer login. Verifique sua conexão e tente novamente.');
       }
     }
   };

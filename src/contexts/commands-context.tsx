@@ -35,21 +35,17 @@ type NewCommand = {
   estimatedTime?: string
 }
 
-// Função helper para converter erros do Supabase em Error objects
-const createErrorFromSupabaseError = (error: any, defaultMessage: string = 'Erro desconhecido'): Error => {
+// Função helper para converter erros do Supabase em Error instances
+const createErrorFromSupabase = (error: any, defaultMessage: string): Error => {
   if (error instanceof Error) {
     return error;
-  }
-  
-  if (typeof error === 'string') {
-    return new Error(error);
   }
   
   if (error && typeof error === 'object') {
     const message = error.message || error.error_description || error.msg || defaultMessage;
     const newError = new Error(message);
     
-    // Preservar propriedades importantes do erro original
+    // Preservar propriedades úteis do erro original
     if (error.code) (newError as any).code = error.code;
     if (error.details) (newError as any).details = error.details;
     if (error.hint) (newError as any).hint = error.hint;
@@ -116,8 +112,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao carregar comandos:', error)
-        toast.error('Erro ao carregar comandos')
-        throw createErrorFromSupabaseError(error, 'Erro ao carregar comandos')
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao carregar comandos');
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       if (data) {
@@ -145,8 +142,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('💥 Erro ao carregar comandos:', err)
-      toast.error('Erro ao carregar comandos')
-      throw createErrorFromSupabaseError(err, 'Erro ao carregar comandos')
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao carregar comandos');
+      toast.error(errorInstance.message)
+      // Não re-throw aqui para não quebrar a aplicação
     } finally {
       setLoading(false)
     }
@@ -168,7 +166,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao carregar favoritos:', error)
-        throw createErrorFromSupabaseError(error, 'Erro ao carregar favoritos')
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao carregar favoritos');
+        // Não mostrar toast para favoritos, é menos crítico
+        console.warn('⚠️ Favoritos não carregados:', errorInstance.message);
+        return
       }
 
       if (data) {
@@ -178,7 +179,8 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('💥 Erro ao carregar favoritos:', err)
-      // Não lançar erro para favoritos - apenas logar
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao carregar favoritos');
+      console.warn('⚠️ Favoritos não carregados:', errorInstance.message);
     }
   }, [user])
 
@@ -201,8 +203,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
         if (error) {
           console.error('❌ Erro ao remover favorito:', error)
-          toast.error('Erro ao remover favorito')
-          throw createErrorFromSupabaseError(error, 'Erro ao remover favorito')
+          const errorInstance = createErrorFromSupabase(error, 'Erro ao remover favorito');
+          toast.error(errorInstance.message)
+          throw errorInstance;
         }
 
         setFavorites(prev => prev.filter(id => id !== commandId))
@@ -218,8 +221,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
         if (error) {
           console.error('❌ Erro ao adicionar favorito:', error)
-          toast.error('Erro ao adicionar favorito')
-          throw createErrorFromSupabaseError(error, 'Erro ao adicionar favorito')
+          const errorInstance = createErrorFromSupabase(error, 'Erro ao adicionar favorito');
+          toast.error(errorInstance.message)
+          throw errorInstance;
         }
 
         setFavorites(prev => [...prev, commandId])
@@ -227,8 +231,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('💥 Erro ao alterar favorito:', err)
-      toast.error('Erro ao alterar favorito')
-      throw createErrorFromSupabaseError(err, 'Erro ao alterar favorito')
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao alterar favorito');
+      toast.error(errorInstance.message)
+      // Não re-throw para não quebrar a UI
     }
   }, [user, favorites])
 
@@ -242,7 +247,8 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao incrementar visualizações:', error)
-        // Não lançar erro para incremento de views - apenas logar
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar visualizações');
+        console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
         return
       }
 
@@ -254,7 +260,8 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       ))
     } catch (err: any) {
       console.error('💥 Erro ao incrementar visualizações:', err)
-      // Não lançar erro para incremento de views - apenas logar
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar visualizações');
+      console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
     }
   }, [])
 
@@ -268,7 +275,8 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao incrementar cópias:', error)
-        // Não lançar erro para incremento de cópias - apenas logar
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar cópias');
+        console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
         return
       }
 
@@ -289,12 +297,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
             p_metadata: { timestamp: new Date().toISOString() }
           })
         } catch (logError) {
-          console.warn('⚠️ Erro ao logar atividade (não crítico):', logError)
+          // Log de atividade é opcional, não quebrar se falhar
+          console.warn('⚠️ Erro ao registrar atividade:', logError);
         }
       }
     } catch (err: any) {
       console.error('💥 Erro ao incrementar cópias:', err)
-      // Não lançar erro para incremento de cópias - apenas logar
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar cópias');
+      console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
     }
   }, [user])
 
@@ -308,14 +318,16 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       
       if (sessionError) {
         console.error('❌ Erro ao obter sessão:', sessionError)
-        toast.error('Erro de autenticação')
-        throw createErrorFromSupabaseError(sessionError, 'Erro de autenticação')
+        const errorInstance = createErrorFromSupabase(sessionError, 'Erro de autenticação');
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       if (!session?.user) {
+        const errorInstance = new Error('Você precisa estar logado para adicionar comandos');
         console.error('❌ Usuário não autenticado')
-        toast.error('Você precisa estar logado para adicionar comandos')
-        throw new Error('Usuário não autenticado')
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       console.log('✅ Usuário autenticado:', session.user.email)
@@ -360,19 +372,20 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         })
         
         // Tratamento específico de erros
+        let errorMessage = 'Erro ao adicionar comando';
         if (error.code === '42501') {
-          toast.error('Erro de permissão: Você não tem autorização para adicionar comandos')
-          throw new Error('Erro de permissão: ' + error.message)
+          errorMessage = 'Erro de permissão: Você não tem autorização para adicionar comandos';
         } else if (error.code === '23505') {
-          toast.error('Erro: Já existe um comando com este título')
-          throw new Error('Comando duplicado: ' + error.message)
+          errorMessage = 'Erro: Já existe um comando com este título';
         } else if (error.code === '23502') {
-          toast.error('Erro: Campos obrigatórios não preenchidos')
-          throw new Error('Campos obrigatórios: ' + error.message)
-        } else {
-          toast.error('Erro ao adicionar comando: ' + error.message)
-          throw createErrorFromSupabaseError(error, 'Erro ao adicionar comando')
+          errorMessage = 'Erro: Campos obrigatórios não preenchidos';
+        } else if (error.message) {
+          errorMessage = `Erro ao adicionar comando: ${error.message}`;
         }
+        
+        const errorInstance = createErrorFromSupabase(error, errorMessage);
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       if (data) {
@@ -408,8 +421,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro capturado ao adicionar comando:', err)
       
-      // Re-throw o erro convertido para Error object
-      throw createErrorFromSupabaseError(err, 'Erro ao adicionar comando')
+      // Garantir que sempre lançamos um Error instance
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao adicionar comando');
+      throw errorInstance;
     } finally {
       setLoading(false)
     }
@@ -442,8 +456,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao atualizar comando:', error)
-        toast.error('Erro ao atualizar comando')
-        throw createErrorFromSupabaseError(error, 'Erro ao atualizar comando')
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao atualizar comando');
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       if (data) {
@@ -474,8 +489,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('💥 Erro ao atualizar comando:', err)
-      toast.error('Erro ao atualizar comando')
-      throw createErrorFromSupabaseError(err, 'Erro ao atualizar comando')
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao atualizar comando');
+      toast.error(errorInstance.message)
+      throw errorInstance;
     } finally {
       setLoading(false)
     }
@@ -493,8 +509,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao deletar comando:', error)
-        toast.error('Erro ao deletar comando')
-        throw createErrorFromSupabaseError(error, 'Erro ao deletar comando')
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao deletar comando');
+        toast.error(errorInstance.message)
+        throw errorInstance;
       }
 
       console.log('✅ Comando deletado (desativado)')
@@ -502,8 +519,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       toast.success('Comando deletado com sucesso!')
     } catch (err: any) {
       console.error('💥 Erro ao deletar comando:', err)
-      toast.error('Erro ao deletar comando')
-      throw createErrorFromSupabaseError(err, 'Erro ao deletar comando')
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao deletar comando');
+      toast.error(errorInstance.message)
+      throw errorInstance;
     } finally {
       setLoading(false)
     }
@@ -560,16 +578,12 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
   // Carregar comandos na inicialização
   useEffect(() => {
-    loadCommands().catch(err => {
-      console.error('💥 Erro ao carregar comandos na inicialização:', err)
-    })
+    loadCommands()
   }, [loadCommands])
 
   // Carregar favoritos quando o usuário mudar
   useEffect(() => {
-    loadFavorites().catch(err => {
-      console.error('💥 Erro ao carregar favoritos na inicialização:', err)
-    })
+    loadFavorites()
   }, [loadFavorites])
 
   return (
