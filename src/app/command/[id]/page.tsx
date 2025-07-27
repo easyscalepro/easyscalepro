@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useCommands } from '@/contexts/commands-context';
 import { useParams } from 'next/navigation';
 import { CommandDetail } from '@/components/command/command-detail';
@@ -11,17 +11,26 @@ export default function CommandDetailPage() {
   const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const commandId = params.id as string;
+  
+  // Usar useRef para controlar se já incrementou as visualizações
+  const hasIncrementedViews = useRef(false);
 
   const command = getCommandById(commandId);
   const relatedCommands = getRelatedCommands(commandId);
 
-  // Incrementar visualizações quando a página carregar
+  // Incrementar visualizações apenas uma vez quando a página carregar
   useEffect(() => {
-    if (command && !authLoading) {
+    if (command && !authLoading && !hasIncrementedViews.current) {
       console.log('👁️ Incrementando visualizações para comando:', command.title);
       incrementViews(commandId);
+      hasIncrementedViews.current = true;
     }
-  }, [command, commandId, incrementViews, authLoading]);
+  }, [command, commandId, authLoading]); // Removido incrementViews das dependências
+
+  // Reset do flag quando o commandId mudar (navegação para outro comando)
+  useEffect(() => {
+    hasIncrementedViews.current = false;
+  }, [commandId]);
 
   if (authLoading) {
     return (

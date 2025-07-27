@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/components/auth/auth-provider'
 import { toast } from 'sonner'
@@ -78,7 +78,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
-  const loadCommands = async () => {
+  const loadCommands = useCallback(async () => {
     try {
       setLoading(true)
       console.log('🔄 Carregando comandos...')
@@ -124,9 +124,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     if (!user) {
       setFavorites([])
       return
@@ -153,9 +153,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao carregar favoritos:', err)
     }
-  }
+  }, [user])
 
-  const toggleFavorite = async (commandId: string) => {
+  const toggleFavorite = useCallback(async (commandId: string) => {
     if (!user) {
       toast.error('Faça login para favoritar comandos')
       return
@@ -202,9 +202,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       console.error('💥 Erro ao alterar favorito:', err)
       toast.error('Erro ao alterar favorito')
     }
-  }
+  }, [user, favorites])
 
-  const incrementViews = async (commandId: string) => {
+  const incrementViews = useCallback(async (commandId: string) => {
     try {
       console.log('👁️ Incrementando visualizações para:', commandId)
       
@@ -226,9 +226,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao incrementar visualizações:', err)
     }
-  }
+  }, [])
 
-  const incrementCopies = async (commandId: string) => {
+  const incrementCopies = useCallback(async (commandId: string) => {
     try {
       console.log('📋 Incrementando cópias para:', commandId)
       
@@ -260,9 +260,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao incrementar cópias:', err)
     }
-  }
+  }, [user])
 
-  const addCommand = async (newCommand: NewCommand) => {
+  const addCommand = useCallback(async (newCommand: NewCommand) => {
     try {
       setLoading(true)
       console.log('➕ Iniciando adição de comando:', newCommand.title)
@@ -381,9 +381,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const updateCommand = async (id: string, updatedCommand: Partial<NewCommand>) => {
+  const updateCommand = useCallback(async (id: string, updatedCommand: Partial<NewCommand>) => {
     try {
       setLoading(true)
       console.log('✏️ Atualizando comando:', id)
@@ -447,9 +447,9 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const deleteCommand = async (id: string) => {
+  const deleteCommand = useCallback(async (id: string) => {
     try {
       setLoading(true)
       console.log('🗑️ Deletando comando:', id)
@@ -475,13 +475,13 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const getCommandById = (id: string): Command | undefined => {
+  const getCommandById = useCallback((id: string): Command | undefined => {
     return commands.find(cmd => cmd.id === id)
-  }
+  }, [commands])
 
-  const getRelatedCommands = (commandId: string) => {
+  const getRelatedCommands = useCallback((commandId: string) => {
     const currentCommand = getCommandById(commandId)
     if (!currentCommand) {
       return []
@@ -524,17 +524,17 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
     console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
     return relatedCommands
-  }
+  }, [commands, getCommandById])
 
   // Carregar comandos na inicialização
   useEffect(() => {
     loadCommands()
-  }, [])
+  }, [loadCommands])
 
   // Carregar favoritos quando o usuário mudar
   useEffect(() => {
     loadFavorites()
-  }, [user])
+  }, [loadFavorites])
 
   return (
     <CommandsContext.Provider value={{ 
