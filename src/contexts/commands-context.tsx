@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/components/auth/auth-provider'
 import { toast } from 'sonner'
 
 export type Command = {
@@ -36,6 +37,7 @@ type NewCommand = {
 
 const CommandsContext = createContext<{
   commands: Command[]
+  favorites: string[]
   loading: boolean
   addCommand: (command: NewCommand) => Promise<void>
   updateCommand: (id: string, command: Partial<NewCommand>) => Promise<void>
@@ -44,8 +46,12 @@ const CommandsContext = createContext<{
   loadCommands: () => Promise<void>
   setCommands: (commands: Command[]) => void
   setLoading: (loading: boolean) => void
+  toggleFavorite: (commandId: string) => Promise<void>
+  incrementViews: (commandId: string) => Promise<void>
+  incrementCopies: (commandId: string) => Promise<void>
 }>({ 
   commands: [], 
+  favorites: [],
   loading: false,
   addCommand: async () => {}, 
   updateCommand: async () => {},
@@ -53,12 +59,17 @@ const CommandsContext = createContext<{
   getCommandById: () => undefined,
   loadCommands: async () => {},
   setCommands: () => {},
-  setLoading: () => {}
+  setLoading: () => {},
+  toggleFavorite: async () => {},
+  incrementViews: async () => {},
+  incrementCopies: async () => {}
 })
 
 export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [commands, setCommands] = useState<Command[]>([])
+  const [favorites, setFavorites] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
   const loadCommands = async () => {
     try {
@@ -105,6 +116,142 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       toast.error('Erro ao carregar comandos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadFavorites = async () => {
+    if (!user) {
+      setFavorites([])
+      return
+    }
+
+    try {
+      console.log('🔄 Carregando favoritos do usuário:', user.id)
+      
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('command_id')
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('❌ Erro ao carregar favoritos:', error)
+        return
+      }
+
+      if (data) {
+        const favoriteIds = data.map(fav => fav.command_id)
+        console.log('✅ Favoritos carregados:', favoriteIds.length)
+        setFavorites(favoriteIds)
+      }
+    } catch (err: any) {
+      console.error('💥 Erro ao carregar favoritos:', err)
+    }
+  }
+
+  const toggleFavorite = async (commandId: string) => {
+    if (!user) {
+      toast.error('Faça login para favoritar comandos')
+      return
+    }
+
+    try {
+      const isFavorite = favorites.includes(commandId)
+      
+      if (isFavorite) {
+        // Remover dos favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('command_id', commandId)
+
+        if (error) {
+          console.error('❌ Erro ao remover favorito:', error)
+          toast.error('Erro ao remover favorito')
+          return
+        }
+
+        setFavorites(prev => prev.filter(id => id !== commandId))
+        toast.success('Removido dos favoritos')
+      } else {
+        // Adicionar aos favoritos
+        const { error } = await supabase
+          .from('favorites')
+          .insert([{
+            user_id: user.id,
+            command_id: commandId
+          }])
+
+        if (error) {
+          console.error('❌ Erro ao adicionar favorito:', error)
+          toast.error('Erro ao adicionar favorito')
+          return
+        }
+
+        setFavorites(prev => [...prev, commandId])
+        toast.success('Adicionado aos favoritos')
+      }
+    } catch (err: any) {
+      console.error('💥 Erro ao alterar favorito:', err)
+      toast.error('Erro ao alterar favorito')
+    }
+  }
+
+  const incrementViews = async (commandId: string) => {
+    try {
+      console.log('👁️ Incrementando visualizações para:', commandId)
+      
+      const { error } = await supabase.rpc('increment_command_views', {
+        command_uuid: commandId
+      })
+
+      if (error) {
+        console.error('❌ Erro ao incrementar visualizações:', error)
+        return
+      }
+
+      // Atualizar localmente
+      setCommands(prev => prev.map(cmd => 
+        cmd.id === commandId 
+          ? { ...cmd, views: cmd.views + 1 }
+          : cmd
+      ))
+    } catch (err: any) {
+      console.error('💥 Erro ao incrementar visualizações:', err)
+    }
+  }
+
+  const incrementCopies = async (commandId: string) => {
+    try {
+      console.log('📋 Incrementando cópias para:', commandId)
+      
+      const { error } = await supabase.rpc('increment_command_copies', {
+        command_uuid: commandId
+      })
+
+      if (error) {
+        console.error('❌ Erro ao incrementar cópias:', error)
+        return
+      }
+
+      // Atualizar localmente
+      setCommands(prev => prev.map(cmd => 
+        cmd.id === commandId 
+          ? { ...cmd, copies: cmd.copies + 1 }
+          : cmd
+      ))
+
+      // Log da atividade do usuário se estiver logado
+      if (user) {
+        await supabase.rpc('log_user_activity', {
+          p_user_id: user.id,
+          p_command_id: commandId,
+          p_activity_type: 'copy',
+          p_metadata: { timestamp: new Date().toISOString() }
+        })
+      }
+    } catch (err: any) {
+      console.error('💥 Erro ao incrementar cópias:', err)
     }
   }
 
@@ -283,9 +430,15 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     loadCommands()
   }, [])
 
+  // Carregar favoritos quando o usuário mudar
+  useEffect(() => {
+    loadFavorites()
+  }, [user])
+
   return (
     <CommandsContext.Provider value={{ 
       commands, 
+      favorites,
       loading,
       addCommand, 
       updateCommand,
@@ -293,7 +446,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       getCommandById,
       loadCommands,
       setCommands,
-      setLoading
+      setLoading,
+      toggleFavorite,
+      incrementViews,
+      incrementCopies
     }}>
       {children}
     </CommandsContext.Provider>

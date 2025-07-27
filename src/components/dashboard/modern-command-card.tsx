@@ -65,7 +65,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   estimatedTime = '5 min',
   onViewDetails,
 }) => {
-  const { favorites, toggleFavorite, incrementCopies } = useCommands();
+  const { favorites = [], toggleFavorite, incrementCopies } = useCommands();
   const isFavorite = favorites.includes(id);
 
   const handleCopyPrompt = async (e: React.MouseEvent) => {
@@ -141,6 +141,7 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
     return icons[category as keyof typeof icons] || Target;
   };
 
+  // Garantir que tags seja sempre um array
   const safeTags = Array.isArray(tags) ? tags : [];
   const CategoryIcon = getCategoryIcon(category);
 
