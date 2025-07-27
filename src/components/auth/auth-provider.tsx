@@ -24,6 +24,31 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
+// Função helper para converter erros do Supabase em Error objects
+const createErrorFromSupabaseError = (error: any, defaultMessage: string = 'Erro desconhecido'): Error => {
+  if (error instanceof Error) {
+    return error;
+  }
+  
+  if (typeof error === 'string') {
+    return new Error(error);
+  }
+  
+  if (error && typeof error === 'object') {
+    const message = error.message || error.error_description || error.msg || defaultMessage;
+    const newError = new Error(message);
+    
+    // Preservar propriedades importantes do erro original
+    if (error.code) (newError as any).code = error.code;
+    if (error.details) (newError as any).details = error.details;
+    if (error.hint) (newError as any).hint = error.hint;
+    
+    return newError;
+  }
+  
+  return new Error(defaultMessage);
+};
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
@@ -245,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('❌ Erro no login:', error.message);
-        throw error;
+        throw createErrorFromSupabaseError(error, 'Erro ao fazer login');
       }
 
       if (!data.user) {
@@ -269,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (error.message?.includes('inativa')) {
         throw new Error(error.message);
       } else {
-        throw new Error('Erro ao fazer login. Verifique sua conexão e tente novamente.');
+        throw createErrorFromSupabaseError(error, 'Erro ao fazer login. Verifique sua conexão e tente novamente.');
       }
     }
   };

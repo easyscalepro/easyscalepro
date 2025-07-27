@@ -35,6 +35,31 @@ type NewCommand = {
   estimatedTime?: string
 }
 
+// Função helper para converter erros do Supabase em Error objects
+const createErrorFromSupabaseError = (error: any, defaultMessage: string = 'Erro desconhecido'): Error => {
+  if (error instanceof Error) {
+    return error;
+  }
+  
+  if (typeof error === 'string') {
+    return new Error(error);
+  }
+  
+  if (error && typeof error === 'object') {
+    const message = error.message || error.error_description || error.msg || defaultMessage;
+    const newError = new Error(message);
+    
+    // Preservar propriedades importantes do erro original
+    if (error.code) (newError as any).code = error.code;
+    if (error.details) (newError as any).details = error.details;
+    if (error.hint) (newError as any).hint = error.hint;
+    
+    return newError;
+  }
+  
+  return new Error(defaultMessage);
+};
+
 const CommandsContext = createContext<{
   commands: Command[]
   favorites: string[]
@@ -92,7 +117,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error('❌ Erro ao carregar comandos:', error)
         toast.error('Erro ao carregar comandos')
-        return
+        throw createErrorFromSupabaseError(error, 'Erro ao carregar comandos')
       }
 
       if (data) {
@@ -121,6 +146,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao carregar comandos:', err)
       toast.error('Erro ao carregar comandos')
+      throw createErrorFromSupabaseError(err, 'Erro ao carregar comandos')
     } finally {
       setLoading(false)
     }
@@ -142,7 +168,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao carregar favoritos:', error)
-        return
+        throw createErrorFromSupabaseError(error, 'Erro ao carregar favoritos')
       }
 
       if (data) {
@@ -152,6 +178,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: any) {
       console.error('💥 Erro ao carregar favoritos:', err)
+      // Não lançar erro para favoritos - apenas logar
     }
   }, [user])
 
@@ -175,7 +202,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         if (error) {
           console.error('❌ Erro ao remover favorito:', error)
           toast.error('Erro ao remover favorito')
-          return
+          throw createErrorFromSupabaseError(error, 'Erro ao remover favorito')
         }
 
         setFavorites(prev => prev.filter(id => id !== commandId))
@@ -192,7 +219,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         if (error) {
           console.error('❌ Erro ao adicionar favorito:', error)
           toast.error('Erro ao adicionar favorito')
-          return
+          throw createErrorFromSupabaseError(error, 'Erro ao adicionar favorito')
         }
 
         setFavorites(prev => [...prev, commandId])
@@ -201,6 +228,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao alterar favorito:', err)
       toast.error('Erro ao alterar favorito')
+      throw createErrorFromSupabaseError(err, 'Erro ao alterar favorito')
     }
   }, [user, favorites])
 
@@ -214,6 +242,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao incrementar visualizações:', error)
+        // Não lançar erro para incremento de views - apenas logar
         return
       }
 
@@ -225,6 +254,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       ))
     } catch (err: any) {
       console.error('💥 Erro ao incrementar visualizações:', err)
+      // Não lançar erro para incremento de views - apenas logar
     }
   }, [])
 
@@ -238,6 +268,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('❌ Erro ao incrementar cópias:', error)
+        // Não lançar erro para incremento de cópias - apenas logar
         return
       }
 
@@ -250,15 +281,20 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
       // Log da atividade do usuário se estiver logado
       if (user) {
-        await supabase.rpc('log_user_activity', {
-          p_user_id: user.id,
-          p_command_id: commandId,
-          p_activity_type: 'copy',
-          p_metadata: { timestamp: new Date().toISOString() }
-        })
+        try {
+          await supabase.rpc('log_user_activity', {
+            p_user_id: user.id,
+            p_command_id: commandId,
+            p_activity_type: 'copy',
+            p_metadata: { timestamp: new Date().toISOString() }
+          })
+        } catch (logError) {
+          console.warn('⚠️ Erro ao logar atividade (não crítico):', logError)
+        }
       }
     } catch (err: any) {
       console.error('💥 Erro ao incrementar cópias:', err)
+      // Não lançar erro para incremento de cópias - apenas logar
     }
   }, [user])
 
@@ -273,7 +309,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (sessionError) {
         console.error('❌ Erro ao obter sessão:', sessionError)
         toast.error('Erro de autenticação')
-        throw new Error('Erro de autenticação: ' + sessionError.message)
+        throw createErrorFromSupabaseError(sessionError, 'Erro de autenticação')
       }
 
       if (!session?.user) {
@@ -335,7 +371,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           throw new Error('Campos obrigatórios: ' + error.message)
         } else {
           toast.error('Erro ao adicionar comando: ' + error.message)
-          throw new Error('Erro do banco: ' + error.message)
+          throw createErrorFromSupabaseError(error, 'Erro ao adicionar comando')
         }
       }
 
@@ -370,14 +406,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         toast.success('Comando adicionado com sucesso!')
       }
     } catch (err: any) {
-      console.error('💥 Erro capturado ao adicionar comando:', {
-        message: err.message,
-        stack: err.stack,
-        name: err.name
-      })
+      console.error('💥 Erro capturado ao adicionar comando:', err)
       
-      // Re-throw o erro para que o formulário possa capturá-lo
-      throw err
+      // Re-throw o erro convertido para Error object
+      throw createErrorFromSupabaseError(err, 'Erro ao adicionar comando')
     } finally {
       setLoading(false)
     }
@@ -411,7 +443,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error('❌ Erro ao atualizar comando:', error)
         toast.error('Erro ao atualizar comando')
-        throw error
+        throw createErrorFromSupabaseError(error, 'Erro ao atualizar comando')
       }
 
       if (data) {
@@ -443,7 +475,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao atualizar comando:', err)
       toast.error('Erro ao atualizar comando')
-      throw err
+      throw createErrorFromSupabaseError(err, 'Erro ao atualizar comando')
     } finally {
       setLoading(false)
     }
@@ -462,7 +494,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error('❌ Erro ao deletar comando:', error)
         toast.error('Erro ao deletar comando')
-        throw error
+        throw createErrorFromSupabaseError(error, 'Erro ao deletar comando')
       }
 
       console.log('✅ Comando deletado (desativado)')
@@ -471,7 +503,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error('💥 Erro ao deletar comando:', err)
       toast.error('Erro ao deletar comando')
-      throw err
+      throw createErrorFromSupabaseError(err, 'Erro ao deletar comando')
     } finally {
       setLoading(false)
     }
@@ -528,12 +560,16 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
   // Carregar comandos na inicialização
   useEffect(() => {
-    loadCommands()
+    loadCommands().catch(err => {
+      console.error('💥 Erro ao carregar comandos na inicialização:', err)
+    })
   }, [loadCommands])
 
   // Carregar favoritos quando o usuário mudar
   useEffect(() => {
-    loadFavorites()
+    loadFavorites().catch(err => {
+      console.error('💥 Erro ao carregar favoritos na inicialização:', err)
+    })
   }, [loadFavorites])
 
   return (
