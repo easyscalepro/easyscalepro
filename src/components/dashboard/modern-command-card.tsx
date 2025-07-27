@@ -68,6 +68,45 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   const { favorites = [], toggleFavorite, incrementCopies } = useCommands();
   const isFavorite = favorites.includes(id);
 
+  const fallbackCopyTextToClipboard = (text: string): boolean => {
+    try {
+      console.log('📋 Usando método fallback (execCommand)');
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Posicionar fora da tela mas ainda acessível
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      textArea.style.pointerEvents = 'none';
+      textArea.style.width = '1px';
+      textArea.style.height = '1px';
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      // Para iOS Safari
+      textArea.setSelectionRange(0, 99999);
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log('✅ Texto copiado usando execCommand');
+        return true;
+      } else {
+        console.error('❌ execCommand retornou false');
+        return false;
+      }
+    } catch (err) {
+      console.error('❌ Erro no fallback execCommand:', err);
+      return false;
+    }
+  };
+
   const copyToClipboard = async (text: string): Promise<boolean> => {
     // Verificar se o texto existe
     if (!text || text.trim() === '') {
@@ -75,54 +114,33 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
       return false;
     }
 
-    try {
-      // Método moderno - navigator.clipboard (funciona em HTTPS e localhost)
-      if (navigator.clipboard && window.isSecureContext) {
-        console.log('📋 Usando navigator.clipboard');
+    // Tentar método moderno apenas se disponível e não bloqueado
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        console.log('📋 Tentando navigator.clipboard');
         await navigator.clipboard.writeText(text);
+        console.log('✅ Texto copiado usando navigator.clipboard');
         return true;
+      } catch (err: any) {
+        console.log('❌ navigator.clipboard falhou:', err.message);
+        
+        // Se for erro de política de permissões, usar fallback
+        if (err.message.includes('permissions policy') || 
+            err.message.includes('blocked') ||
+            err.name === 'NotAllowedError') {
+          console.log('🔄 Clipboard API bloqueada, usando fallback');
+          return fallbackCopyTextToClipboard(text);
+        }
+        
+        // Para outros erros, também tentar fallback
+        console.log('🔄 Erro no clipboard, tentando fallback');
+        return fallbackCopyTextToClipboard(text);
       }
-      
-      // Fallback para contextos não seguros
-      console.log('📋 Usando fallback execCommand');
-      return fallbackCopyTextToClipboard(text);
-    } catch (err) {
-      console.error('❌ Erro no navigator.clipboard:', err);
-      // Tentar fallback se o método moderno falhar
-      return fallbackCopyTextToClipboard(text);
     }
-  };
-
-  const fallbackCopyTextToClipboard = (text: string): boolean => {
-    try {
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      
-      // Evitar scroll para o elemento
-      textArea.style.top = '0';
-      textArea.style.left = '0';
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      textArea.style.pointerEvents = 'none';
-      
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      if (successful) {
-        console.log('✅ Texto copiado usando fallback');
-        return true;
-      } else {
-        console.error('❌ execCommand falhou');
-        return false;
-      }
-    } catch (err) {
-      console.error('❌ Erro no fallback:', err);
-      return false;
-    }
+    
+    // Se navigator.clipboard não estiver disponível, usar fallback diretamente
+    console.log('📋 navigator.clipboard não disponível, usando fallback');
+    return fallbackCopyTextToClipboard(text);
   };
 
   const handleCopyPrompt = async (e: React.MouseEvent) => {
@@ -148,12 +166,17 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
         });
         console.log('✅ Prompt copiado com sucesso');
       } else {
-        throw new Error('Falha ao copiar usando todos os métodos');
+        // Se todos os métodos falharam, mostrar o prompt para cópia manual
+        console.log('❌ Todos os métodos de cópia falharam');
+        toast.error('Não foi possível copiar automaticamente', {
+          description: 'Clique em "Ver" para copiar manualmente',
+          duration: 5000
+        });
       }
     } catch (error) {
-      console.error('💥 Erro ao copiar prompt:', error);
+      console.error('💥 Erro inesperado ao copiar prompt:', error);
       toast.error('Erro ao copiar prompt', {
-        description: 'Tente novamente ou copie manualmente'
+        description: 'Clique em "Ver" para copiar manualmente'
       });
     }
   };
