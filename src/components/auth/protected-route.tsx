@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, Shield, Lock, AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Shield, Lock, AlertTriangle } from 'lucide-react';
+import { EnhancedLoadingScreen } from '@/components/ui/enhanced-loading-screen';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -64,34 +65,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
   }, [user, profile, loading, router, pathname, requireAdmin]);
 
-  // Mostrar loading enquanto verifica autenticação
+  // Mostrar loading aprimorado enquanto verifica autenticação
   if (loading || !checkComplete) {
-    return fallback || (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center space-y-6 p-8">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-blue-200 dark:border-blue-800 rounded-full"></div>
-            <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-              Verificando autenticação...
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 max-w-md">
-              Aguarde enquanto validamos seu acesso
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return fallback || <EnhancedLoadingScreen message="Validando autenticação" />;
   }
 
   // Usuário não logado

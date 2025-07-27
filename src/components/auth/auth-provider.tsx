@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Timeout de segurança para evitar loading infinito
     const safetyTimeout = setTimeout(() => {
       if (mounted) {
-        console.log('⏰ Timeout de segurança - finalizando loading');
+        console.log('⏰ Timeout de segurança - finalizando loading de autenticação');
         setLoading(false);
       }
     }, 10000); // 10 segundos máximo
@@ -278,10 +278,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('👋 Iniciando processo de logout no AuthProvider...');
       
+      // Mostrar loading durante logout
+      setLoading(true);
+      
       // Limpar estado imediatamente para melhor UX
       setUser(null);
       setProfile(null);
-      setLoading(false);
       
       // Tentar fazer logout no Supabase
       await authSignOut();
@@ -294,10 +296,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Mesmo com erro, garantir que o estado seja limpo
       setUser(null);
       setProfile(null);
-      setLoading(false);
       
       // Não lançar erro para não bloquear o logout
       console.log('🧹 Estado limpo mesmo com erro no logout');
+    } finally {
+      setLoading(false);
     }
   };
 
