@@ -28,7 +28,12 @@ import {
   Shield,
   RefreshCw,
   Wifi,
-  WifiOff
+  WifiOff,
+  Key,
+  Settings,
+  MoreVertical,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
@@ -40,11 +45,210 @@ import { LoginTest } from './login-test';
 import { DatabaseCheck } from './database-check';
 import { EmailConfirmationTool } from './email-confirmation-tool';
 import { ImprovedUserCreator } from './improved-user-creator';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth/auth-provider';
 
+// Modal para edição de senha
+const PasswordEditModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+}> = ({ isOpen, onClose, user }) => {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handlePasswordUpdate = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Atualizar senha via Admin API
+      const { error } = await supabase.auth.admin.updateUserById(user.id, {
+        password: newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Senha atualizada com sucesso');
+      onClose();
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Erro ao atualizar senha:', error);
+      toast.error('Erro ao atualizar senha: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Key className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Alterar Senha</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Usuário</label>
+            <div className="text-sm text-gray-600">{user?.name} ({user?.email})</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Nova Senha</label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Confirmar Senha</label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <Button
+            onClick={handlePasswordUpdate}
+            disabled={loading || !newPassword || !confirmPassword}
+            className="flex-1"
+          >
+            {loading ? 'Atualizando...' : 'Atualizar Senha'}
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Modal para edição rápida de status e função
+const QuickEditModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+  onUpdate: (id: string, data: any) => void;
+}> = ({ isOpen, onClose, user, onUpdate }) => {
+  const [status, setStatus] = useState(user?.status || 'ativo');
+  const [role, setRole] = useState(user?.role || 'user');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setStatus(user.status);
+      setRole(user.role);
+    }
+  }, [user]);
+
+  const handleUpdate = async () => {
+    try {
+      setLoading(true);
+      await onUpdate(user.id, { status, role });
+      onClose();
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Edição Rápida</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Usuário</label>
+            <div className="text-sm text-gray-600">{user?.name} ({user?.email})</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="suspenso">Suspenso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Função</label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="moderator">Moderador</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <Button
+            onClick={handleUpdate}
+            disabled={loading}
+            className="flex-1"
+          >
+            {loading ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const EnhancedUserManagement: React.FC = () => {
-  const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers } = useUsers();
+  const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers, updateUser } = useUsers();
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -59,6 +263,12 @@ export const EnhancedUserManagement: React.FC = () => {
     needsSync: boolean;
     hasAdminAccess: boolean;
   } | null>(null);
+
+  // Estados para modais de edição
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [quickEditModalOpen, setQuickEditModalOpen] = useState(false);
+  const [userForPasswordEdit, setUserForPasswordEdit] = useState(null);
+  const [userForQuickEdit, setUserForQuickEdit] = useState(null);
 
   // Verificar conexão e status de sincronização ao carregar
   useEffect(() => {
@@ -165,6 +375,17 @@ export const EnhancedUserManagement: React.FC = () => {
 
   const handleSendEmail = (email: string, name: string) => {
     toast.info(`Email enviado para ${name} (${email})`);
+  };
+
+  // Novas funções para edição avançada
+  const handlePasswordEdit = (user: any) => {
+    setUserForPasswordEdit(user);
+    setPasswordModalOpen(true);
+  };
+
+  const handleQuickEdit = (user: any) => {
+    setUserForQuickEdit(user);
+    setQuickEditModalOpen(true);
   };
 
   const handleExportUsers = () => {
@@ -621,17 +842,44 @@ export const EnhancedUserManagement: React.FC = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
+                    <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
+                      <div className="flex gap-1 flex-wrap">
+                        {/* Edição completa de dados */}
                         <Button
                           onClick={() => handleEditUser(user)}
                           size="sm"
                           variant="outline"
                           className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
-                          title="Editar usuário"
+                          title="Editar dados completos"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+
+                        {/* Edição rápida de status e função */}
+                        <Button
+                          onClick={() => handleQuickEdit(user)}
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                          title="Edição rápida (Status/Função)"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+
+                        {/* Edição de senha */}
+                        {profile?.role === 'admin' && (
+                          <Button
+                            onClick={() => handlePasswordEdit(user)}
+                            size="sm"
+                            variant="outline"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                            title="Alterar senha"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Toggle de status */}
                         <Button
                           onClick={() => handleToggleStatus(user.id, user.status, user.name)}
                           size="sm"
@@ -642,8 +890,10 @@ export const EnhancedUserManagement: React.FC = () => {
                           }
                           title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
                         >
-                          {user.status === 'ativo' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                          {user.status === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                         </Button>
+
+                        {/* Enviar email */}
                         <Button
                           onClick={() => handleSendEmail(user.email, user.name)}
                           size="sm"
@@ -653,6 +903,8 @@ export const EnhancedUserManagement: React.FC = () => {
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
+
+                        {/* Deletar usuário (apenas admin) */}
                         {profile?.role === 'admin' && (
                           <Button
                             onClick={() => handleDeleteUser(user.id, user.name)}
@@ -703,12 +955,33 @@ export const EnhancedUserManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de formulário */}
+      {/* Modal de formulário completo */}
       <UserFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         user={selectedUser}
         mode={modalMode}
+      />
+
+      {/* Modal de edição de senha */}
+      <PasswordEditModal
+        isOpen={passwordModalOpen}
+        onClose={() => {
+          setPasswordModalOpen(false);
+          setUserForPasswordEdit(null);
+        }}
+        user={userForPasswordEdit}
+      />
+
+      {/* Modal de edição rápida */}
+      <QuickEditModal
+        isOpen={quickEditModalOpen}
+        onClose={() => {
+          setQuickEditModalOpen(false);
+          setUserForQuickEdit(null);
+        }}
+        user={userForQuickEdit}
+        onUpdate={updateUser}
       />
     </div>
   );
