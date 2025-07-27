@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { CommandsProvider } from "@/contexts/commands-context";
 import { UsersProvider } from "@/contexts/users-context";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { AppLoadingProvider } from "@/components/providers/app-providers";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
@@ -30,14 +31,16 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <AuthProvider>
-            <CommandsProvider>
-              <UsersProvider>
-                {children}
-                <Toaster />
-              </UsersProvider>
-            </CommandsProvider>
-          </AuthProvider>
+          <AppLoadingProvider>
+            <AuthProvider>
+              <CommandsProvider>
+                <UsersProvider>
+                  {children}
+                  <Toaster />
+                </UsersProvider>
+              </CommandsProvider>
+            </AuthProvider>
+          </AppLoadingProvider>
         </ThemeProvider>
       </body>
     </html>
