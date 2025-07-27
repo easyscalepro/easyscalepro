@@ -99,6 +99,11 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false)
   const { user, profile } = useAuth()
 
+  // Função helper para encontrar comando por ID (não usar useCallback para evitar dependências circulares)
+  const findCommandById = (id: string): Command | undefined => {
+    return commands.find(cmd => cmd.id === id)
+  }
+
   const loadCommands = useCallback(async () => {
     try {
       setLoading(true)
@@ -442,7 +447,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Verificar se o comando existe e se o usuário tem permissão
-      const command = getCommandById(id);
+      const command = findCommandById(id);
       if (!command) {
         const errorInstance = new Error('Comando não encontrado');
         toast.error(errorInstance.message)
@@ -522,7 +527,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [user, profile, getCommandById])
+  }, [user, profile, commands]) // Usar commands ao invés de getCommandById
 
   const deleteCommand = useCallback(async (id: string) => {
     try {
@@ -537,7 +542,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Verificar se o comando existe e se o usuário tem permissão
-      const command = getCommandById(id);
+      const command = findCommandById(id);
       if (!command) {
         const errorInstance = new Error('Comando não encontrado');
         toast.error(errorInstance.message)
@@ -597,14 +602,15 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [user, profile, getCommandById])
+  }, [user, profile, commands]) // Usar commands ao invés de getCommandById
 
+  // Definir getCommandById como useCallback DEPOIS das outras funções
   const getCommandById = useCallback((id: string): Command | undefined => {
-    return commands.find(cmd => cmd.id === id)
+    return findCommandById(id)
   }, [commands])
 
   const getRelatedCommands = useCallback((commandId: string) => {
-    const currentCommand = getCommandById(commandId)
+    const currentCommand = findCommandById(commandId)
     if (!currentCommand) {
       return []
     }
@@ -646,7 +652,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
     console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
     return relatedCommands
-  }, [commands, getCommandById])
+  }, [commands])
 
   // Carregar comandos na inicialização
   useEffect(() => {
