@@ -1,151 +1,123 @@
 "use client";
 
 import React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { EasyScaleLogo } from '@/components/easyscale-logo';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   FileText, 
   Users, 
-  BarChart3, 
-  Settings,
+  Settings, 
+  BarChart3,
   LogOut,
-  Plus,
-  Zap
+  User
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/auth-provider';
-import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+const navigation = [
+  {
+    name: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
+  },
+  {
+    name: 'Comandos',
+    href: '/admin/commands',
+    icon: FileText,
+  },
+  {
+    name: 'Usuários',
+    href: '/admin/users',
+    icon: Users,
+  },
+  {
+    name: 'Analytics',
+    href: '/admin/analytics',
+    icon: BarChart3,
+  },
+  {
+    name: 'Configurações',
+    href: '/admin/settings',
+    icon: Settings,
+  },
+];
 
 export const AdminSidebar: React.FC = () => {
-  const router = useRouter();
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-    { icon: FileText, label: 'Comandos', path: '/admin/commands' },
-    { icon: Users, label: 'Usuários', path: '/admin/users' },
-    { icon: Zap, label: 'Integrações', path: '/admin/integrations' },
-    { icon: BarChart3, label: 'Relatórios', path: '/admin/reports' },
-    { icon: Settings, label: 'Configurações', path: '/admin/settings' },
-  ];
-
-  const handleNavigation = (path: string) => {
-    console.log('Navegando para:', path);
+  const handleSignOut = async () => {
     try {
-      router.push(path);
-    } catch (error) {
-      console.error('Erro na navegação:', error);
-      toast.error('Erro ao navegar');
-    }
-  };
-
-  const handleNewCommand = () => {
-    console.log('Criando novo comando');
-    try {
-      router.push('/admin/commands/new');
-    } catch (error) {
-      console.error('Erro ao criar comando:', error);
-      toast.error('Erro ao abrir formulário');
-    }
-  };
-
-  const handleLogout = async () => {
-    console.log('Iniciando processo de logout...');
-    
-    try {
-      // Mostrar loading
-      toast.loading('Fazendo logout...', { id: 'logout' });
-      
-      // Fazer logout
       await signOut();
-      
-      // Limpar toast de loading
-      toast.dismiss('logout');
-      
-      // Redirecionar para login
-      router.push('/login');
-      
-      // Mostrar sucesso
-      toast.success('Logout realizado com sucesso!');
-      
-    } catch (error: any) {
-      console.error('Erro no logout:', error);
-      
-      // Limpar toast de loading
-      toast.dismiss('logout');
-      
-      // Mostrar erro específico
-      if (error.message) {
-        toast.error(`Erro ao fazer logout: ${error.message}`);
-      } else {
-        toast.error('Erro ao fazer logout. Tente novamente.');
-      }
-      
-      // Fallback: forçar redirecionamento mesmo com erro
-      setTimeout(() => {
-        try {
-          router.push('/login');
-        } catch (redirectError) {
-          console.error('Erro no redirecionamento:', redirectError);
-          // Último recurso: recarregar a página
-          window.location.href = '/login';
-        }
-      }, 2000);
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
     }
   };
 
   return (
-    <div className="w-64 bg-[#0F1115] text-white h-screen flex flex-col relative z-10">
-      <div className="p-6 border-b border-gray-700">
-        <EasyScaleLogo className="text-white" />
-        <p className="text-sm text-gray-400 mt-2">Painel Administrativo</p>
+    <div className="flex flex-col w-64 bg-white border-r border-gray-200 h-full">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[#2563EB] rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">ES</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-[#0F1115]">EasyScale</h1>
+            <p className="text-xs text-gray-500">Admin Panel</p>
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 p-4">
-        <Button
-          onClick={handleNewCommand}
-          className="w-full mb-6 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium transition-all duration-200 hover:scale-105 relative z-20"
-          type="button"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Comando
-        </Button>
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-2">
+        {navigation.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-[#2563EB] text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <Icon className="h-5 w-5" />
+              {item.name}
+            </Link>
+          );
+        })}
+      </nav>
 
-        <nav className="space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.path;
-            
-            return (
-              <Button
-                key={item.path}
-                onClick={() => handleNavigation(item.path)}
-                variant="ghost"
-                type="button"
-                className={`w-full justify-start text-left transition-all duration-200 hover:scale-105 relative z-20 ${
-                  isActive 
-                    ? 'bg-[#2563EB] text-white hover:bg-[#1d4ed8]' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                }`}
-              >
-                <Icon className="h-4 w-4 mr-3" />
-                {item.label}
-              </Button>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className="p-4 border-t border-gray-700">
+      {/* User Info */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+            <User className="h-4 w-4 text-gray-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[#0F1115] truncate">
+              {profile?.name || 'Admin'}
+            </p>
+            <p className="text-xs text-gray-500">
+              Administrador
+            </p>
+          </div>
+        </div>
+        
         <Button
-          onClick={handleLogout}
-          variant="ghost"
-          type="button"
-          className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 hover:scale-105 relative z-20"
+          onClick={handleSignOut}
+          variant="outline"
+          size="sm"
+          className="w-full justify-start text-gray-700 border-gray-200 hover:bg-gray-50"
         >
-          <LogOut className="h-4 w-4 mr-3" />
+          <LogOut className="h-4 w-4 mr-2" />
           Sair
         </Button>
       </div>
