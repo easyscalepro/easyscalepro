@@ -33,7 +33,9 @@ import {
   Settings,
   MoreVertical,
   Lock,
-  Unlock
+  Unlock,
+  Zap,
+  Star
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
@@ -413,6 +415,31 @@ export const EnhancedUserManagement: React.FC = () => {
     toast.success('Lista de usuários exportada com sucesso!');
   };
 
+  // Funções de demonstração para os botões de ação
+  const handleDemoEdit = () => {
+    toast.info('🔵 Demonstração: Botão de Edição Completa');
+  };
+
+  const handleDemoQuickEdit = () => {
+    toast.info('🟣 Demonstração: Botão de Edição Rápida');
+  };
+
+  const handleDemoPassword = () => {
+    toast.info('🟠 Demonstração: Botão de Alterar Senha');
+  };
+
+  const handleDemoToggle = () => {
+    toast.info('🔄 Demonstração: Botão de Toggle Status');
+  };
+
+  const handleDemoEmail = () => {
+    toast.info('📧 Demonstração: Botão de Enviar Email');
+  };
+
+  const handleDemoDelete = () => {
+    toast.info('🔴 Demonstração: Botão de Deletar');
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
       ativo: 'bg-green-100 text-green-800 border-green-200',
@@ -734,7 +761,7 @@ export const EnhancedUserManagement: React.FC = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6 pt-0 lasy-highlight">
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="relative">
@@ -783,6 +810,84 @@ export const EnhancedUserManagement: React.FC = () => {
             >
               Limpar Filtros
             </Button>
+          </div>
+
+          {/* Seção de Demonstração dos Botões de Ação Avançada */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="h-5 w-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-900">Botões de Ação Avançada</h4>
+              <Star className="h-4 w-4 text-yellow-500" />
+            </div>
+            <p className="text-sm text-blue-700 mb-4">
+              Demonstração dos novos botões implementados na tabela de usuários:
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {/* Botão 1: Edição Completa */}
+              <button
+                onClick={handleDemoEdit}
+                className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1 text-sm"
+                title="Edição completa de dados"
+              >
+                <Edit className="h-4 w-4" />
+                Editar
+              </button>
+
+              {/* Botão 2: Edição Rápida */}
+              <button
+                onClick={handleDemoQuickEdit}
+                className="px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center gap-1 text-sm"
+                title="Edição rápida (Status/Função)"
+              >
+                <Settings className="h-4 w-4" />
+                Rápido
+              </button>
+
+              {/* Botão 3: Alterar Senha */}
+              <button
+                onClick={handleDemoPassword}
+                className="px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 flex items-center gap-1 text-sm"
+                title="Alterar senha"
+              >
+                <Key className="h-4 w-4" />
+                Senha
+              </button>
+
+              {/* Botão 4: Toggle Status */}
+              <button
+                onClick={handleDemoToggle}
+                className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-1 text-sm"
+                title="Ativar/Desativar usuário"
+              >
+                <Lock className="h-4 w-4" />
+                Status
+              </button>
+
+              {/* Botão 5: Email */}
+              <button
+                onClick={handleDemoEmail}
+                className="px-3 py-2 bg-cyan-500 text-white rounded hover:bg-cyan-600 flex items-center gap-1 text-sm"
+                title="Enviar email"
+              >
+                <Mail className="h-4 w-4" />
+                Email
+              </button>
+
+              {/* Botão 6: Deletar */}
+              <button
+                onClick={handleDemoDelete}
+                className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1 text-sm"
+                title="Excluir usuário"
+              >
+                <Trash2 className="h-4 w-4" />
+                Deletar
+              </button>
+            </div>
+
+            <div className="mt-3 text-xs text-blue-600">
+              💡 Estes botões aparecem na coluna "Ações" da tabela de usuários abaixo
+            </div>
           </div>
 
           {/* DEBUG: Mostrar informações dos usuários */}
