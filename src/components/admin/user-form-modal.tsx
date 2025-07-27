@@ -77,6 +77,39 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     toast.success('Senha gerada automaticamente!');
   };
 
+  const createUserWithAuth = async () => {
+    try {
+      console.log('🔐 Chamando API backend para criar usuário...');
+      
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+          name: formData.name.trim(),
+          company: formData.company.trim(),
+          phone: formData.phone.trim()
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao criar usuário');
+      }
+
+      console.log('✅ Usuário criado via API:', result.userId);
+      return result.userId;
+
+    } catch (error: any) {
+      console.error('❌ Erro na API de criação:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -127,35 +160,18 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         // Se criar com autenticação está ativado e tem senha
         if (createWithAuth && formData.password.trim()) {
           try {
-            console.log('🔐 Criando usuário no Supabase Auth...');
+            console.log('🔐 Criando usuário com autenticação...');
             toast.loading('Criando conta de acesso...', { id: 'create-user' });
             
-            // Usar Admin API para criar usuário
-            const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-              email: formData.email.trim().toLowerCase(),
-              password: formData.password,
-              email_confirm: true, // Confirmar email automaticamente
-              user_metadata: {
-                name: formData.name.trim(),
-                company: formData.company.trim(),
-                phone: formData.phone.trim()
-              }
-            });
-
-            if (authError) {
-              console.error('❌ Erro ao criar no Auth:', authError);
-              throw new Error(`Erro ao criar conta de acesso: ${authError.message}`);
-            }
-
-            if (authData.user) {
-              userId = authData.user.id;
-              authCreated = true;
-              console.log('✅ Usuário criado no Auth:', userId);
-            }
+            // Usar API backend para criar usuário
+            userId = await createUserWithAuth();
+            authCreated = true;
+            console.log('✅ Usuário criado com autenticação:', userId);
+            
           } catch (authError: any) {
-            console.error('❌ Falha na criação do Auth:', authError);
+            console.error('❌ Falha na criação com Auth:', authError);
             toast.dismiss('create-user');
-            toast.error('Erro ao criar conta de acesso. Verifique as permissões.');
+            toast.error(`Erro ao criar conta de acesso: ${authError.message}`);
             return;
           }
         }
@@ -195,14 +211,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         if (profileError) {
           console.error('❌ Erro ao criar perfil:', profileError);
           
-          // Se criou no Auth mas falhou no perfil, tentar limpar
+          // Se criou no Auth mas falhou no perfil, informar para limpeza manual
           if (authCreated && userId) {
-            try {
-              await supabase.auth.admin.deleteUser(userId);
-              console.log('🧹 Usuário removido do Auth devido ao erro no perfil');
-            } catch (cleanupError) {
-              console.warn('⚠️ Não foi possível limpar usuário do Auth:', cleanupError);
-            }
+            console.warn('⚠️ Usuário criado no Auth mas falhou no perfil. ID:', userId);
           }
           
           throw new Error(`Erro ao salvar perfil: ${profileError.message}`);
@@ -282,12 +293,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       let userFriendlyMessage = 'Erro desconhecido';
       
       if (error.message) {
-        if (error.message.includes('já existe') || error.message.includes('duplicate')) {
+        if (error.message.includes('já existe') || error.message.includes('duplicate') || error.message.includes('already registered')) {
           userFriendlyMessage = 'Este email já está cadastrado no sistema';
         } else if (error.message.includes('permissão') || error.message.includes('permission')) {
           userFriendlyMessage = 'Você não tem permissão para esta operação';
-        } else if (error.message.includes('Admin API')) {
-          userFriendlyMessage = 'Erro ao criar conta de acesso. Verifique as configurações do Supabase.';
+        } else if (error.message.includes('invalid email')) {
+          userFriendlyMessage = 'Email inválido';
+        } else if (error.message.includes('weak password')) {
+          userFriendlyMessage = 'Senha muito fraca. Use pelo menos 6 caracteres';
         } else if (error.message.includes('profiles')) {
           userFriendlyMessage = 'Erro ao salvar dados do usuário na tabela';
         } else if (error.message.includes('network') || error.message.includes('fetch')) {
@@ -435,6 +448,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                       placeholder="Digite uma senha para o usuário"
                       required={createWithAuth}
+                      minLength={6}
                     />
                     <button
                       type="button"
@@ -457,11 +471,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             <div className="flex items-start gap-2">
               <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
               <div className="text-xs text-blue-700 dark:text-blue-300">
-                <strong>Salvamento Funcional:</strong> 
+                <strong>Salvamento Seguro:</strong> 
                 {mode === 'create' ? (
                   <>
                     {createWithAuth ? 
-                      ' Usuário será criado no Supabase Auth + tabela profiles (poderá fazer login)' :
+                      ' Usuário será criado via API backend segura + tabela profiles (poderá fazer login)' :
                       ' Usuário será salvo apenas na tabela profiles (sem acesso de login)'
                     }
                   </>
