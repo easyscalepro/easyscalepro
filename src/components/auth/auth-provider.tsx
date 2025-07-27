@@ -24,6 +24,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -66,6 +67,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       const profileData = await loadProfile(user.id);
       setProfile(profileData);
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      console.log('🔐 Iniciando login para:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      });
+
+      if (error) {
+        console.error('❌ Erro no login:', error);
+        
+        // Tratamento específico de erros
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email não confirmado. Verifique sua caixa de entrada.');
+        } else if (error.message.includes('Too many requests')) {
+          throw new Error('Muitas tentativas de login. Aguarde alguns minutos.');
+        } else {
+          throw new Error(error.message || 'Erro no login');
+        }
+      }
+
+      if (data.user) {
+        console.log('✅ Login realizado com sucesso:', data.user.email);
+        
+        // Carregar perfil do usuário
+        const profileData = await loadProfile(data.user.id);
+        
+        if (!profileData) {
+          throw new Error('Perfil do usuário não encontrado');
+        }
+
+        // Verificar se a conta está ativa
+        if (profileData.status !== 'ativo') {
+          throw new Error('Conta inativa. Entre em contato com o administrador.');
+        }
+
+        setUser(data.user);
+        setProfile(profileData);
+        
+        console.log('✅ Usuário autenticado com sucesso');
+      }
+    } catch (error: any) {
+      console.error('💥 Erro no signIn:', error);
+      throw error;
     }
   };
 
@@ -150,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       profile,
       loading,
+      signIn,
       signOut,
       refreshProfile
     }}>
