@@ -1,25 +1,42 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Search, 
   UserPlus, 
+  Edit, 
+  Trash2, 
+  UserCheck, 
+  UserX, 
+  Mail, 
+  Phone, 
+  Building,
+  Calendar,
+  Activity,
   Filter,
   Download,
+  Upload,
+  AlertTriangle,
+  CheckCircle,
+  Database,
+  Shield,
   RefreshCw,
   Wifi,
   WifiOff,
-  AlertTriangle,
-  CheckCircle,
-  Database
+  Key,
+  Settings,
+  MoreVertical,
+  Lock,
+  Unlock
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
-import { useAuth } from '@/components/auth/auth-provider';
-import { useUserManagement } from '@/hooks/use-user-management';
-
-// Componentes existentes
 import { UserFormModal } from './user-form-modal';
 import { UserSyncButton } from './user-sync-button';
 import { ManualUserSync } from './manual-user-sync';
@@ -28,38 +45,292 @@ import { LoginTest } from './login-test';
 import { DatabaseCheck } from './database-check';
 import { EmailConfirmationTool } from './email-confirmation-tool';
 import { ImprovedUserCreator } from './improved-user-creator';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/auth/auth-provider';
 
-// Componentes modulares novos
-import { UserPasswordModal } from './modals/user-password-modal';
-import { UserQuickEditModal } from './modals/user-quick-edit-modal';
-import { UserStatsCards } from './components/user-stats-cards';
-import { UserFilters } from './components/user-filters';
-import { UserTable } from './components/user-table';
+// Modal para edição de senha (implementado inline)
+const PasswordEditModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+}> = ({ isOpen, onClose, user }) => {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handlePasswordUpdate = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase.auth.admin.updateUserById(user.id, {
+        password: newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Senha atualizada com sucesso');
+      onClose();
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Erro ao atualizar senha:', error);
+      toast.error('Erro ao atualizar senha: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Key className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Alterar Senha</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Usuário</label>
+            <div className="text-sm text-gray-600">{user?.name} ({user?.email})</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Nova Senha</label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Confirmar Senha</label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <Button
+            onClick={handlePasswordUpdate}
+            disabled={loading || !newPassword || !confirmPassword}
+            className="flex-1"
+          >
+            {loading ? 'Atualizando...' : 'Atualizar Senha'}
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Modal para edição rápida (implementado inline)
+const QuickEditModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  user: any;
+  onUpdate: (id: string, data: any) => void;
+}> = ({ isOpen, onClose, user, onUpdate }) => {
+  const [status, setStatus] = useState(user?.status || 'ativo');
+  const [role, setRole] = useState(user?.role || 'user');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setStatus(user.status);
+      setRole(user.role);
+    }
+  }, [user]);
+
+  const handleUpdate = async () => {
+    try {
+      setLoading(true);
+      await onUpdate(user.id, { status, role });
+      onClose();
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Settings className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Edição Rápida</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Usuário</label>
+            <div className="text-sm text-gray-600">{user?.name} ({user?.email})</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="suspenso">Suspenso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Função</label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="moderator">Moderador</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <Button
+            onClick={handleUpdate}
+            disabled={loading}
+            className="flex-1"
+          >
+            {loading ? 'Salvando...' : 'Salvar'}
+          </Button>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const EnhancedUserManagement: React.FC = () => {
   const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers, updateUser } = useUsers();
   const { profile } = useAuth();
-  const { 
-    connectionStatus, 
-    syncStatus, 
-    checkConnection, 
-    handleSendEmail, 
-    handleExportUsers 
-  } = useUserManagement();
-
-  // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [roleFilter, setRoleFilter] = useState('todos');
-
-  // Estados para modais
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedUser, setSelectedUser] = useState(undefined);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [syncStatus, setSyncStatus] = useState<{
+    authUsers: number;
+    profiles: number;
+    needsSync: boolean;
+    hasAdminAccess: boolean;
+  } | null>(null);
+
+  // Estados para modais de edição avançada
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [quickEditModalOpen, setQuickEditModalOpen] = useState(false);
   const [userForPasswordEdit, setUserForPasswordEdit] = useState(null);
   const [userForQuickEdit, setUserForQuickEdit] = useState(null);
+
+  // Verificar conexão e status de sincronização ao carregar
+  useEffect(() => {
+    checkConnection();
+    checkSyncStatus();
+  }, []);
+
+  const checkConnection = async () => {
+    try {
+      setConnectionStatus('checking');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.warn('Problema de conexão:', error);
+        setConnectionStatus('disconnected');
+      } else {
+        setConnectionStatus('connected');
+      }
+    } catch (error) {
+      console.error('Erro de conexão:', error);
+      setConnectionStatus('disconnected');
+    }
+  };
+
+  const checkSyncStatus = async () => {
+    try {
+      let authCount = 0;
+      let hasAdminAccess = false;
+
+      try {
+        const { data: authResponse, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (!authError && authResponse) {
+          authCount = authResponse.users?.length || 0;
+          hasAdminAccess = true;
+        }
+      } catch (error) {
+        console.warn('Sem acesso à Admin API:', error);
+      }
+
+      const { data: profiles } = await supabase.from('profiles').select('id');
+      const profileCount = profiles?.length || 0;
+      
+      setSyncStatus({
+        authUsers: authCount,
+        profiles: profileCount,
+        needsSync: hasAdminAccess && authCount > profileCount,
+        hasAdminAccess
+      });
+    } catch (error) {
+      console.warn('Não foi possível verificar status de sincronização:', error);
+      setSyncStatus({
+        authUsers: 0,
+        profiles: 0,
+        needsSync: false,
+        hasAdminAccess: false
+      });
+    }
+  };
 
   // Filtrar usuários
   const filteredUsers = users.filter(user => {
@@ -73,7 +344,6 @@ export const EnhancedUserManagement: React.FC = () => {
     return matchesSearch && matchesStatus && matchesRole;
   });
 
-  // Handlers
   const handleCreateUser = () => {
     setModalMode('create');
     setSelectedUser(undefined);
@@ -99,6 +369,11 @@ export const EnhancedUserManagement: React.FC = () => {
     }
   };
 
+  const handleSendEmail = (email: string, name: string) => {
+    toast.info(`Email enviado para ${name} (${email})`);
+  };
+
+  // Novas funções para edição avançada
   const handlePasswordEdit = (user: any) => {
     setUserForPasswordEdit(user);
     setPasswordModalOpen(true);
@@ -107,6 +382,57 @@ export const EnhancedUserManagement: React.FC = () => {
   const handleQuickEdit = (user: any) => {
     setUserForQuickEdit(user);
     setQuickEditModalOpen(true);
+  };
+
+  const handleExportUsers = () => {
+    const csvContent = [
+      ['Nome', 'Email', 'Status', 'Função', 'Empresa', 'Telefone', 'Comandos Usados', 'Último Acesso', 'Membro desde'],
+      ...filteredUsers.map(user => [
+        user.name || '',
+        user.email || '',
+        user.status || '',
+        user.role || '',
+        user.company || '',
+        user.phone || '',
+        (user.commandsUsed || 0).toString(),
+        user.lastAccess || '',
+        user.joinedAt || ''
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('Lista de usuários exportada com sucesso!');
+  };
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      ativo: 'bg-green-100 text-green-800 border-green-200',
+      inativo: 'bg-gray-100 text-gray-800 border-gray-200',
+      suspenso: 'bg-red-100 text-red-800 border-red-200'
+    };
+    return <Badge className={`${styles[status as keyof typeof styles]} border`}>{status}</Badge>;
+  };
+
+  const getRoleBadge = (role: string) => {
+    const styles = {
+      admin: 'bg-purple-100 text-purple-800 border-purple-200',
+      moderator: 'bg-blue-100 text-blue-800 border-blue-200',
+      user: 'bg-gray-100 text-gray-800 border-gray-200'
+    };
+    const labels = {
+      admin: 'Administrador',
+      moderator: 'Moderador',
+      user: 'Usuário'
+    };
+    return <Badge className={`${styles[role as keyof typeof styles]} border text-xs`}>
+      {labels[role as keyof typeof labels]}
+    </Badge>;
   };
 
   // Estatísticas
@@ -235,10 +561,16 @@ export const EnhancedUserManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Componentes de gerenciamento */}
+      {/* Criador melhorado de usuários */}
       <ImprovedUserCreator />
+
+      {/* Componente de sincronização manual */}
       <ManualUserSync />
+
+      {/* Componente de verificação do banco */}
       <DatabaseCheck />
+
+      {/* Ferramenta de confirmação de email */}
       <EmailConfirmationTool />
 
       {/* Componentes de teste */}
@@ -293,7 +625,63 @@ export const EnhancedUserManagement: React.FC = () => {
       )}
 
       {/* Estatísticas */}
-      <UserStatsCards stats={stats} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Activity className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#0F1115]">{stats.total}</div>
+                <div className="text-sm text-gray-600">Total de Usuários</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <UserCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#0F1115]">{stats.active}</div>
+                <div className="text-sm text-gray-600">Usuários Ativos</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <UserX className="h-5 w-5 text-gray-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#0F1115]">{stats.inactive}</div>
+                <div className="text-sm text-gray-600">Usuários Inativos</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <UserX className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[#0F1115]">{stats.suspended}</div>
+                <div className="text-sm text-gray-600">Usuários Suspensos</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Controles */}
       <Card className="border-gray-200">
@@ -316,7 +704,7 @@ export const EnhancedUserManagement: React.FC = () => {
               </Button>
               {syncStatus?.hasAdminAccess && <UserSyncButton />}
               <Button
-                onClick={() => handleExportUsers(filteredUsers)}
+                onClick={handleExportUsers}
                 variant="outline"
                 size="sm"
                 className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
@@ -339,26 +727,199 @@ export const EnhancedUserManagement: React.FC = () => {
         </CardHeader>
         <CardContent>
           {/* Filtros */}
-          <UserFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            roleFilter={roleFilter}
-            setRoleFilter={setRoleFilter}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              
+              <Input
+                placeholder="Buscar usuários..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]"
+              />
+            </div>
 
-          {/* Tabela */}
-          <UserTable
-            users={filteredUsers}
-            currentUserRole={profile?.role}
-            onEditUser={handleEditUser}
-            onQuickEdit={handleQuickEdit}
-            onPasswordEdit={handlePasswordEdit}
-            onToggleStatus={handleToggleStatus}
-            onSendEmail={handleSendEmail}
-            onDeleteUser={handleDeleteUser}
-          />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Status</SelectItem>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="suspenso">Suspenso</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="h-12 border-gray-200 focus:border-[#2563EB] focus:ring-[#2563EB]">
+                <SelectValue placeholder="Função" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas as Funções</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+                <SelectItem value="moderator">Moderador</SelectItem>
+                <SelectItem value="user">Usuário</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('todos');
+                setRoleFilter('todos');
+              }}
+              variant="outline"
+              className="h-12 border-gray-200"
+            >
+              Limpar Filtros
+            </Button>
+          </div>
+
+          {/* Tabela com novos botões de ação */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold text-[#0F1115]">Usuário</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Status</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Função</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Empresa</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Atividade</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-gray-50">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {user.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium text-[#0F1115]">{user.name}</div>
+                          <div className="text-sm text-gray-500 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                          </div>
+                          {user.phone && (
+                            <div className="text-sm text-gray-500 flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {user.phone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(user.status)}
+                    </TableCell>
+                    <TableCell>
+                      {getRoleBadge(user.role)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Building className="h-3 w-3 text-gray-400" />
+                        {user.company || 'Não informado'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm space-y-1">
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Activity className="h-3 w-3" />
+                          {user.commandsUsed || 0} comandos
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-500">
+                          <Calendar className="h-3 w-3" />
+                          {user.lastAccess || 'Nunca'}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Desde {user.joinedAt || 'N/A'}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
+                      <div className="flex gap-1 flex-wrap">
+                        {/* Edição completa de dados */}
+                        <Button
+                          onClick={() => handleEditUser(user)}
+                          size="sm"
+                          variant="outline"
+                          className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white"
+                          title="Editar dados completos"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+
+                        {/* Edição rápida de status e função */}
+                        <Button
+                          onClick={() => handleQuickEdit(user)}
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                          title="Edição rápida (Status/Função)"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+
+                        {/* Edição de senha */}
+                        {profile?.role === 'admin' && (
+                          <Button
+                            onClick={() => handlePasswordEdit(user)}
+                            size="sm"
+                            variant="outline"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                            title="Alterar senha"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Toggle de status */}
+                        <Button
+                          onClick={() => handleToggleStatus(user.id, user.status, user.name)}
+                          size="sm"
+                          variant="outline"
+                          className={user.status === 'ativo' 
+                            ? "border-orange-500 text-orange-600 hover:bg-orange-50"
+                            : "border-green-500 text-green-600 hover:bg-green-50"
+                          }
+                          title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
+                        >
+                          {user.status === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                        </Button>
+
+                        {/* Enviar email */}
+                        <Button
+                          onClick={() => handleSendEmail(user.email, user.name)}
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                          title="Enviar email"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+
+                        {/* Deletar usuário (apenas admin) */}
+                        {profile?.role === 'admin' && (
+                          <Button
+                            onClick={() => handleDeleteUser(user.id, user.name)}
+                            size="sm"
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
+                            title="Excluir usuário"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-12">
@@ -391,7 +952,7 @@ export const EnhancedUserManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modais */}
+      {/* Modal de formulário completo */}
       <UserFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -399,7 +960,8 @@ export const EnhancedUserManagement: React.FC = () => {
         mode={modalMode}
       />
 
-      <UserPasswordModal
+      {/* Modal de edição de senha */}
+      <PasswordEditModal
         isOpen={passwordModalOpen}
         onClose={() => {
           setPasswordModalOpen(false);
@@ -408,7 +970,8 @@ export const EnhancedUserManagement: React.FC = () => {
         user={userForPasswordEdit}
       />
 
-      <UserQuickEditModal
+      {/* Modal de edição rápida */}
+      <QuickEditModal
         isOpen={quickEditModalOpen}
         onClose={() => {
           setQuickEditModalOpen(false);
