@@ -25,15 +25,114 @@ export const CommandDetail: React.FC<CommandDetailProps> = ({ command, relatedCo
   const { favorites, toggleFavorite, incrementCopies } = useCommands();
   const isFavorite = favorites.includes(command.id);
 
+  const fallbackCopyTextToClipboard = (text: string): boolean => {
+    try {
+      console.log('📋 Usando método fallback (execCommand)');
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Posicionar fora da tela mas ainda acessível
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      textArea.style.pointerEvents = 'none';
+      textArea.style.width = '1px';
+      textArea.style.height = '1px';
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      // Para iOS Safari
+      textArea.setSelectionRange(0, 99999);
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log('✅ Texto copiado usando execCommand');
+        return true;
+      } else {
+        console.error('❌ execCommand retornou false');
+        return false;
+      }
+    } catch (err) {
+      console.error('❌ Erro no fallback execCommand:', err);
+      return false;
+    }
+  };
+
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    // Verificar se o texto existe
+    if (!text || text.trim() === '') {
+      console.error('❌ Texto vazio para copiar');
+      return false;
+    }
+
+    // Tentar método moderno apenas se disponível e não bloqueado
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        console.log('📋 Tentando navigator.clipboard');
+        await navigator.clipboard.writeText(text);
+        console.log('✅ Texto copiado usando navigator.clipboard');
+        return true;
+      } catch (err: any) {
+        console.log('❌ navigator.clipboard falhou:', err.message);
+        
+        // Se for erro de política de permissões, usar fallback
+        if (err.message.includes('permissions policy') || 
+            err.message.includes('blocked') ||
+            err.name === 'NotAllowedError') {
+          console.log('🔄 Clipboard API bloqueada, usando fallback');
+          return fallbackCopyTextToClipboard(text);
+        }
+        
+        // Para outros erros, também tentar fallback
+        console.log('🔄 Erro no clipboard, tentando fallback');
+        return fallbackCopyTextToClipboard(text);
+      }
+    }
+    
+    // Se navigator.clipboard não estiver disponível, usar fallback diretamente
+    console.log('📋 navigator.clipboard não disponível, usando fallback');
+    return fallbackCopyTextToClipboard(text);
+  };
+
   const handleCopyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(command.prompt);
-      incrementCopies(command.id);
-      toast.success('Prompt copiado!', {
-        description: 'O comando foi copiado para sua área de transferência'
-      });
+      console.log('📋 Iniciando cópia do prompt para comando:', command.id);
+      console.log('📋 Tamanho do prompt:', command.prompt?.length || 0);
+      
+      if (!command.prompt || command.prompt.trim() === '') {
+        toast.error('Prompt vazio ou inválido');
+        return;
+      }
+
+      const success = await copyToClipboard(command.prompt);
+      
+      if (success) {
+        // Incrementar contador de cópias
+        await incrementCopies(command.id);
+        
+        toast.success('Prompt copiado!', {
+          description: 'O comando foi copiado para sua área de transferência'
+        });
+        console.log('✅ Prompt copiado com sucesso');
+      } else {
+        // Se todos os métodos falharam, mostrar mensagem informativa
+        console.log('❌ Todos os métodos de cópia falharam');
+        toast.error('Não foi possível copiar automaticamente', {
+          description: 'Selecione e copie o texto manualmente (Ctrl+C)',
+          duration: 5000
+        });
+      }
     } catch (error) {
-      toast.error('Erro ao copiar prompt');
+      console.error('💥 Erro inesperado ao copiar prompt:', error);
+      toast.error('Erro ao copiar prompt', {
+        description: 'Selecione e copie o texto manualmente'
+      });
     }
   };
 
