@@ -446,6 +446,11 @@ export const EnhancedUserManagement: React.FC = () => {
     suspended: users.filter(u => u.status === 'suspenso').length
   };
 
+  // Debug: Log dos usuários
+  console.log('🔍 DEBUG - Usuários carregados:', users.length);
+  console.log('🔍 DEBUG - Usuários filtrados:', filteredUsers.length);
+  console.log('🔍 DEBUG - Primeiro usuário:', filteredUsers[0]);
+
   // Se há erro, mostrar interface de erro melhorada
   if (error) {
     return (
@@ -723,6 +728,7 @@ export const EnhancedUserManagement: React.FC = () => {
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Novo Usuário
+                
                 </Button>
               )}
             </div>
@@ -779,6 +785,13 @@ export const EnhancedUserManagement: React.FC = () => {
             </Button>
           </div>
 
+          {/* DEBUG: Mostrar informações dos usuários */}
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <strong>DEBUG:</strong> {users.length} usuários carregados, {filteredUsers.length} filtrados
+            </p>
+          </div>
+
           {/* Tabela com novos botões de ação */}
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <Table>
@@ -793,20 +806,20 @@ export const EnhancedUserManagement: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => {
-                  console.log('Renderizando usuário:', user);
+                {filteredUsers.map((user, index) => {
+                  console.log(`🔍 Renderizando usuário ${index + 1}:`, user);
                   return (
                     <TableRow key={user.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            {user.name?.charAt(0).toUpperCase()}
+                            {user.name?.charAt(0).toUpperCase() || 'U'}
                           </div>
                           <div>
-                            <div className="font-medium text-[#0F1115]">{user.name}</div>
+                            <div className="font-medium text-[#0F1115]">{user.name || 'Nome não informado'}</div>
                             <div className="text-sm text-gray-500 flex items-center gap-1">
                               <Mail className="h-3 w-3" />
-                              {user.email}
+                              {user.email || 'Email não informado'}
                             </div>
                             {user.phone && (
                               <div className="text-sm text-gray-500 flex items-center gap-1">
@@ -818,10 +831,10 @@ export const EnhancedUserManagement: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(user.status)}
+                        {getStatusBadge(user.status || 'ativo')}
                       </TableCell>
                       <TableCell>
-                        {getRoleBadge(user.role)}
+                        {getRoleBadge(user.role || 'user')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
@@ -845,71 +858,89 @@ export const EnhancedUserManagement: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
-                        <div className="flex gap-1 flex-wrap min-w-[300px]">
-                          {/* 1. Edição completa de dados - AZUL */}
+                        <div className="flex gap-1 flex-wrap w-full">
+                          {/* BOTÃO 1: Edição completa - AZUL */}
                           <Button
-                            onClick={() => handleEditUser(user)}
+                            onClick={() => {
+                              console.log('🔵 Clicou em EDITAR:', user);
+                              handleEditUser(user);
+                            }}
                             size="sm"
                             variant="outline"
-                            className="border-blue-500 text-blue-600 hover:bg-blue-50 hover:border-blue-600"
+                            className="border-blue-500 text-blue-600 hover:bg-blue-50"
                             title="Editar dados completos"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
 
-                          {/* 2. Edição rápida de status e função - ROXO */}
+                          {/* BOTÃO 2: Edição rápida - ROXO */}
                           <Button
-                            onClick={() => handleQuickEdit(user)}
+                            onClick={() => {
+                              console.log('🟣 Clicou em EDIÇÃO RÁPIDA:', user);
+                              handleQuickEdit(user);
+                            }}
                             size="sm"
                             variant="outline"
-                            className="border-purple-500 text-purple-600 hover:bg-purple-50 hover:border-purple-600"
+                            className="border-purple-500 text-purple-600 hover:bg-purple-50"
                             title="Edição rápida (Status/Função)"
                           >
                             <Settings className="h-4 w-4" />
                           </Button>
 
-                          {/* 3. Edição de senha - LARANJA (apenas admin) */}
+                          {/* BOTÃO 3: Alterar senha - LARANJA */}
                           <Button
-                            onClick={() => handlePasswordEdit(user)}
+                            onClick={() => {
+                              console.log('🟠 Clicou em SENHA:', user);
+                              handlePasswordEdit(user);
+                            }}
                             size="sm"
                             variant="outline"
-                            className="border-orange-500 text-orange-600 hover:bg-orange-50 hover:border-orange-600"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-50"
                             title="Alterar senha"
                           >
                             <Key className="h-4 w-4" />
                           </Button>
 
-                          {/* 4. Toggle de status - LARANJA/VERDE */}
+                          {/* BOTÃO 4: Toggle status - VERDE/LARANJA */}
                           <Button
-                            onClick={() => handleToggleStatus(user.id, user.status, user.name)}
+                            onClick={() => {
+                              console.log('🔄 Clicou em TOGGLE STATUS:', user);
+                              handleToggleStatus(user.id, user.status || 'ativo', user.name || 'Usuário');
+                            }}
                             size="sm"
                             variant="outline"
-                            className={user.status === 'ativo' 
-                              ? "border-orange-500 text-orange-600 hover:bg-orange-50 hover:border-orange-600"
-                              : "border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600"
+                            className={(user.status || 'ativo') === 'ativo' 
+                              ? "border-orange-500 text-orange-600 hover:bg-orange-50"
+                              : "border-green-500 text-green-600 hover:bg-green-50"
                             }
-                            title={user.status === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
+                            title={(user.status || 'ativo') === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
                           >
-                            {user.status === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            {(user.status || 'ativo') === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                           </Button>
 
-                          {/* 5. Enviar email - AZUL CLARO */}
+                          {/* BOTÃO 5: Email - AZUL CLARO */}
                           <Button
-                            onClick={() => handleSendEmail(user.email, user.name)}
+                            onClick={() => {
+                              console.log('📧 Clicou em EMAIL:', user);
+                              handleSendEmail(user.email || '', user.name || 'Usuário');
+                            }}
                             size="sm"
                             variant="outline"
-                            className="border-cyan-400 text-cyan-600 hover:bg-cyan-50 hover:border-cyan-500"
+                            className="border-cyan-400 text-cyan-600 hover:bg-cyan-50"
                             title="Enviar email"
                           >
                             <Mail className="h-4 w-4" />
                           </Button>
 
-                          {/* 6. Deletar usuário - VERMELHO (apenas admin) */}
+                          {/* BOTÃO 6: Deletar - VERMELHO */}
                           <Button
-                            onClick={() => handleDeleteUser(user.id, user.name)}
+                            onClick={() => {
+                              console.log('🔴 Clicou em DELETAR:', user);
+                              handleDeleteUser(user.id, user.name || 'Usuário');
+                            }}
                             size="sm"
                             variant="outline"
-                            className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
+                            className="border-red-500 text-red-600 hover:bg-red-50"
                             title="Excluir usuário"
                           >
                             <Trash2 className="h-4 w-4" />
