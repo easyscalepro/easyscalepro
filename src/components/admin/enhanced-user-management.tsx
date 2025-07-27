@@ -35,7 +35,8 @@ import {
   Lock,
   Unlock,
   Zap,
-  Star
+  Star,
+  UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
@@ -248,6 +249,90 @@ const QuickEditModal: React.FC<{
   );
 };
 
+// Modal para seleção de usuário para edição
+const UserSelectionModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  users: any[];
+  onSelectUser: (user: any) => void;
+  title: string;
+  description: string;
+}> = ({ isOpen, onClose, users, onSelectUser, title, description }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredUsers = users.filter(user => 
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-hidden">
+        <div className="flex items-center gap-2 mb-4">
+          <UserCog className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">{title}</h3>
+        </div>
+        
+        <p className="text-sm text-gray-600 mb-4">{description}</p>
+        
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar usuário..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+          {filteredUsers.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              Nenhum usuário encontrado
+            </div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                onClick={() => {
+                  onSelectUser(user);
+                  onClose();
+                }}
+                className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center gap-3"
+              >
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {user.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{user.name || 'Nome não informado'}</div>
+                  <div className="text-xs text-gray-500">{user.email}</div>
+                </div>
+                <div className="text-xs">
+                  <Badge className={`${
+                    user.status === 'ativo' ? 'bg-green-100 text-green-800' :
+                    user.status === 'inativo' ? 'bg-gray-100 text-gray-800' :
+                    'bg-red-100 text-red-800'
+                  } border`}>
+                    {user.status}
+                  </Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        <div className="flex justify-end mt-4">
+          <Button onClick={onClose} variant="outline">
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const EnhancedUserManagement: React.FC = () => {
   const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers, updateUser } = useUsers();
   const { profile } = useAuth();
@@ -270,6 +355,10 @@ export const EnhancedUserManagement: React.FC = () => {
   const [quickEditModalOpen, setQuickEditModalOpen] = useState(false);
   const [userForPasswordEdit, setUserForPasswordEdit] = useState(null);
   const [userForQuickEdit, setUserForQuickEdit] = useState(null);
+
+  // Estados para modais de seleção de usuário
+  const [userSelectionModalOpen, setUserSelectionModalOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<'edit' | 'password'>('edit');
 
   // Verificar conexão e status de sincronização ao carregar
   useEffect(() => {
@@ -387,6 +476,20 @@ export const EnhancedUserManagement: React.FC = () => {
     console.log('Edição rápida do usuário:', user);
     setUserForQuickEdit(user);
     setQuickEditModalOpen(true);
+  };
+
+  // Novas funções para seleção de usuário
+  const handleOpenUserSelection = (mode: 'edit' | 'password') => {
+    setSelectionMode(mode);
+    setUserSelectionModalOpen(true);
+  };
+
+  const handleUserSelection = (user: any) => {
+    if (selectionMode === 'edit') {
+      handleEditUser(user);
+    } else if (selectionMode === 'password') {
+      handlePasswordEdit(user);
+    }
   };
 
   const handleExportUsers = () => {
@@ -641,7 +744,7 @@ export const EnhancedUserManagement: React.FC = () => {
           <div className="flex items-center gap-3">
             <Database className="h-5 w-5 text-blue-600" />
             <div className="flex-1">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm">
+              <h4 className="font-semibold text-blue-900  dark:text-blue-100 text-sm">
                 Status de Sincronização
               </h4>
               <div className="flex items-center gap-4 text-sm text-blue-700 dark:text-blue-300 mt-1">
@@ -810,6 +913,45 @@ export const EnhancedUserManagement: React.FC = () => {
             >
               Limpar Filtros
             </Button>
+          </div>
+
+          {/* Botões de Edição Rápida */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <UserCog className="h-5 w-5 text-green-600" />
+              <h4 className="font-semibold text-green-900">Edição Rápida de Usuários</h4>
+            </div>
+            <p className="text-sm text-green-700 mb-4">
+              Selecione um usuário da lista para editar seus dados ou alterar sua senha:
+            </p>
+            
+            <div className="flex gap-3">
+              {/* Botão para Editar Usuário */}
+              <Button
+                onClick={() => handleOpenUserSelection('edit')}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                disabled={users.length === 0}
+              >
+                <Edit className="h-4 w-4" />
+                Editar Usuário
+              </Button>
+
+              {/* Botão para Alterar Senha */}
+              <Button
+                onClick={() => handleOpenUserSelection('password')}
+                className="bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-2"
+                disabled={users.length === 0}
+              >
+                <Key className="h-4 w-4" />
+                Alterar Senha
+              </Button>
+            </div>
+
+            {users.length === 0 && (
+              <div className="mt-3 text-xs text-green-600">
+                ⚠️ Nenhum usuário disponível para edição
+              </div>
+            )}
           </div>
 
           {/* Seção de Demonstração dos Botões de Ação Avançada */}
@@ -1112,6 +1254,19 @@ export const EnhancedUserManagement: React.FC = () => {
         }}
         user={userForQuickEdit}
         onUpdate={updateUser}
+      />
+
+      {/* Modal de seleção de usuário */}
+      <UserSelectionModal
+        isOpen={userSelectionModalOpen}
+        onClose={() => setUserSelectionModalOpen(false)}
+        users={users}
+        onSelectUser={handleUserSelection}
+        title={selectionMode === 'edit' ? 'Selecionar Usuário para Editar' : 'Selecionar Usuário para Alterar Senha'}
+        description={selectionMode === 'edit' 
+          ? 'Escolha um usuário da lista para editar seus dados completos:'
+          : 'Escolha um usuário da lista para alterar sua senha:'
+        }
       />
     </div>
   );
