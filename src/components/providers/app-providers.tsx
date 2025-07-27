@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { LoadingScreen } from '@/components/ui/loading-screen';
+import { EnhancedLoadingScreen } from '@/components/ui/enhanced-loading-screen';
 
 interface AppLoadingContextType {
   isLoading: boolean;
@@ -27,10 +27,10 @@ export const AppLoadingProvider: React.FC<AppLoadingProviderProps> = ({ children
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Simular tempo de carregamento inicial
+    // Simular tempo de carregamento inicial mais realista
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 2000);
 
     // Marcar como hidratado
     setIsHydrated(true);
@@ -38,9 +38,9 @@ export const AppLoadingProvider: React.FC<AppLoadingProviderProps> = ({ children
     return () => clearTimeout(timer);
   }, []);
 
-  // Mostrar loading durante a hidratação ou quando explicitamente definido
+  // Mostrar loading aprimorado durante a hidratação ou quando explicitamente definido
   if (!isHydrated || isLoading) {
-    return <LoadingScreen message="Carregando" />;
+    return <EnhancedLoadingScreen message="Inicializando aplicação" />;
   }
 
   return (
