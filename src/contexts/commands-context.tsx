@@ -97,7 +97,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [commands, setCommands] = useState<Command[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   const loadCommands = useCallback(async () => {
     try {
@@ -434,6 +434,33 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true)
       console.log('✏️ Atualizando comando:', id)
 
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        const errorInstance = new Error('Você precisa estar logado para atualizar comandos');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      // Verificar se o comando existe e se o usuário tem permissão
+      const command = getCommandById(id);
+      if (!command) {
+        const errorInstance = new Error('Comando não encontrado');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      // Verificar permissões: usuário deve ser o criador ou admin
+      const isOwner = command.createdBy === user.id;
+      const isAdmin = profile?.role === 'admin';
+      
+      if (!isOwner && !isAdmin) {
+        const errorInstance = new Error('Você não tem permissão para atualizar este comando');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      console.log('✅ Permissões verificadas - usuário pode atualizar comando');
+
       // Mapear os dados do frontend para o formato do banco
       const commandData: any = {}
       if (updatedCommand.title) commandData.title = updatedCommand.title
@@ -495,20 +522,65 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, profile, getCommandById])
 
   const deleteCommand = useCallback(async (id: string) => {
     try {
       setLoading(true)
       console.log('🗑️ Deletando comando:', id)
 
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        const errorInstance = new Error('Você precisa estar logado para deletar comandos');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      // Verificar se o comando existe e se o usuário tem permissão
+      const command = getCommandById(id);
+      if (!command) {
+        const errorInstance = new Error('Comando não encontrado');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      // Verificar permissões: usuário deve ser o criador ou admin
+      const isOwner = command.createdBy === user.id;
+      const isAdmin = profile?.role === 'admin';
+      
+      if (!isOwner && !isAdmin) {
+        const errorInstance = new Error('Você não tem permissão para deletar este comando');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
+
+      console.log('✅ Permissões verificadas - usuário pode deletar comando');
+      console.log('📋 Detalhes da operação:', {
+        commandId: id,
+        userId: user.id,
+        isOwner,
+        isAdmin,
+        commandCreatedBy: command.createdBy
+      });
+
       const { error } = await supabase
         .from('commands')
-        .update({ is_active: false })
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
 
       if (error) {
         console.error('❌ Erro ao deletar comando:', error)
+        
+        // Tratamento específico para erro de RLS
+        if (error.code === '42501' || error.message.includes('row-level security policy')) {
+          const errorInstance = new Error('Erro de permissão: Você não tem autorização para deletar este comando. Verifique se você é o criador ou tem privilégios de administrador.');
+          toast.error(errorInstance.message)
+          throw errorInstance;
+        }
+        
         const errorInstance = createErrorFromSupabase(error, 'Erro ao deletar comando');
         toast.error(errorInstance.message)
         throw errorInstance;
@@ -525,7 +597,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, profile, getCommandById])
 
   const getCommandById = useCallback((id: string): Command | undefined => {
     return commands.find(cmd => cmd.id === id)
