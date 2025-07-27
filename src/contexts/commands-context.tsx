@@ -532,7 +532,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const deleteCommand = useCallback(async (id: string) => {
     try {
       setLoading(true)
-      console.log('🗑️ Deletando comando:', id)
+      console.log('🗑️ Deletando comando usando função RPC:', id)
 
       // Verificar se o usuário está autenticado
       if (!user) {
@@ -541,83 +541,44 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         throw errorInstance;
       }
 
-      // Verificar se o comando existe e se o usuário tem permissão
-      const command = findCommandById(id);
-      if (!command) {
-        const errorInstance = new Error('Comando não encontrado');
-        toast.error(errorInstance.message)
-        throw errorInstance;
-      }
-
-      // Debug detalhado das permissões
-      const isOwner = command.createdBy === user.id;
-      const isAdmin = profile?.role === 'admin';
-      
-      console.log('🔍 Debug de permissões:', {
-        commandId: id,
-        commandTitle: command.title,
-        commandCreatedBy: command.createdBy,
-        currentUserId: user.id,
-        currentUserEmail: user.email,
-        userProfile: profile,
-        isOwner,
-        isAdmin,
-        hasPermission: isOwner || isAdmin
+      console.log('📋 Detalhes do usuário:', {
+        userId: user.id,
+        userEmail: user.email,
+        profileRole: profile?.role
       });
 
-      if (!isOwner && !isAdmin) {
-        const errorInstance = new Error('Você não tem permissão para deletar este comando');
-        toast.error(errorInstance.message)
-        throw errorInstance;
-      }
+      // Usar a função RPC que contorna problemas de RLS
+      const { data, error } = await supabase.rpc('delete_command_admin', {
+        command_uuid: id
+      })
 
-      console.log('✅ Permissões verificadas - usuário pode deletar comando');
-
-      // Tentar a operação de update
-      console.log('📝 Executando UPDATE para desativar comando...');
-      const { data, error } = await supabase
-        .from('commands')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-
-      // Debug detalhado do erro
       if (error) {
-        console.error('❌ Erro detalhado ao deletar comando:', {
-          error,
-          errorType: typeof error,
-          errorKeys: Object.keys(error || {}),
-          errorMessage: error?.message,
-          errorCode: error?.code,
-          errorDetails: error?.details,
-          errorHint: error?.hint
-        })
-        
-        // Verificar se é erro vazio
-        if (!error.message && !error.code && Object.keys(error).length === 0) {
-          const errorInstance = new Error('Erro desconhecido ao deletar comando. Verifique suas permissões.');
-          toast.error(errorInstance.message)
-          throw errorInstance;
-        }
-        
-        // Tratamento específico para erro de RLS
-        if (error.code === '42501' || error.message?.includes('row-level security policy')) {
-          const errorInstance = new Error('Erro de permissão: Você não tem autorização para deletar este comando. Verifique se você é o criador ou tem privilégios de administrador.');
-          toast.error(errorInstance.message)
-          throw errorInstance;
-        }
-        
+        console.error('❌ Erro na função RPC:', error)
         const errorInstance = createErrorFromSupabase(error, 'Erro ao deletar comando');
         toast.error(errorInstance.message)
         throw errorInstance;
       }
 
-      console.log('✅ Comando deletado (desativado):', data)
-      setCommands(prev => prev.filter(cmd => cmd.id !== id))
-      toast.success('Comando deletado com sucesso!')
+      console.log('📊 Resultado da função RPC:', data)
+
+      // Verificar o resultado da função
+      if (data && typeof data === 'object') {
+        if (data.success) {
+          console.log('✅ Comando deletado com sucesso via RPC')
+          setCommands(prev => prev.filter(cmd => cmd.id !== id))
+          toast.success(data.message || 'Comando deletado com sucesso!')
+        } else {
+          console.error('❌ Erro retornado pela função:', data.error)
+          const errorInstance = new Error(data.error || 'Erro desconhecido ao deletar comando');
+          toast.error(errorInstance.message)
+          throw errorInstance;
+        }
+      } else {
+        console.error('❌ Resposta inesperada da função RPC:', data)
+        const errorInstance = new Error('Resposta inesperada do servidor');
+        toast.error(errorInstance.message)
+        throw errorInstance;
+      }
     } catch (err: any) {
       console.error('💥 Erro ao deletar comando:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao deletar comando');
@@ -626,7 +587,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [user, profile, commands]) // Usar commands ao invés de getCommandById
+  }, [user, profile])
 
   // Definir getCommandById como useCallback DEPOIS das outras funções
   const getCommandById = useCallback((id: string): Command | undefined => {
