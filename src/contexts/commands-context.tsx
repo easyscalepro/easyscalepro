@@ -101,14 +101,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false)
   const { user, profile } = useAuth()
 
-  // Função helper para encontrar comando por ID (não usar useCallback para evitar dependências circulares)
-  const findCommandById = (id: string): Command | undefined => {
+  // Função helper para encontrar comando por ID (estável)
+  const getCommandById = useCallback((id: string): Command | undefined => {
     const command = commands.find(cmd => cmd.id === id);
     console.log('🔍 Buscando comando por ID:', { id, found: !!command, totalCommands: commands.length });
     return command;
-  }
+  }, [commands])
 
-  // Nova função para buscar comando diretamente do banco
+  // Nova função para buscar comando diretamente do banco (estável)
   const getCommandByIdFromDB = useCallback(async (id: string): Promise<Command | null> => {
     try {
       console.log('🔄 Buscando comando do banco de dados:', id);
@@ -157,6 +157,122 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   }, []);
+
+  const getRelatedCommands = useCallback((commandId: string) => {
+    const currentCommand = commands.find(cmd => cmd.id === commandId);
+    if (!currentCommand) {
+      return []
+    }
+
+    // Buscar comandos relacionados baseados na categoria e tags
+    const relatedCommands = commands
+      .filter(cmd => {
+        // Excluir o comando atual
+        if (cmd.id === commandId) return false
+        
+        // Priorizar comandos da mesma categoria
+        if (cmd.category === currentCommand.category) return true
+        
+        // Ou comandos que compartilham tags
+        const sharedTags = cmd.tags.some(tag => 
+          currentCommand.tags.includes(tag)
+        )
+        return sharedTags
+      })
+      .sort((a, b) => {
+        // Ordenar por categoria primeiro (mesma categoria tem prioridade)
+        if (a.category === currentCommand.category && b.category !== currentCommand.category) {
+          return -1
+        }
+        if (b.category === currentCommand.category && a.category !== currentCommand.category) {
+          return 1
+        }
+        
+        // Depois por popularidade
+        return b.popularity - a.popularity
+      })
+      .slice(0, 4) // Limitar a 4 comandos relacionados
+      .map(cmd => ({
+        id: cmd.id,
+        title: cmd.title,
+        category: cmd.category,
+        level: cmd.level
+      }))
+
+    console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
+    return relatedCommands
+  }, [commands])
+
+  const incrementViews = useCallback(async (commandId: string) => {
+    try {
+      console.log('👁️ Incrementando visualizações para:', commandId)
+      
+      const { error } = await supabase.rpc('increment_command_views', {
+        command_uuid: commandId
+      })
+
+      if (error) {
+        console.error('❌ Erro ao incrementar visualizações:', error)
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar visualizações');
+        console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
+        return
+      }
+
+      // Atualizar localmente
+      setCommands(prev => prev.map(cmd => 
+        cmd.id === commandId 
+          ? { ...cmd, views: cmd.views + 1 }
+          : cmd
+      ))
+    } catch (err: any) {
+      console.error('💥 Erro ao incrementar visualizações:', err)
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar visualizações');
+      console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
+    }
+  }, [])
+
+  const incrementCopies = useCallback(async (commandId: string) => {
+    try {
+      console.log('📋 Incrementando cópias para:', commandId)
+      
+      const { error } = await supabase.rpc('increment_command_copies', {
+        command_uuid: commandId
+      })
+
+      if (error) {
+        console.error('❌ Erro ao incrementar cópias:', error)
+        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar cópias');
+        console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
+        return
+      }
+
+      // Atualizar localmente
+      setCommands(prev => prev.map(cmd => 
+        cmd.id === commandId 
+          ? { ...cmd, copies: cmd.copies + 1 }
+          : cmd
+      ))
+
+      // Log da atividade do usuário se estiver logado
+      if (user) {
+        try {
+          await supabase.rpc('log_user_activity', {
+            p_user_id: user.id,
+            p_command_id: commandId,
+            p_activity_type: 'copy',
+            p_metadata: { timestamp: new Date().toISOString() }
+          })
+        } catch (logError) {
+          // Log de atividade é opcional, não quebrar se falhar
+          console.warn('⚠️ Erro ao registrar atividade:', logError);
+        }
+      }
+    } catch (err: any) {
+      console.error('💥 Erro ao incrementar cópias:', err)
+      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar cópias');
+      console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
+    }
+  }, [user])
 
   const loadCommands = useCallback(async () => {
     try {
@@ -297,77 +413,6 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, favorites])
 
-  const incrementViews = useCallback(async (commandId: string) => {
-    try {
-      console.log('👁️ Incrementando visualizações para:', commandId)
-      
-      const { error } = await supabase.rpc('increment_command_views', {
-        command_uuid: commandId
-      })
-
-      if (error) {
-        console.error('❌ Erro ao incrementar visualizações:', error)
-        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar visualizações');
-        console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
-        return
-      }
-
-      // Atualizar localmente
-      setCommands(prev => prev.map(cmd => 
-        cmd.id === commandId 
-          ? { ...cmd, views: cmd.views + 1 }
-          : cmd
-      ))
-    } catch (err: any) {
-      console.error('💥 Erro ao incrementar visualizações:', err)
-      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar visualizações');
-      console.warn('⚠️ Visualizações não incrementadas:', errorInstance.message);
-    }
-  }, [])
-
-  const incrementCopies = useCallback(async (commandId: string) => {
-    try {
-      console.log('📋 Incrementando cópias para:', commandId)
-      
-      const { error } = await supabase.rpc('increment_command_copies', {
-        command_uuid: commandId
-      })
-
-      if (error) {
-        console.error('❌ Erro ao incrementar cópias:', error)
-        const errorInstance = createErrorFromSupabase(error, 'Erro ao incrementar cópias');
-        console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
-        return
-      }
-
-      // Atualizar localmente
-      setCommands(prev => prev.map(cmd => 
-        cmd.id === commandId 
-          ? { ...cmd, copies: cmd.copies + 1 }
-          : cmd
-      ))
-
-      // Log da atividade do usuário se estiver logado
-      if (user) {
-        try {
-          await supabase.rpc('log_user_activity', {
-            p_user_id: user.id,
-            p_command_id: commandId,
-            p_activity_type: 'copy',
-            p_metadata: { timestamp: new Date().toISOString() }
-          })
-        } catch (logError) {
-          // Log de atividade é opcional, não quebrar se falhar
-          console.warn('⚠️ Erro ao registrar atividade:', logError);
-        }
-      }
-    } catch (err: any) {
-      console.error('💥 Erro ao incrementar cópias:', err)
-      const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar cópias');
-      console.warn('⚠️ Cópias não incrementadas:', errorInstance.message);
-    }
-  }, [user])
-
   const addCommand = useCallback(async (newCommand: NewCommand) => {
     try {
       setLoading(true)
@@ -502,7 +547,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Verificar se o comando existe e se o usuário tem permissão
-      let command = findCommandById(id);
+      let command = getCommandById(id);
       
       // Se não encontrar no contexto, buscar do banco
       if (!command) {
@@ -582,14 +627,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         toast.success('Comando atualizado com sucesso!')
       }
     } catch (err: any) {
-      console.error('💥 Erro ao atualizar comando:', err)
+      console.error('💥 Erro ao at ualizar comando:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao atualizar comando');
       toast.error(errorInstance.message)
       throw errorInstance;
     } finally {
       setLoading(false)
     }
-  }, [user, profile, getCommandByIdFromDB]) // Usar getCommandByIdFromDB ao invés de commands
+  }, [user, profile, getCommandById, getCommandByIdFromDB])
 
   const deleteCommand = useCallback(async (id: string) => {
     try {
@@ -650,56 +695,6 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false)
     }
   }, [user, profile])
-
-  // Definir getCommandById como useCallback DEPOIS das outras funções
-  const getCommandById = useCallback((id: string): Command | undefined => {
-    return findCommandById(id)
-  }, [commands])
-
-  const getRelatedCommands = useCallback((commandId: string) => {
-    const currentCommand = findCommandById(commandId)
-    if (!currentCommand) {
-      return []
-    }
-
-    // Buscar comandos relacionados baseados na categoria e tags
-    const relatedCommands = commands
-      .filter(cmd => {
-        // Excluir o comando atual
-        if (cmd.id === commandId) return false
-        
-        // Priorizar comandos da mesma categoria
-        if (cmd.category === currentCommand.category) return true
-        
-        // Ou comandos que compartilham tags
-        const sharedTags = cmd.tags.some(tag => 
-          currentCommand.tags.includes(tag)
-        )
-        return sharedTags
-      })
-      .sort((a, b) => {
-        // Ordenar por categoria primeiro (mesma categoria tem prioridade)
-        if (a.category === currentCommand.category && b.category !== currentCommand.category) {
-          return -1
-        }
-        if (b.category === currentCommand.category && a.category !== currentCommand.category) {
-          return 1
-        }
-        
-        // Depois por popularidade
-        return b.popularity - a.popularity
-      })
-      .slice(0, 4) // Limitar a 4 comandos relacionados
-      .map(cmd => ({
-        id: cmd.id,
-        title: cmd.title,
-        category: cmd.category,
-        level: cmd.level
-      }))
-
-    console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
-    return relatedCommands
-  }, [commands])
 
   // Carregar comandos na inicialização
   useEffect(() => {

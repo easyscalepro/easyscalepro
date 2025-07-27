@@ -70,7 +70,7 @@ export default function CommandPage() {
     };
 
     loadCommand();
-  }, [commandId, getCommandById, getCommandByIdFromDB, getRelatedCommands, incrementViews, router]);
+  }, [commandId]); // Apenas commandId como dependência
 
   if (loading) {
     return (
