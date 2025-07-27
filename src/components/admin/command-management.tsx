@@ -10,11 +10,13 @@ import { Edit, Trash2, Search, Plus, Upload, Eye, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useCommands } from '@/contexts/commands-context';
+import { useAuth } from '@/components/auth/auth-provider';
 
 export const CommandManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { commands, deleteCommand } = useCommands();
+  const { user, profile } = useAuth();
 
   const filteredCommands = commands.filter(command =>
     command.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,6 +52,28 @@ export const CommandManagement: React.FC = () => {
     event.stopPropagation();
     
     console.log('🗑️ Iniciando processo de exclusão:', { id, title });
+    
+    // Debug detalhado das permissões ANTES da confirmação
+    const command = commands.find(cmd => cmd.id === id);
+    console.log('🔍 Debug detalhado de permissões:', {
+      commandId: id,
+      commandTitle: title,
+      commandFound: !!command,
+      commandCreatedBy: command?.createdBy,
+      currentUser: {
+        id: user?.id,
+        email: user?.email
+      },
+      currentProfile: {
+        id: profile?.id,
+        email: profile?.email,
+        role: profile?.role,
+        status: profile?.status
+      },
+      isOwner: command?.createdBy === user?.id,
+      isAdmin: profile?.role === 'admin',
+      hasPermission: (command?.createdBy === user?.id) || (profile?.role === 'admin')
+    });
     
     try {
       // Usar window.confirm para garantir compatibilidade
@@ -123,8 +147,26 @@ export const CommandManagement: React.FC = () => {
     return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
+  // Debug do estado atual do usuário
+  console.log('👤 Estado atual do usuário:', {
+    user: user ? { id: user.id, email: user.email } : null,
+    profile: profile ? { id: profile.id, email: profile.email, role: profile.role } : null,
+    isAdmin: profile?.role === 'admin'
+  });
+
   return (
     <div className="space-y-6 relative z-10">
+      {/* Debug info para admin */}
+      {profile?.role === 'admin' && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="text-sm text-green-800">
+              <strong>🔧 Debug Admin:</strong> Usuário: {user?.email} | Role: {profile?.role} | ID: {user?.id}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header com estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-gray-200">
@@ -208,84 +250,106 @@ export const CommandManagement: React.FC = () => {
                   <TableHead className="font-semibold text-[#0F1115]">Categoria</TableHead>
                   <TableHead className="font-semibold text-[#0F1115]">Nível</TableHead>
                   <TableHead className="font-semibold text-[#0F1115]">Criado</TableHead>
+                  <TableHead className="font-semibold text-[#0F1115]">Criador</TableHead>
                   <TableHead className="font-semibold text-[#0F1115]">Métricas</TableHead>
                   <TableHead className="font-semibold text-[#0F1115]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCommands.map((command) => (
-                  <TableRow key={command.id} className="hover:bg-gray-50">
-                    <TableCell className="max-w-xs">
-                      <div>
-                        <div className="font-medium text-[#0F1115] truncate" title={command.title}>
-                          {command.title}
+                {filteredCommands.map((command) => {
+                  const isOwner = command.createdBy === user?.id;
+                  const isAdmin = profile?.role === 'admin';
+                  const canDelete = isOwner || isAdmin;
+                  
+                  return (
+                    <TableRow key={command.id} className="hover:bg-gray-50">
+                      <TableCell className="max-w-xs">
+                        <div>
+                          <div className="font-medium text-[#0F1115] truncate" title={command.title}>
+                            {command.title}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate" title={command.description}>
+                            {command.description}
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500 truncate" title={command.description}>
-                          {command.description}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`${getCategoryColor(command.category)} border`}>
+                          {command.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`${getLevelColor(command.level)} border`}>
+                          {command.level}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {command.createdAt}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        <div>
+                          <div className="text-xs">ID: {command.createdBy?.slice(0, 8)}...</div>
+                          <div className="text-xs text-green-600">
+                            {isOwner && '👤 Você'}
+                            {isAdmin && !isOwner && '🔧 Admin'}
+                            {!isOwner && !isAdmin && '👥 Outro'}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`${getCategoryColor(command.category)} border`}>
-                        {command.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`${getLevelColor(command.level)} border`}>
-                        {command.level}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {command.createdAt}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Eye className="h-3 w-3" />
-                          {command.views}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-1">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Eye className="h-3 w-3" />
+                            {command.views}
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Copy className="h-3 w-3" />
+                            {command.copies}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <Copy className="h-3 w-3" />
-                          {command.copies}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            onClick={() => handleView(command.id)}
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            className="border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200 hover:scale-105 relative z-20"
+                            title="Visualizar"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => handleEdit(command.id)}
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all duration-200 hover:scale-105 relative z-20"
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={(e) => handleDelete(e, command.id, command.title)}
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            disabled={!canDelete}
+                            className={`transition-all duration-200 hover:scale-105 relative z-20 ${
+                              canDelete 
+                                ? 'border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400' 
+                                : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={canDelete ? "Excluir" : "Sem permissão para excluir"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          onClick={() => handleView(command.id)}
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          className="border-gray-300 text-gray-600 hover:bg-gray-50 transition-all duration-200 hover:scale-105 relative z-20"
-                          title="Visualizar"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleEdit(command.id)}
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          className="border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white transition-all duration-200 hover:scale-105 relative z-20"
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={(e) => handleDelete(e, command.id, command.title)}
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-all duration-200 hover:scale-105 relative z-20"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
