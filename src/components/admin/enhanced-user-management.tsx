@@ -792,25 +792,25 @@ export const EnhancedUserManagement: React.FC = () => {
             </p>
           </div>
 
-          {/* Tabela com novos botões de ação */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold text-[#0F1115]">Usuário</TableHead>
-                  <TableHead className="font-semibold text-[#0F1115]">Status</TableHead>
-                  <TableHead className="font-semibold text-[#0F1115]">Função</TableHead>
-                  <TableHead className="font-semibold text-[#0F1115]">Empresa</TableHead>
-                  <TableHead className="font-semibold text-[#0F1115]">Atividade</TableHead>
-                  <TableHead className="font-semibold text-[#0F1115]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          {/* VERSÃO SIMPLIFICADA DA TABELA */}
+          <div className="w-full overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 p-3 text-left">Usuário</th>
+                  <th className="border border-gray-300 p-3 text-left">Status</th>
+                  <th className="border border-gray-300 p-3 text-left">Função</th>
+                  <th className="border border-gray-300 p-3 text-left">Empresa</th>
+                  <th className="border border-gray-300 p-3 text-left">Atividade</th>
+                  <th className="border border-gray-300 p-3 text-left min-w-[400px]">AÇÕES</th>
+                </tr>
+              </thead>
+              <tbody>
                 {filteredUsers.map((user, index) => {
                   console.log(`🔍 Renderizando usuário ${index + 1}:`, user);
                   return (
-                    <TableRow key={user.id} className="hover:bg-gray-50">
-                      <TableCell>
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="border border-gray-300 p-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                             {user.name?.charAt(0).toUpperCase() || 'U'}
@@ -829,20 +829,20 @@ export const EnhancedUserManagement: React.FC = () => {
                             )}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-gray-300 p-3">
                         {getStatusBadge(user.status || 'ativo')}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-gray-300 p-3">
                         {getRoleBadge(user.role || 'user')}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-gray-300 p-3">
                         <div className="flex items-center gap-1 text-sm">
                           <Building className="h-3 w-3 text-gray-400" />
                           {user.company || 'Não informado'}
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="border border-gray-300 p-3">
                         <div className="text-sm space-y-1">
                           <div className="flex items-center gap-1 text-gray-600">
                             <Activity className="h-3 w-3" />
@@ -856,102 +856,97 @@ export const EnhancedUserManagement: React.FC = () => {
                             Desde {user.joinedAt || 'N/A'}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] lasy-highlight">
-                        <div className="flex gap-1 flex-wrap w-full">
+                      </td>
+                      <td className="border border-gray-300 p-3">
+                        <div className="flex gap-2 flex-wrap">
                           {/* BOTÃO 1: Edição completa - AZUL */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('🔵 Clicou em EDITAR:', user);
                               handleEditUser(user);
                             }}
-                            size="sm"
-                            variant="outline"
-                            className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                            className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
                             title="Editar dados completos"
                           >
                             <Edit className="h-4 w-4" />
-                          </Button>
+                            Editar
+                          </button>
 
                           {/* BOTÃO 2: Edição rápida - ROXO */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('🟣 Clicou em EDIÇÃO RÁPIDA:', user);
                               handleQuickEdit(user);
                             }}
-                            size="sm"
-                            variant="outline"
-                            className="border-purple-500 text-purple-600 hover:bg-purple-50"
+                            className="px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 flex items-center gap-1"
                             title="Edição rápida (Status/Função)"
                           >
                             <Settings className="h-4 w-4" />
-                          </Button>
+                            Rápido
+                          </button>
 
                           {/* BOTÃO 3: Alterar senha - LARANJA */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('🟠 Clicou em SENHA:', user);
                               handlePasswordEdit(user);
                             }}
-                            size="sm"
-                            variant="outline"
-                            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                            className="px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 flex items-center gap-1"
                             title="Alterar senha"
                           >
                             <Key className="h-4 w-4" />
-                          </Button>
+                            Senha
+                          </button>
 
                           {/* BOTÃO 4: Toggle status - VERDE/LARANJA */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('🔄 Clicou em TOGGLE STATUS:', user);
                               handleToggleStatus(user.id, user.status || 'ativo', user.name || 'Usuário');
                             }}
-                            size="sm"
-                            variant="outline"
-                            className={(user.status || 'ativo') === 'ativo' 
-                              ? "border-orange-500 text-orange-600 hover:bg-orange-50"
-                              : "border-green-500 text-green-600 hover:bg-green-50"
-                            }
+                            className={`px-3 py-2 text-white rounded flex items-center gap-1 ${
+                              (user.status || 'ativo') === 'ativo' 
+                                ? "bg-orange-500 hover:bg-orange-600"
+                                : "bg-green-500 hover:bg-green-600"
+                            }`}
                             title={(user.status || 'ativo') === 'ativo' ? 'Desativar usuário' : 'Ativar usuário'}
                           >
                             {(user.status || 'ativo') === 'ativo' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                          </Button>
+                            {(user.status || 'ativo') === 'ativo' ? 'Desativar' : 'Ativar'}
+                          </button>
 
                           {/* BOTÃO 5: Email - AZUL CLARO */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('📧 Clicou em EMAIL:', user);
                               handleSendEmail(user.email || '', user.name || 'Usuário');
                             }}
-                            size="sm"
-                            variant="outline"
-                            className="border-cyan-400 text-cyan-600 hover:bg-cyan-50"
+                            className="px-3 py-2 bg-cyan-500 text-white rounded hover:bg-cyan-600 flex items-center gap-1"
                             title="Enviar email"
                           >
                             <Mail className="h-4 w-4" />
-                          </Button>
+                            Email
+                          </button>
 
                           {/* BOTÃO 6: Deletar - VERMELHO */}
-                          <Button
+                          <button
                             onClick={() => {
                               console.log('🔴 Clicou em DELETAR:', user);
                               handleDeleteUser(user.id, user.name || 'Usuário');
                             }}
-                            size="sm"
-                            variant="outline"
-                            className="border-red-500 text-red-600 hover:bg-red-50"
+                            className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
                             title="Excluir usuário"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                            Deletar
+                          </button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
 
           {filteredUsers.length === 0 && !loading && (
