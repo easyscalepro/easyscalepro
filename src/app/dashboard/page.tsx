@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useAuth } from '@/components/auth/auth-provider'
 import { supabase } from '@/lib/supabase'
 import { useCommands } from '@/contexts/commands-context'
 import { useUsers } from '@/contexts/users-context'
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 
 export default function DashboardPage() {
-  const session = useSession()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const { commands, loading: commandsLoading } = useCommands()
   const { users, loading: usersLoading } = useUsers()
@@ -20,58 +20,65 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session) {
+    if (!authLoading && !user) {
+      console.log('❌ Usuário não autenticado, redirecionando para login')
       router.push('/login')
       return
     }
 
-    const loadProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
+    if (user) {
+      const loadProfile = async () => {
+        try {
+          console.log('🔄 Carregando perfil do usuário:', user.id)
+          
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
 
-        if (error) {
-          console.error('Erro ao carregar perfil:', error)
-          return
+          if (error) {
+            console.error('❌ Erro ao carregar perfil:', error)
+            return
+          }
+
+          console.log('✅ Perfil carregado:', data)
+          setProfile(data)
+        } catch (err) {
+          console.error('💥 Erro ao carregar perfil:', err)
+        } finally {
+          setLoading(false)
         }
-
-        setProfile(data)
-      } catch (err) {
-        console.error('Erro ao carregar perfil:', err)
-      } finally {
-        setLoading(false)
       }
-    }
 
-    loadProfile()
-  }, [session, router])
+      loadProfile()
+    }
+  }, [user, authLoading, router])
 
   const handleLogout = async () => {
     try {
+      console.log('🚪 Fazendo logout...')
       await supabase.auth.signOut()
       toast.success('Logout realizado com sucesso!')
       router.push('/login')
     } catch (error) {
-      console.error('Erro no logout:', error)
+      console.error('❌ Erro no logout:', error)
       toast.error('Erro ao fazer logout')
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Carregando...</p>
+          <p className="mt-2 text-gray-600">Carregando dashboard...</p>
         </div>
       </div>
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
@@ -84,7 +91,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
               <p className="text-sm text-gray-600">
-                Bem-vindo, {profile?.name || session.user.email}
+                Bem-vindo, {profile?.name || user.email}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -137,7 +144,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm">
-                  <span className="font-medium">Email:</span> {session.user.email}
+                  <span className="font-medium">Email:</span> {user.email}
                 </p>
                 <p className="text-sm">
                   <span className="font-medium">Nome:</span> {profile?.name || 'Não informado'}

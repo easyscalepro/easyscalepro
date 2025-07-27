@@ -1,13 +1,23 @@
 'use client'
 
-import { SessionContextProvider } from '@supabase/auth-helpers-react'
+import { createContext, useContext } from 'react'
+import { SessionContextProvider, useSessionContext } from '@supabase/auth-helpers-react'
 import { supabase } from '@/lib/supabase'
-import { ReactNode } from 'react'
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+const AuthContext = createContext(null)
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <SessionContextProvider supabaseClient={supabase}>
       {children}
     </SessionContextProvider>
   )
+}
+
+export const useAuth = () => {
+  const { session, isLoading } = useSessionContext()
+  return {
+    user: session?.user ?? null,
+    loading: isLoading,
+  }
 }

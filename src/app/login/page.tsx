@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth/auth-provider'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('✅ Usuário já logado, redirecionando para dashboard')
+      router.push('/dashboard')
+    }
+  }, [user, authLoading, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +35,7 @@ export default function LoginPage() {
 
     try {
       setLoading(true)
-      console.log('🔐 Tentando fazer login...')
+      console.log('🔐 Tentando fazer login com:', email)
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -37,23 +47,42 @@ export default function LoginPage() {
         
         if (error.message.includes('Invalid login credentials')) {
           toast.error('Email ou senha incorretos')
+        } else if (error.message.includes('Email not confirmed')) {
+          toast.error('Por favor, confirme seu email antes de fazer login')
         } else {
-          toast.error('Erro ao fazer login')
+          toast.error('Erro ao fazer login: ' + error.message)
         }
         return
       }
 
       if (data.user) {
-        console.log('✅ Login realizado com sucesso')
+        console.log('✅ Login realizado com sucesso para:', data.user.email)
         toast.success('Login realizado com sucesso!')
-        router.push('/dashboard')
+        // O redirecionamento será feito pelo useEffect quando user mudar
       }
     } catch (err: any) {
-      console.error('💥 Erro no login:', err)
+      console.error('💥 Erro inesperado no login:', err)
       toast.error('Erro inesperado ao fazer login')
     } finally {
       setLoading(false)
     }
+  }
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Não mostrar formulário se já estiver logado
+  if (user) {
+    return null
   }
 
   return (
@@ -76,6 +105,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -87,6 +117,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
             <Button 
@@ -97,6 +128,10 @@ export default function LoginPage() {
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
+          
+          <div className="mt-4 text-center text-sm text-gray-600">
+            <p>Para testar, use as credenciais do seu usuário Supabase</p>
+          </div>
         </CardContent>
       </Card>
     </div>
