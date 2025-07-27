@@ -1,24 +1,22 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth/auth-provider'
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/auth/auth-provider';
 
 export default function Home() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (user) {
-        console.log('✅ Usuário logado, redirecionando para dashboard')
-        router.push('/dashboard')
+        router.push('/dashboard');
       } else {
-        console.log('❌ Usuário não logado, redirecionando para login')
-        router.push('/login')
+        router.push('/login');
       }
     }
-  }, [user, loading, router])
+  }, [user, loading, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -32,10 +30,10 @@ export default function Home() {
             Carregando EasyScale...
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            {loading ? 'Verificando autenticação...' : 'Redirecionando...'}
+            Preparando sua experiência
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

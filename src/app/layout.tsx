@@ -1,28 +1,47 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AppProviders } from "@/components/providers/app-providers";
-import SonnerToaster from "@/components/ui/sonner-toaster";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { CommandsProvider } from "@/contexts/commands-context";
+import { UsersProvider } from "@/contexts/users-context";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { AppLoadingProvider } from "@/components/providers/app-providers";
+import { Toaster } from "@/components/ui/sonner";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "EasyScale - Comandos IA",
-  description: "Plataforma de comandos para IA",
+  title: "EasyScale - Comandos ChatGPT para PMEs",
+  description: "Acesse mais de 1.000 comandos especializados de ChatGPT para impulsionar seu negócio",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
-        <AppProviders>
-          {children}
-          <SonnerToaster />
-        </AppProviders>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange={false}
+        >
+          <AppLoadingProvider>
+            <AuthProvider>
+              <CommandsProvider>
+                <UsersProvider>
+                  {children}
+                  <Toaster />
+                </UsersProvider>
+              </CommandsProvider>
+            </AuthProvider>
+          </AppLoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
