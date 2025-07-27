@@ -111,9 +111,10 @@ export const CommandForm: React.FC<CommandFormProps> = ({ commandId, mode }) => 
 
     try {
       const commandData = {
-        ...formData,
         title: formData.title.trim(),
         description: formData.description.trim(),
+        category: formData.category,
+        level: formData.level,
         prompt: formData.prompt.trim(),
         usage: formData.usage.trim() || 'Use este comando substituindo as variáveis entre colchetes pelos dados específicos da sua empresa.',
         tags: formData.tags.length > 0 ? formData.tags : [formData.category.toLowerCase()],
@@ -121,10 +122,12 @@ export const CommandForm: React.FC<CommandFormProps> = ({ commandId, mode }) => 
       };
 
       if (mode === 'create') {
-        addCommand(commandData as Omit<Command, 'id' | 'createdAt' | 'views' | 'copies' | 'popularity'>);
+        console.log('🔄 Criando comando:', commandData);
+        await addCommand(commandData);
         toast.success('Comando criado com sucesso!');
       } else if (mode === 'edit' && commandId) {
-        updateCommand(commandId, commandData);
+        console.log('🔄 Atualizando comando:', commandId, commandData);
+        await updateCommand(commandId, commandData);
         toast.success('Comando atualizado com sucesso!');
       }
 
@@ -134,7 +137,7 @@ export const CommandForm: React.FC<CommandFormProps> = ({ commandId, mode }) => 
       }, 1000);
       
     } catch (error) {
-      console.error('Erro ao salvar comando:', error);
+      console.error('❌ Erro ao salvar comando:', error);
       toast.error('Erro ao salvar comando. Tente novamente.');
     } finally {
       setIsSubmitting(false);
