@@ -64,6 +64,7 @@ const CommandsContext = createContext<{
   updateCommand: (id: string, command: Partial<NewCommand>) => Promise<void>
   deleteCommand: (id: string) => Promise<void>
   getCommandById: (id: string) => Command | undefined
+  getCommandByIdFromDB: (id: string) => Promise<Command | null>
   getRelatedCommands: (commandId: string) => Array<{
     id: string;
     title: string;
@@ -84,6 +85,7 @@ const CommandsContext = createContext<{
   updateCommand: async () => {},
   deleteCommand: async () => {},
   getCommandById: () => undefined,
+  getCommandByIdFromDB: async () => null,
   getRelatedCommands: () => [],
   loadCommands: async () => {},
   setCommands: () => {},
@@ -101,8 +103,60 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
   // Função helper para encontrar comando por ID (não usar useCallback para evitar dependências circulares)
   const findCommandById = (id: string): Command | undefined => {
-    return commands.find(cmd => cmd.id === id)
+    const command = commands.find(cmd => cmd.id === id);
+    console.log('🔍 Buscando comando por ID:', { id, found: !!command, totalCommands: commands.length });
+    return command;
   }
+
+  // Nova função para buscar comando diretamente do banco
+  const getCommandByIdFromDB = useCallback(async (id: string): Promise<Command | null> => {
+    try {
+      console.log('🔄 Buscando comando do banco de dados:', id);
+      
+      const { data, error } = await supabase
+        .from('commands')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao buscar comando do banco:', error);
+        return null;
+      }
+
+      if (data) {
+        console.log('✅ Comando encontrado no banco:', data.title);
+        
+        // Mapear dados do banco para o formato esperado pelo frontend
+        const mappedCommand: Command = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          category: data.category_name, // Mapear category_name para category
+          level: data.level,
+          prompt: data.prompt,
+          usage: data.usage_instructions, // Mapear usage_instructions para usage
+          tags: data.tags || [],
+          estimatedTime: data.estimated_time || '10 min', // Mapear estimated_time para estimatedTime
+          views: data.views || 0,
+          copies: data.copies || 0,
+          popularity: data.popularity || 0,
+          isActive: data.is_active,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+
+        return mappedCommand;
+      }
+
+      return null;
+    } catch (err: any) {
+      console.error('💥 Erro inesperado ao buscar comando do banco:', err);
+      return null;
+    }
+  }, []);
 
   const loadCommands = useCallback(async () => {
     try {
@@ -125,7 +179,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (data) {
         console.log('✅ Comandos carregados:', data.length)
         // Mapear os dados do banco para o formato esperado pelo frontend
-        const mappedCommands = data.map(cmd => ({
+        const mappe dCommands = data.map(cmd => ({
           id: cmd.id,
           title: cmd.title,
           description: cmd.description,
@@ -144,6 +198,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           updatedAt: cmd.updated_at
         }))
         setCommands(mappedCommands)
+        console.log('📊 Comandos mapeados e salvos no estado:', mappedCommands.length);
       }
     } catch (err: any) {
       console.error('💥 Erro ao carregar comandos:', err)
@@ -447,7 +502,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Verificar se o comando existe e se o usuário tem permissão
-      const command = findCommandById(id);
+      let command = findCommandById(id);
+      
+      // Se não encontrar no contexto, buscar do banco
+      if (!command) {
+        console.log('⚠️ Comando não encontrado no contexto, buscando do banco...');
+        command = await getCommandByIdFromDB(id);
+      }
+      
       if (!command) {
         const errorInstance = new Error('Comando não encontrado');
         toast.error(errorInstance.message)
@@ -527,7 +589,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false)
     }
-  }, [user, profile, commands]) // Usar commands ao invés de getCommandById
+  }, [user, profile, getCommandByIdFromDB]) // Usar getCommandByIdFromDB ao invés de commands
 
   const deleteCommand = useCallback(async (id: string) => {
     try {
@@ -658,6 +720,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       updateCommand,
       deleteCommand,
       getCommandById,
+      getCommandByIdFromDB,
       getRelatedCommands,
       loadCommands,
       setCommands,

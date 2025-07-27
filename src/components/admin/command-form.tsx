@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Save, ArrowLeft, Upload, FileText } from 'lucide-react';
+import { X, Plus, Save, ArrowLeft, Upload, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useCommands, type Command } from '@/contexts/commands-context';
+import { supabase } from '@/lib/supabase';
 
 interface CommandFormProps {
   commandId?: string;
@@ -35,24 +36,105 @@ export const CommandForm: React.FC<CommandFormProps> = ({ commandId, mode }) => 
   
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCommand, setIsLoadingCommand] = useState(false);
 
-  useEffect(() => {
-    if (mode === 'edit' && commandId) {
-      const command = getCommandById(commandId);
-      if (command) {
-        setFormData({
-          title: command.title,
-          description: command.description,
-          category: command.category,
-          level: command.level,
-          prompt: command.prompt,
-          usage: command.usage || '',
-          tags: command.tags || [],
-          estimatedTime: command.estimatedTime || '10 min'
-        });
+  // Função para buscar comando diretamente do banco
+  const loadCommandFromDatabase = async (id: string) => {
+    try {
+      setIsLoadingCommand(true);
+      console.log('🔄 Buscando comando do banco de dados:', id);
+      
+      const { data, error } = await supabase
+        .from('commands')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao buscar comando:', error);
+        toast.error('Erro ao carregar dados do comando');
+        return null;
       }
+
+      if (data) {
+        console.log('✅ Comando carregado do banco:', data.title);
+        
+        // Mapear dados do banco para o formato do formulário
+        const mappedCommand = {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          category: data.category_name, // Mapear category_name para category
+          level: data.level,
+          prompt: data.prompt,
+          usage: data.usage_instructions, // Mapear usage_instructions para usage
+          tags: data.tags || [],
+          estimatedTime: data.estimated_time || '10 min', // Mapear estimated_time para estimatedTime
+          views: data.views || 0,
+          copies: data.copies || 0,
+          popularity: data.popularity || 0,
+          isActive: data.is_active,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+
+        return mappedCommand;
+      }
+
+      return null;
+    } catch (err) {
+      console.error('💥 Erro inesperado ao buscar comando:', err);
+      toast.error('Erro inesperado ao carregar comando');
+      return null;
+    } finally {
+      setIsLoadingCommand(false);
     }
-  }, [mode, commandId, getCommandById]);
+  };
+
+  // Carregar dados do comando para edição
+  useEffect(() => {
+    const loadCommandData = async () => {
+      if (mode === 'edit' && commandId) {
+        console.log('📝 Modo edição - carregando comando:', commandId);
+        
+        // Primeiro tentar buscar do contexto local
+        let command = getCommandById(commandId);
+        
+        if (!command) {
+          console.log('⚠️ Comando não encontrado no contexto, buscando do banco...');
+          command = await loadCommandFromDatabase(commandId);
+        }
+
+        if (command) {
+          console.log('✅ Dados do comando carregados:', {
+            title: command.title,
+            category: command.category,
+            level: command.level,
+            tagsCount: command.tags?.length || 0
+          });
+
+          setFormData({
+            title: command.title || '',
+            description: command.description || '',
+            category: command.category || '',
+            level: command.level || '',
+            prompt: command.prompt || '',
+            usage: command.usage || '',
+            tags: command.tags || [],
+            estimatedTime: command.estimatedTime || '10 min'
+          });
+        } else {
+          console.error('❌ Comando não encontrado:', commandId);
+          toast.error('Comando não encontrado');
+          router.push('/admin/commands');
+        }
+      }
+    };
+
+    loadCommandData();
+  }, [mode, commandId, getCommandById, router]);
 
   const categories = [
     'Marketing',
@@ -204,6 +286,18 @@ Resultado esperado:
     toast.success('Template de prompt carregado!');
   };
 
+  // Mostrar loading enquanto carrega dados do comando
+  if (mode === 'edit' && isLoadingCommand) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-[#2563EB] mx-auto" />
+          <p className="mt-4 text-gray-600">Carregando dados do comando...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -218,6 +312,11 @@ Resultado esperado:
         <h1 className="text-3xl font-bold text-[#0F1115]">
           {mode === 'create' ? 'Criar Novo Comando' : 'Editar Comando'}
         </h1>
+        {mode === 'edit' && commandId && (
+          <div className="text-sm text-gray-500">
+            ID: {commandId}
+          </div>
+        )}
       </div>
 
       <Card className="border-gray-200">
