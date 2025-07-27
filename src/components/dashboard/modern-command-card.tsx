@@ -68,16 +68,93 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   const { favorites = [], toggleFavorite, incrementCopies } = useCommands();
   const isFavorite = favorites.includes(id);
 
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    // Verificar se o texto existe
+    if (!text || text.trim() === '') {
+      console.error('❌ Texto vazio para copiar');
+      return false;
+    }
+
+    try {
+      // Método moderno - navigator.clipboard (funciona em HTTPS e localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        console.log('📋 Usando navigator.clipboard');
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      
+      // Fallback para contextos não seguros
+      console.log('📋 Usando fallback execCommand');
+      return fallbackCopyTextToClipboard(text);
+    } catch (err) {
+      console.error('❌ Erro no navigator.clipboard:', err);
+      // Tentar fallback se o método moderno falhar
+      return fallbackCopyTextToClipboard(text);
+    }
+  };
+
+  const fallbackCopyTextToClipboard = (text: string): boolean => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Evitar scroll para o elemento
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      textArea.style.pointerEvents = 'none';
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log('✅ Texto copiado usando fallback');
+        return true;
+      } else {
+        console.error('❌ execCommand falhou');
+        return false;
+      }
+    } catch (err) {
+      console.error('❌ Erro no fallback:', err);
+      return false;
+    }
+  };
+
   const handleCopyPrompt = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
     try {
-      await navigator.clipboard.writeText(prompt);
-      incrementCopies(id);
-      toast.success('Prompt copiado!', {
-        description: 'O comando foi copiado para sua área de transferência'
-      });
+      console.log('📋 Iniciando cópia do prompt para comando:', id);
+      console.log('📋 Tamanho do prompt:', prompt?.length || 0);
+      
+      if (!prompt || prompt.trim() === '') {
+        toast.error('Prompt vazio ou inválido');
+        return;
+      }
+
+      const success = await copyToClipboard(prompt);
+      
+      if (success) {
+        // Incrementar contador de cópias
+        await incrementCopies(id);
+        
+        toast.success('Prompt copiado!', {
+          description: 'O comando foi copiado para sua área de transferência'
+        });
+        console.log('✅ Prompt copiado com sucesso');
+      } else {
+        throw new Error('Falha ao copiar usando todos os métodos');
+      }
     } catch (error) {
-      toast.error('Erro ao copiar prompt');
+      console.error('💥 Erro ao copiar prompt:', error);
+      toast.error('Erro ao copiar prompt', {
+        description: 'Tente novamente ou copie manualmente'
+      });
     }
   };
 
