@@ -78,15 +78,15 @@ export const useUserManagement = () => {
     const csvContent = [
       ['Nome', 'Email', 'Status', 'Função', 'Empresa', 'Telefone', 'Comandos Usados', 'Último Acesso', 'Membro desde'],
       ...users.map(user => [
-        user.name,
-        user.email,
-        user.status,
-        user.role,
+        user.name || '',
+        user.email || '',
+        user.status || '',
+        user.role || '',
         user.company || '',
         user.phone || '',
-        user.commandsUsed.toString(),
-        user.lastAccess,
-        user.joinedAt
+        (user.commandsUsed || 0).toString(),
+        user.lastAccess || '',
+        user.joinedAt || ''
       ])
     ].map(row => row.join(',')).join('\n');
 

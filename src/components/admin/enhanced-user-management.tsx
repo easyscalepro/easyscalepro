@@ -15,12 +15,11 @@ import {
   CheckCircle,
   Database
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
 import { useAuth } from '@/components/auth/auth-provider';
 import { useUserManagement } from '@/hooks/use-user-management';
 
-// Componentes modulares
+// Componentes existentes
 import { UserFormModal } from './user-form-modal';
 import { UserSyncButton } from './user-sync-button';
 import { ManualUserSync } from './manual-user-sync';
@@ -30,7 +29,7 @@ import { DatabaseCheck } from './database-check';
 import { EmailConfirmationTool } from './email-confirmation-tool';
 import { ImprovedUserCreator } from './improved-user-creator';
 
-// Componentes modulares criados
+// Componentes modulares novos
 import { UserPasswordModal } from './modals/user-password-modal';
 import { UserQuickEditModal } from './modals/user-quick-edit-modal';
 import { UserStatsCards } from './components/user-stats-cards';
@@ -64,8 +63,8 @@ export const EnhancedUserManagement: React.FC = () => {
 
   // Filtrar usuários
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (user.company && user.company.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === 'todos' || user.status === statusFilter;
