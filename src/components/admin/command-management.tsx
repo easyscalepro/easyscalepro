@@ -44,15 +44,38 @@ export const CommandManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
-    console.log('Deletando comando:', id, title);
-    if (confirm(`Tem certeza que deseja excluir o comando "${title}"?\n\nEsta ação não pode ser desfeita.`)) {
-      try {
-        deleteCommand(id);
-        toast.success('Comando excluído com sucesso!');
-      } catch (error) {
-        console.error('Erro ao deletar:', error);
-        toast.error('Erro ao excluir comando');
+  const handleDelete = async (event: React.MouseEvent, id: string, title: string) => {
+    // Prevenir propagação do evento
+    event.preventDefault();
+    event.stopPropagation();
+    
+    console.log('🗑️ Iniciando processo de exclusão:', { id, title });
+    
+    try {
+      // Usar window.confirm para garantir compatibilidade
+      const confirmed = window.confirm(
+        `Tem certeza que deseja excluir o comando "${title}"?\n\nEsta ação não pode ser desfeita.`
+      );
+      
+      console.log('✅ Confirmação do usuário:', confirmed);
+      
+      if (!confirmed) {
+        console.log('❌ Usuário cancelou a exclusão');
+        return;
+      }
+
+      console.log('🔄 Chamando deleteCommand...');
+      await deleteCommand(id);
+      console.log('✅ Comando excluído com sucesso');
+      
+    } catch (error) {
+      console.error('💥 Erro ao deletar comando:', error);
+      
+      // Mostrar erro específico se disponível
+      if (error instanceof Error) {
+        toast.error(`Erro ao excluir comando: ${error.message}`);
+      } else {
+        toast.error('Erro desconhecido ao excluir comando');
       }
     }
   };
@@ -250,7 +273,7 @@ export const CommandManagement: React.FC = () => {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          onClick={() => handleDelete(command.id, command.title)}
+                          onClick={(e) => handleDelete(e, command.id, command.title)}
                           size="sm"
                           variant="outline"
                           type="button"
