@@ -43,6 +43,12 @@ const CommandsContext = createContext<{
   updateCommand: (id: string, command: Partial<NewCommand>) => Promise<void>
   deleteCommand: (id: string) => Promise<void>
   getCommandById: (id: string) => Command | undefined
+  getRelatedCommands: (commandId: string) => Array<{
+    id: string;
+    title: string;
+    category: string;
+    level: string;
+  }>
   loadCommands: () => Promise<void>
   setCommands: (commands: Command[]) => void
   setLoading: (loading: boolean) => void
@@ -57,6 +63,7 @@ const CommandsContext = createContext<{
   updateCommand: async () => {},
   deleteCommand: async () => {},
   getCommandById: () => undefined,
+  getRelatedCommands: () => [],
   loadCommands: async () => {},
   setCommands: () => {},
   setLoading: () => {},
@@ -425,6 +432,51 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     return commands.find(cmd => cmd.id === id)
   }
 
+  const getRelatedCommands = (commandId: string) => {
+    const currentCommand = getCommandById(commandId)
+    if (!currentCommand) {
+      return []
+    }
+
+    // Buscar comandos relacionados baseados na categoria e tags
+    const relatedCommands = commands
+      .filter(cmd => {
+        // Excluir o comando atual
+        if (cmd.id === commandId) return false
+        
+        // Priorizar comandos da mesma categoria
+        if (cmd.category === currentCommand.category) return true
+        
+        // Ou comandos que compartilham tags
+        const sharedTags = cmd.tags.some(tag => 
+          currentCommand.tags.includes(tag)
+        )
+        return sharedTags
+      })
+      .sort((a, b) => {
+        // Ordenar por categoria primeiro (mesma categoria tem prioridade)
+        if (a.category === currentCommand.category && b.category !== currentCommand.category) {
+          return -1
+        }
+        if (b.category === currentCommand.category && a.category !== currentCommand.category) {
+          return 1
+        }
+        
+        // Depois por popularidade
+        return b.popularity - a.popularity
+      })
+      .slice(0, 4) // Limitar a 4 comandos relacionados
+      .map(cmd => ({
+        id: cmd.id,
+        title: cmd.title,
+        category: cmd.category,
+        level: cmd.level
+      }))
+
+    console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
+    return relatedCommands
+  }
+
   // Carregar comandos na inicialização
   useEffect(() => {
     loadCommands()
@@ -444,6 +496,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       updateCommand,
       deleteCommand,
       getCommandById,
+      getRelatedCommands,
       loadCommands,
       setCommands,
       setLoading,
