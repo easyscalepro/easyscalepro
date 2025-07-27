@@ -265,27 +265,49 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const addCommand = async (newCommand: NewCommand) => {
     try {
       setLoading(true)
-      console.log('➕ Adicionando comando:', newCommand.title)
+      console.log('➕ Iniciando adição de comando:', newCommand.title)
 
-      // Obter usuário atual
-      const { data: { session } } = await supabase.auth.getSession()
+      // Verificar se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('❌ Erro ao obter sessão:', sessionError)
+        toast.error('Erro de autenticação')
+        throw new Error('Erro de autenticação: ' + sessionError.message)
+      }
+
+      if (!session?.user) {
+        console.error('❌ Usuário não autenticado')
+        toast.error('Você precisa estar logado para adicionar comandos')
+        throw new Error('Usuário não autenticado')
+      }
+
+      console.log('✅ Usuário autenticado:', session.user.email)
       
       // Mapear os dados do frontend para o formato do banco
       const commandData = {
-        title: newCommand.title,
-        description: newCommand.description,
+        title: newCommand.title.trim(),
+        description: newCommand.description.trim(),
         category_name: newCommand.category, // Mapear category para category_name
         level: newCommand.level,
-        prompt: newCommand.prompt,
-        usage_instructions: newCommand.usage || null, // Mapear usage para usage_instructions
-        tags: newCommand.tags || [],
+        prompt: newCommand.prompt.trim(),
+        usage_instructions: newCommand.usage?.trim() || null, // Mapear usage para usage_instructions
+        tags: Array.isArray(newCommand.tags) ? newCommand.tags : [],
         estimated_time: newCommand.estimatedTime || '10 min', // Mapear estimatedTime para estimated_time
         views: 0,
         copies: 0,
         popularity: 0,
         is_active: true,
-        created_by: session?.user?.id || null
+        created_by: session.user.id
       }
+
+      console.log('📝 Dados preparados para inserção:', {
+        title: commandData.title,
+        category_name: commandData.category_name,
+        level: commandData.level,
+        tags: commandData.tags,
+        created_by: commandData.created_by
+      })
 
       const { data, error } = await supabase
         .from('commands')
@@ -294,13 +316,35 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         .single()
 
       if (error) {
-        console.error('❌ Erro ao adicionar comando:', error)
-        toast.error('Erro ao adicionar comando')
-        throw error
+        console.error('❌ Erro detalhado ao adicionar comando:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // Tratamento específico de erros
+        if (error.code === '42501') {
+          toast.error('Erro de permissão: Você não tem autorização para adicionar comandos')
+          throw new Error('Erro de permissão: ' + error.message)
+        } else if (error.code === '23505') {
+          toast.error('Erro: Já existe um comando com este título')
+          throw new Error('Comando duplicado: ' + error.message)
+        } else if (error.code === '23502') {
+          toast.error('Erro: Campos obrigatórios não preenchidos')
+          throw new Error('Campos obrigatórios: ' + error.message)
+        } else {
+          toast.error('Erro ao adicionar comando: ' + error.message)
+          throw new Error('Erro do banco: ' + error.message)
+        }
       }
 
       if (data) {
-        console.log('✅ Comando adicionado:', data.title)
+        console.log('✅ Comando adicionado com sucesso:', {
+          id: data.id,
+          title: data.title,
+          category_name: data.category_name
+        })
         
         // Mapear os dados do banco para o formato do frontend
         const mappedCommand: Command = {
@@ -326,8 +370,13 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         toast.success('Comando adicionado com sucesso!')
       }
     } catch (err: any) {
-      console.error('💥 Erro ao adicionar comando:', err)
-      toast.error('Erro ao adicionar comando')
+      console.error('💥 Erro capturado ao adicionar comando:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      })
+      
+      // Re-throw o erro para que o formulário possa capturá-lo
       throw err
     } finally {
       setLoading(false)
