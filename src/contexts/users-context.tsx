@@ -64,7 +64,26 @@ export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
   };
 
-  // Carregar usuários
+  // Verificar se o usuário atual é admin
+  const checkIsAdmin = async (): Promise<boolean> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      return profile?.role === 'admin';
+    } catch (error) {
+      console.warn('⚠️ Erro ao verificar se é admin:', error);
+      return false;
+    }
+  };
+
+  // Carregar usuários com diferentes estratégias baseadas em permissões
   const refreshUsers = async () => {
     try {
       setLoading(true);
@@ -72,14 +91,61 @@ export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('🔄 Carregando usuários...');
       
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Verificar se é admin primeiro
+      const isAdmin = await checkIsAdmin();
+      console.log('👤 É admin:', isAdmin);
+
+      let data, fetchError;
+
+      if (isAdmin) {
+        // Se for admin, tentar usar service role ou função específica
+        try {
+          // Tentar usar a função get_users_by_status que tem SECURITY DEFINER
+          const { data: functionData, error: functionError } = await supabase
+            .rpc('get_users_by_status');
+
+          if (!functionError && functionData) {
+            data = functionData;
+            console.log('✅ Usuários carregados via função admin');
+          } else {
+            throw functionError || new Error('Função não retornou dados');
+          }
+        } catch (adminError) {
+          console.warn('⚠️ Erro ao usar função admin, tentando query normal:', adminError);
+          
+          // Fallback para query normal
+          const result = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          data = result.data;
+          fetchError = result.error;
+        }
+      } else {
+        // Se não for admin, carregar apenas perfis ativos
+        const result = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('status', 'ativo')
+          .order('created_at', { ascending: false });
+        
+        data = result.data;
+        fetchError = result.error;
+      }
 
       if (fetchError) {
         console.error('❌ Erro ao carregar usuários:', fetchError);
-        throw new Error(`Erro ao carregar usuários: ${fetchError.message}`);
+        
+        // Tratamento específico para erros de RLS
+        if (fetchError.message?.includes('infinite recursion') || 
+            fetchError.message?.includes('policy')) {
+          throw new Error('Erro de configuração de segurança. Entre em contato com o administrador.');
+        } else if (fetchError.message?.includes('permission denied')) {
+          throw new Error('Sem permissão para visualizar usuários. Verifique suas credenciais.');
+        } else {
+          throw new Error(`Erro ao carregar usuários: ${fetchError.message}`);
+        }
       }
 
       if (data) {
@@ -99,11 +165,18 @@ export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // Deletar usuário
+  // Deletar usuário usando service role
   const deleteUser = async (id: string) => {
     try {
       setLoading(true);
       
+      // Verificar se é admin
+      const isAdmin = await checkIsAdmin();
+      if (!isAdmin) {
+        throw new Error('Apenas administradores podem deletar usuários');
+      }
+
+      // Usar service role para deletar
       const { error: deleteError } = await supabase
         .from('profiles')
         .delete()
