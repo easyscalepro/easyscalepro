@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner';
 import { useUsers } from '@/contexts/users-context';
 import { useAuth } from '@/components/auth/auth-provider';
+import { UserFormModal } from '@/components/admin/user-form-modal';
 
 export const UserManagementDashboard: React.FC = () => {
   const { users, loading, error, deleteUser, toggleUserStatus, refreshUsers } = useUsers();
@@ -36,6 +37,9 @@ export const UserManagementDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [roleFilter, setRoleFilter] = useState('todos');
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
   // Filtrar usuários
   const filteredUsers = users.filter(user => {
@@ -90,6 +94,23 @@ export const UserManagementDashboard: React.FC = () => {
     a.click();
     window.URL.revokeObjectURL(url);
     toast.success('Lista de usuários exportada com sucesso!');
+  };
+
+  const handleAddUser = () => {
+    setSelectedUser(null);
+    setModalMode('create');
+    setIsUserModalOpen(true);
+  };
+
+  const handleEditUser = (user: any) => {
+    setSelectedUser(user);
+    setModalMode('edit');
+    setIsUserModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsUserModalOpen(false);
+    setSelectedUser(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -250,12 +271,22 @@ export const UserManagementDashboard: React.FC = () => {
       {/* Controles */}
       <Card className="border-gray-200">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between lasy-highlight">
             <CardTitle className="text-lg font-semibold text-[#0F1115] dark:text-white flex items-center gap-2">
               <Filter className="h-5 w-5 text-[#2563EB]" />
               Gerenciar Usuários ({filteredUsers.length} de {users.length})
             </CardTitle>
             <div className="flex gap-2">
+              {profile?.role === 'admin' && (
+                <Button
+                  onClick={handleAddUser}
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+                  size="sm"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar Usuário
+                </Button>
+              )}
               <Button
                 onClick={refreshUsers}
                 variant="outline"
@@ -405,6 +436,17 @@ export const UserManagementDashboard: React.FC = () => {
                         >
                           {user.status === 'ativo' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                         </Button>
+                        {profile?.role === 'admin' && (
+                          <Button
+                            onClick={() => handleEditUser(user)}
+                            size="sm"
+                            variant="outline"
+                            className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                            title="Editar usuário"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           onClick={() => handleSendEmail(user.email, user.name)}
                           size="sm"
@@ -450,10 +492,27 @@ export const UserManagementDashboard: React.FC = () => {
                   : 'Comece criando o primeiro usuário da plataforma'
                 }
               </p>
+              {profile?.role === 'admin' && (
+                <Button
+                  onClick={handleAddUser}
+                  className="bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-medium"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar Primeiro Usuário
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Usuário */}
+      <UserFormModal
+        isOpen={isUserModalOpen}
+        onClose={handleCloseModal}
+        user={selectedUser}
+        mode={modalMode}
+      />
     </div>
   );
 };
