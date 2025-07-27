@@ -549,10 +549,22 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         throw errorInstance;
       }
 
-      // Verificar permissões: usuário deve ser o criador ou admin
+      // Debug detalhado das permissões
       const isOwner = command.createdBy === user.id;
       const isAdmin = profile?.role === 'admin';
       
+      console.log('🔍 Debug de permissões:', {
+        commandId: id,
+        commandTitle: command.title,
+        commandCreatedBy: command.createdBy,
+        currentUserId: user.id,
+        currentUserEmail: user.email,
+        userProfile: profile,
+        isOwner,
+        isAdmin,
+        hasPermission: isOwner || isAdmin
+      });
+
       if (!isOwner && !isAdmin) {
         const errorInstance = new Error('Você não tem permissão para deletar este comando');
         toast.error(errorInstance.message)
@@ -560,27 +572,39 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('✅ Permissões verificadas - usuário pode deletar comando');
-      console.log('📋 Detalhes da operação:', {
-        commandId: id,
-        userId: user.id,
-        isOwner,
-        isAdmin,
-        commandCreatedBy: command.createdBy
-      });
 
-      const { error } = await supabase
+      // Tentar a operação de update
+      console.log('📝 Executando UPDATE para desativar comando...');
+      const { data, error } = await supabase
         .from('commands')
         .update({ 
           is_active: false,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .select()
 
+      // Debug detalhado do erro
       if (error) {
-        console.error('❌ Erro ao deletar comando:', error)
+        console.error('❌ Erro detalhado ao deletar comando:', {
+          error,
+          errorType: typeof error,
+          errorKeys: Object.keys(error || {}),
+          errorMessage: error?.message,
+          errorCode: error?.code,
+          errorDetails: error?.details,
+          errorHint: error?.hint
+        })
+        
+        // Verificar se é erro vazio
+        if (!error.message && !error.code && Object.keys(error).length === 0) {
+          const errorInstance = new Error('Erro desconhecido ao deletar comando. Verifique suas permissões.');
+          toast.error(errorInstance.message)
+          throw errorInstance;
+        }
         
         // Tratamento específico para erro de RLS
-        if (error.code === '42501' || error.message.includes('row-level security policy')) {
+        if (error.code === '42501' || error.message?.includes('row-level security policy')) {
           const errorInstance = new Error('Erro de permissão: Você não tem autorização para deletar este comando. Verifique se você é o criador ou tem privilégios de administrador.');
           toast.error(errorInstance.message)
           throw errorInstance;
@@ -591,7 +615,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         throw errorInstance;
       }
 
-      console.log('✅ Comando deletado (desativado)')
+      console.log('✅ Comando deletado (desativado):', data)
       setCommands(prev => prev.filter(cmd => cmd.id !== id))
       toast.success('Comando deletado com sucesso!')
     } catch (err: any) {
