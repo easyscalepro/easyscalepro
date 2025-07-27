@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { signUp } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 // Componente separado que usa useSearchParams
 function LoginFormWithParams() {
@@ -21,6 +22,7 @@ function LoginFormWithParams() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,13 +162,56 @@ function LoginFormWithParams() {
     }
   };
 
-  const handleForgotPassword = () => {
-    if (!email) {
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
       toast.error('Digite seu email primeiro para recuperar a senha');
       return;
     }
-    
-    toast.info('Funcionalidade de recuperação de senha em desenvolvimento');
+
+    if (!validateEmail(email)) {
+      toast.error('Por favor, insira um email válido');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      toast.loading('Enviando email de recuperação...', { id: 'forgot-password' });
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.dismiss('forgot-password');
+      toast.success('Email de recuperação enviado!', {
+        description: 'Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.'
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao enviar email de recuperação:', error);
+      
+      toast.dismiss('forgot-password');
+      
+      if (error.message.includes('User not found')) {
+        toast.error('Email não encontrado', {
+          description: 'Este email não está cadastrado em nosso sistema.'
+        });
+      } else if (error.message.includes('Email rate limit exceeded')) {
+        toast.error('Muitas tentativas', {
+          description: 'Aguarde alguns minutos antes de tentar novamente.'
+        });
+      } else {
+        toast.error('Erro ao enviar email', {
+          description: 'Tente novamente em alguns minutos.'
+        });
+      }
+    } finally {
+      setForgotPasswordLoading(false);
+    }
   };
 
   const handleTestLogin = () => {
@@ -314,9 +359,17 @@ function LoginFormWithParams() {
               <button
                 type="button"
                 onClick={handleForgotPassword}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors"
+                disabled={forgotPasswordLoading}
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed lasy-highlight"
               >
-                Esqueci minha senha
+                {forgotPasswordLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-3 h-3 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
+                    Enviando email...
+                  </div>
+                ) : (
+                  'Esqueci minha senha'
+                )}
               </button>
             )}
 
