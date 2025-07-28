@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { useAuth } from '@/components/auth/auth-provider';
@@ -278,6 +278,9 @@ export const DashboardHeader: React.FC = () => {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80 p-0">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Menu de Navegação</SheetTitle>
+                  </SheetHeader>
                   <div className="flex flex-col h-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
                     {/* Header do menu mobile */}
                     <div className="p-6 border-b border-gray-200 dark:border-gray-700">
