@@ -28,7 +28,8 @@ import {
   HeartOff,
   RefreshCw,
   SortAsc,
-  SortDesc
+  SortDesc,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -52,7 +53,7 @@ interface Favorite {
   id: string;
   command_id: string;
   created_at: string;
-  commands: Command;
+  commands: Command | null;
 }
 
 export const FavoritesPage: React.FC = () => {
@@ -113,7 +114,31 @@ export const FavoritesPage: React.FC = () => {
         return;
       }
 
-      setFavorites(data || []);
+      // Filtrar favoritos que têm comandos válidos e remover os inválidos
+      const validFavorites = (data || []).filter(fav => fav.commands !== null);
+      const invalidFavorites = (data || []).filter(fav => fav.commands === null);
+
+      // Se houver favoritos inválidos, removê-los automaticamente
+      if (invalidFavorites.length > 0) {
+        console.log(`Removendo ${invalidFavorites.length} favoritos inválidos...`);
+        
+        for (const invalidFav of invalidFavorites) {
+          try {
+            await supabase
+              .from('favorites')
+              .delete()
+              .eq('id', invalidFav.id);
+          } catch (deleteError) {
+            console.error('Erro ao remover favorito inválido:', deleteError);
+          }
+        }
+
+        if (invalidFavorites.length > 0) {
+          toast.info(`${invalidFavorites.length} favorito(s) inválido(s) foram removidos automaticamente`);
+        }
+      }
+
+      setFavorites(validFavorites);
       
     } catch (error) {
       console.error('Erro:', error);
@@ -124,40 +149,51 @@ export const FavoritesPage: React.FC = () => {
   };
 
   const filterAndSortFavorites = () => {
-    let filtered = [...favorites];
+    // Filtrar apenas favoritos com comandos válidos
+    let filtered = favorites.filter(fav => fav.commands !== null);
 
     // Filtrar por busca
     if (searchTerm) {
-      filtered = filtered.filter(fav => 
-        fav.commands.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fav.commands.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fav.commands.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      filtered = filtered.filter(fav => {
+        const command = fav.commands;
+        if (!command) return false;
+        
+        return (
+          command.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          command.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (command.tags && Array.isArray(command.tags) && command.tags.some(tag => 
+            tag?.toLowerCase().includes(searchTerm.toLowerCase())
+          ))
+        );
+      });
     }
 
     // Filtrar por categoria
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(fav => fav.commands.category_name === selectedCategory);
+      filtered = filtered.filter(fav => fav.commands?.category_name === selectedCategory);
     }
 
     // Filtrar por nível
     if (selectedLevel !== 'all') {
-      filtered = filtered.filter(fav => fav.commands.level === selectedLevel);
+      filtered = filtered.filter(fav => fav.commands?.level === selectedLevel);
     }
 
     // Ordenar
     filtered.sort((a, b) => {
       let comparison = 0;
       
+      // Verificar se ambos os comandos existem
+      if (!a.commands || !b.commands) return 0;
+      
       switch (sortBy) {
         case 'recent':
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
         case 'popular':
-          comparison = a.commands.popularity - b.commands.popularity;
+          comparison = (a.commands.popularity || 0) - (b.commands.popularity || 0);
           break;
         case 'alphabetical':
-          comparison = a.commands.title.localeCompare(b.commands.title);
+          comparison = (a.commands.title || '').localeCompare(b.commands.title || '');
           break;
       }
       
@@ -220,11 +256,21 @@ export const FavoritesPage: React.FC = () => {
     await incrementViews(command.id);
   };
 
-  const categories = [...new Set(favorites.map(fav => fav.commands.category_name))];
-  const levels = [...new Set(favorites.map(fav => fav.commands.level))];
+  // Extrair categorias e níveis com verificação de null
+  const categories = [...new Set(
+    favorites
+      .filter(fav => fav.commands?.category_name)
+      .map(fav => fav.commands!.category_name)
+  )];
+  
+  const levels = [...new Set(
+    favorites
+      .filter(fav => fav.commands?.level)
+      .map(fav => fav.commands!.level)
+  )];
 
   const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
+    switch (level?.toLowerCase()) {
       case 'iniciante': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
       case 'intermediário': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
       case 'avançado': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
@@ -233,7 +279,7 @@ export const FavoritesPage: React.FC = () => {
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category.toLowerCase()) {
+    switch (category?.toLowerCase()) {
       case 'marketing': return <TrendingUp className="h-3 w-3" />;
       case 'vendas': return <Target className="h-3 w-3" />;
       case 'produtividade': return <Zap className="h-3 w-3" />;
@@ -402,6 +448,11 @@ export const FavoritesPage: React.FC = () => {
           {filteredFavorites.map((favorite) => {
             const command = favorite.commands;
             
+            // Verificação adicional de segurança
+            if (!command) {
+              return null;
+            }
+            
             return (
               <Card 
                 key={favorite.id} 
@@ -413,17 +464,17 @@ export const FavoritesPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2 sm:gap-3">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {command.title}
+                        {command.title || 'Título não disponível'}
                       </CardTitle>
                       <CardDescription className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1 sm:mt-2">
-                        {command.description}
+                        {command.description || 'Descrição não disponível'}
                       </CardDescription>
                     </div>
                     
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeFavorite(favorite.id, command.title)}
+                      onClick={() => removeFavorite(favorite.id, command.title || 'Comando')}
                       className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 sm:p-2 flex-shrink-0"
                     >
                       <Heart className="h-3 w-3 sm:h-4 sm:w-4 fill-current" />
@@ -433,20 +484,20 @@ export const FavoritesPage: React.FC = () => {
                   {/* Tags e badges - Layout mobile otimizado */}
                   <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 sm:mt-3">
                     <Badge className={`text-xs px-2 py-1 ${getLevelColor(command.level)}`}>
-                      {command.level}
+                      {command.level || 'N/A'}
                     </Badge>
                     <Badge variant="outline" className="text-xs px-2 py-1 flex items-center gap-1">
                       {getCategoryIcon(command.category_name)}
-                      {command.category_name}
+                      {command.category_name || 'Sem categoria'}
                     </Badge>
                     <Badge variant="outline" className="text-xs px-2 py-1 flex items-center gap-1">
                       <Clock className="h-2 w-2 sm:h-3 sm:w-3" />
-                      {command.estimated_time}
+                      {command.estimated_time || '10 min'}
                     </Badge>
                   </div>
 
                   {/* Tags do comando */}
-                  {command.tags && command.tags.length > 0 && (
+                  {command.tags && Array.isArray(command.tags) && command.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {command.tags.slice(0, isMobile ? 2 : 3).map((tag, index) => (
                         <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5">
@@ -468,15 +519,15 @@ export const FavoritesPage: React.FC = () => {
                   <div className="flex justify-between text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
                     <div className="flex items-center gap-1">
                       <Eye className="h-3 w-3" />
-                      {command.views}
+                      {command.views || 0}
                     </div>
                     <div className="flex items-center gap-1">
                       <Copy className="h-3 w-3" />
-                      {command.copies}
+                      {command.copies || 0}
                     </div>
                     <div className="flex items-center gap-1">
                       <Star className="h-3 w-3" />
-                      {command.popularity}
+                      {command.popularity || 0}
                     </div>
                   </div>
 
@@ -498,6 +549,7 @@ export const FavoritesPage: React.FC = () => {
                       onClick={() => handleCopyPrompt(command)}
                       size="sm"
                       className="flex-1 text-xs sm:text-sm h-8 sm:h-9 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      disabled={!command.prompt}
                     >
                       <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Copiar
