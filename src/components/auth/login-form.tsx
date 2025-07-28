@@ -169,6 +169,12 @@ function LoginFormWithParams() {
     toast.info('Credenciais de teste preenchidas');
   };
 
+  const handleForgotPassword = () => {
+    console.log('Clique detectado!');
+    alert('Redirecionando para recuperação de senha...');
+    window.location.href = '/forgot-password';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       {/* Theme Toggle */}
@@ -307,16 +313,44 @@ function LoginFormWithParams() {
             </Button>
           </form>
 
-          {/* Botão "Esqueci minha senha" - NAVEGAÇÃO DIRETA */}
+          {/* Botão "Esqueci minha senha" - BUTTON HTML SIMPLES */}
           {!isSignUp && (
             <div className="mt-6 text-center">
-              <div
-                onClick={() => window.location.href = '/forgot-password'}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer lasy-highlight"
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                onMouseDown={handleForgotPassword}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: '#2563EB',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s',
+                  zIndex: 9999,
+                  position: 'relative',
+                  pointerEvents: 'auto'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                  e.currentTarget.style.color = '#1d4ed8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#2563EB';
+                }}
               >
-                <Mail className="h-4 w-4" />
+                <Mail style={{ width: '16px', height: '16px' }} />
                 Esqueci minha senha
-              </div>
+              </button>
             </div>
           )}
 
