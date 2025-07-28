@@ -23,6 +23,23 @@ function ResetPasswordFormWithParams() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  useEffect(() => {
+    // Verificar se o usuário está autenticado para reset
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔍 Sessão atual para reset:', !!session);
+      
+      if (!session) {
+        toast.error('Sessão de recuperação não encontrada. Solicite um novo link.');
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
   const calculatePasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length >= 8) strength += 1;
@@ -89,24 +106,41 @@ function ResetPasswordFormWithParams() {
         return;
       }
 
+      console.log('🔄 Atualizando senha...');
+
       const { error } = await supabase.auth.updateUser({
         password: password
       });
 
       if (error) {
+        console.error('❌ Erro ao atualizar senha:', error);
         throw error;
       }
 
-      toast.success('Senha redefinida com sucesso!');
+      console.log('✅ Senha atualizada com sucesso');
+      toast.success('Senha redefinida com sucesso!', {
+        description: 'Você será redirecionado para o login em alguns segundos.'
+      });
       
-      // Redirecionar para login após 2 segundos
+      // Fazer logout para limpar a sessão de recuperação
+      await supabase.auth.signOut();
+      
+      // Redirecionar para login após 3 segundos
       setTimeout(() => {
         router.push('/login');
-      }, 2000);
+      }, 3000);
 
     } catch (error: any) {
-      console.error('Erro ao redefinir senha:', error);
-      toast.error('Erro ao redefinir senha: ' + error.message);
+      console.error('💥 Erro ao redefinir senha:', error);
+      
+      if (error.message?.includes('session_not_found')) {
+        toast.error('Sessão expirada. Solicite um novo link de recuperação.');
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        toast.error('Erro ao redefinir senha: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
