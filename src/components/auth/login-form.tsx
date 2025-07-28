@@ -164,7 +164,8 @@ function LoginFormWithParams() {
   };
 
   const handleForgotPassword = async () => {
-    console.log('🔄 Botão "Esqueci minha senha" clicado - INÍCIO');
+    console.log('🔄 CLIQUE DETECTADO - Botão "Esqueci minha senha"');
+    alert('Botão clicado! Verificando email...');
     
     // Validar se o email foi preenchido
     if (!email.trim()) {
@@ -394,34 +395,59 @@ function LoginFormWithParams() {
             </Button>
           </form>
 
-          {/* Botão "Esqueci minha senha" FORA do formulário */}
+          {/* Botão "Esqueci minha senha" SIMPLIFICADO */}
           {!isSignUp && (
-            <div className="mt-4">
-              <div
+            <div className="mt-6">
+              <button
                 onClick={handleForgotPassword}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight cursor-pointer select-none"
-                style={{ 
-                  pointerEvents: forgotPasswordLoading ? 'none' : 'auto',
-                  opacity: forgotPasswordLoading ? 0.5 : 1
+                disabled={forgotPasswordLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: '#2563EB',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  pointerEvents: 'auto'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 {forgotPasswordLoading ? (
                   <>
-                    <div className="w-3 h-3 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
+                    <div style={{
+                      width: '12px',
+                      height: '12px',
+                      border: '2px solid #2563EB',
+                      borderTop: '2px solid transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
                     Enviando email...
                   </>
                 ) : emailSent ? (
                   <>
-                    <RotateCcw className="h-4 w-4" />
+                    <RotateCcw style={{ width: '16px', height: '16px' }} />
                     Reenviar email de recuperação
                   </>
                 ) : (
                   <>
-                    <Mail className="h-4 w-4" />
+                    <Mail style={{ width: '16px', height: '16px' }} />
                     Esqueci minha senha
                   </>
                 )}
-              </div>
+              </button>
             </div>
           )}
 
@@ -446,6 +472,13 @@ function LoginFormWithParams() {
           </div>
         </CardContent>
       </Card>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
