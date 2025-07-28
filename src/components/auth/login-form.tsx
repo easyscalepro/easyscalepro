@@ -9,7 +9,7 @@ import { EasyScaleLogoLarge } from '@/components/easyscale-logo-large';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { signUp } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,7 @@ function LoginFormWithParams() {
   const [loading, setLoading] = useState(false);
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, user } = useAuth();
@@ -163,50 +164,76 @@ function LoginFormWithParams() {
   };
 
   const handleForgotPassword = async () => {
+    // Validar se o email foi preenchido
     if (!email.trim()) {
-      toast.error('Digite seu email primeiro para recuperar a senha');
+      toast.error('Digite seu email primeiro para recuperar a senha', {
+        description: 'Preencha o campo de email acima e tente novamente.'
+      });
       return;
     }
 
+    // Validar formato do email
     if (!validateEmail(email)) {
-      toast.error('Por favor, insira um email válido');
+      toast.error('Por favor, insira um email válido', {
+        description: 'Verifique se o email está no formato correto (exemplo@dominio.com)'
+      });
       return;
     }
 
     setForgotPasswordLoading(true);
 
     try {
+      console.log('🔄 Enviando email de recuperação para:', email);
+      
       toast.loading('Enviando email de recuperação...', { id: 'forgot-password' });
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Verificar se o usuário existe primeiro (opcional, mas melhora UX)
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email.trim())
+        .single();
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) {
+        console.error('❌ Erro ao enviar email de recuperação:', error);
         throw error;
       }
 
       toast.dismiss('forgot-password');
       toast.success('Email de recuperação enviado!', {
-        description: 'Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.'
+        description: 'Verifique sua caixa de entrada e spam. O link expira em 1 hora.',
+        duration: 6000
       });
 
+      setEmailSent(true);
+      
+      console.log('✅ Email de recuperação enviado com sucesso');
+
     } catch (error: any) {
-      console.error('Erro ao enviar email de recuperação:', error);
+      console.error('💥 Erro ao enviar email de recuperação:', error);
       
       toast.dismiss('forgot-password');
       
-      if (error.message.includes('User not found')) {
+      // Tratamento específico de erros
+      if (error.message?.includes('User not found') || error.message?.includes('user_not_found')) {
         toast.error('Email não encontrado', {
-          description: 'Este email não está cadastrado em nosso sistema.'
+          description: 'Este email não está cadastrado em nosso sistema. Verifique o email ou crie uma conta.'
         });
-      } else if (error.message.includes('Email rate limit exceeded')) {
+      } else if (error.message?.includes('Email rate limit exceeded') || error.message?.includes('rate_limit')) {
         toast.error('Muitas tentativas', {
           description: 'Aguarde alguns minutos antes de tentar novamente.'
         });
+      } else if (error.message?.includes('Invalid email')) {
+        toast.error('Email inválido', {
+          description: 'Verifique se o email está no formato correto.'
+        });
       } else {
         toast.error('Erro ao enviar email', {
-          description: 'Tente novamente em alguns minutos.'
+          description: 'Tente novamente em alguns minutos. Se o problema persistir, entre em contato com o suporte.'
         });
       }
     } finally {
@@ -257,6 +284,17 @@ function LoginFormWithParams() {
             </div>
           )}
 
+          {/* Aviso de email enviado */}
+          {emailSent && !isSignUp && (
+            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <div className="text-sm text-green-700 dark:text-green-300">
+                <p className="font-medium">Email enviado!</p>
+                <p>Verifique sua caixa de entrada e spam.</p>
+              </div>
+            </div>
+          )}
+
           {/* Botão de teste (apenas em desenvolvimento) */}
           {!isSignUp && (
             <div className="mb-4">
@@ -301,7 +339,11 @@ function LoginFormWithParams() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    // Reset email sent status when email changes
+                    if (emailSent) setEmailSent(false);
+                  }}
                   placeholder="seu@email.com"
                   className="pl-10 h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   required
@@ -360,15 +402,23 @@ function LoginFormWithParams() {
                 type="button"
                 onClick={handleForgotPassword}
                 disabled={forgotPasswordLoading}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed lasy-highlight"
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed lasy-highlight flex items-center justify-center gap-2 p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
                 {forgotPasswordLoading ? (
-                  <div className="flex items-center justify-center gap-2">
+                  <>
                     <div className="w-3 h-3 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
                     Enviando email...
-                  </div>
+                  </>
+                ) : emailSent ? (
+                  <>
+                    <RotateCcw className="h-4 w-4" />
+                    Reenviar email de recuperação
+                  </>
                 ) : (
-                  'Esqueci minha senha'
+                  <>
+                    <Mail className="h-4 w-4" />
+                    Esqueci minha senha
+                  </>
                 )}
               </button>
             )}
@@ -382,6 +432,7 @@ function LoginFormWithParams() {
                   setEmail('');
                   setPassword('');
                   setLoginAttempts(0);
+                  setEmailSent(false);
                 }}
                 className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
               >
