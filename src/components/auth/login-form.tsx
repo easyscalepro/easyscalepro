@@ -169,31 +169,6 @@ function LoginFormWithParams() {
     toast.info('Credenciais de teste preenchidas');
   };
 
-  const handleForgotPasswordClick = () => {
-    console.log('🔄 CLIQUE DETECTADO - Esqueci minha senha');
-    alert('Clique detectado! Redirecionando...');
-    
-    try {
-      const emailParam = email ? `?email=${encodeURIComponent(email)}` : '';
-      const url = `/forgot-password${emailParam}`;
-      
-      console.log('🔄 Navegando para:', url);
-      
-      // Tentar múltiplas formas de navegação
-      if (router && router.push) {
-        console.log('🔄 Usando router.push');
-        router.push(url);
-      } else {
-        console.log('🔄 Usando window.location.href');
-        window.location.href = url;
-      }
-    } catch (error) {
-      console.error('❌ Erro na navegação:', error);
-      // Fallback para navegação direta
-      window.location.href = `/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       {/* Theme Toggle */}
@@ -332,17 +307,12 @@ function LoginFormWithParams() {
             </Button>
           </form>
 
-          {/* Botão "Esqueci minha senha" ULTRA SIMPLIFICADO */}
+          {/* Botão "Esqueci minha senha" - NAVEGAÇÃO DIRETA */}
           {!isSignUp && (
             <div className="mt-6 text-center">
               <div
-                onClick={handleForgotPasswordClick}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight cursor-pointer"
-                style={{
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  pointerEvents: 'auto'
-                }}
+                onClick={() => window.location.href = '/forgot-password'}
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer lasy-highlight"
               >
                 <Mail className="h-4 w-4" />
                 Esqueci minha senha
