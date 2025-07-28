@@ -163,11 +163,8 @@ function LoginFormWithParams() {
     }
   };
 
-  const handleForgotPassword = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('🔄 Botão "Esqueci minha senha" clicado');
+  const handleForgotPassword = async () => {
+    console.log('🔄 Botão "Esqueci minha senha" clicado - INÍCIO');
     
     // Validar se o email foi preenchido
     if (!email.trim()) {
@@ -395,14 +392,18 @@ function LoginFormWithParams() {
                 isSignUp ? 'Criar Conta' : 'Entrar'
               )}
             </Button>
+          </form>
 
-            {!isSignUp && (
-              <Button
-                type="button"
+          {/* Botão "Esqueci minha senha" FORA do formulário */}
+          {!isSignUp && (
+            <div className="mt-4">
+              <div
                 onClick={handleForgotPassword}
-                disabled={forgotPasswordLoading}
-                variant="ghost"
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight"
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight cursor-pointer select-none"
+                style={{ 
+                  pointerEvents: forgotPasswordLoading ? 'none' : 'auto',
+                  opacity: forgotPasswordLoading ? 0.5 : 1
+                }}
               >
                 {forgotPasswordLoading ? (
                   <>
@@ -420,29 +421,29 @@ function LoginFormWithParams() {
                     Esqueci minha senha
                   </>
                 )}
-              </Button>
-            )}
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setName('');
-                  setEmail('');
-                  setPassword('');
-                  setLoginAttempts(0);
-                  setEmailSent(false);
-                }}
-                className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
-              >
-                {isSignUp 
-                  ? 'Já tem uma conta? Faça login'
-                  : 'Não tem conta? Criar conta'
-                }
-              </button>
+              </div>
             </div>
-          </form>
+          )}
+
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setName('');
+                setEmail('');
+                setPassword('');
+                setLoginAttempts(0);
+                setEmailSent(false);
+              }}
+              className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
+            >
+              {isSignUp 
+                ? 'Já tem uma conta? Faça login'
+                : 'Não tem conta? Criar conta'
+              }
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>
