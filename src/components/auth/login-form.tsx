@@ -163,7 +163,12 @@ function LoginFormWithParams() {
     }
   };
 
-  const handleForgotPassword = async () => {
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🔄 Botão "Esqueci minha senha" clicado');
+    
     // Validar se o email foi preenchido
     if (!email.trim()) {
       toast.error('Digite seu email primeiro para recuperar a senha', {
@@ -187,13 +192,7 @@ function LoginFormWithParams() {
       
       toast.loading('Enviando email de recuperação...', { id: 'forgot-password' });
 
-      // Verificar se o usuário existe primeiro (opcional, mas melhora UX)
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email.trim())
-        .single();
-
+      // Enviar email de recuperação
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -206,7 +205,7 @@ function LoginFormWithParams() {
       toast.dismiss('forgot-password');
       toast.success('Email de recuperação enviado!', {
         description: 'Verifique sua caixa de entrada e spam. O link expira em 1 hora.',
-        duration: 6000
+        duration: 8000
       });
 
       setEmailSent(true);
@@ -398,11 +397,12 @@ function LoginFormWithParams() {
             </Button>
 
             {!isSignUp && (
-              <button
+              <Button
                 type="button"
                 onClick={handleForgotPassword}
                 disabled={forgotPasswordLoading}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed lasy-highlight flex items-center justify-center gap-2 p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                variant="ghost"
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight"
               >
                 {forgotPasswordLoading ? (
                   <>
@@ -420,7 +420,7 @@ function LoginFormWithParams() {
                     Esqueci minha senha
                   </>
                 )}
-              </button>
+              </Button>
             )}
 
             <div className="text-center">
