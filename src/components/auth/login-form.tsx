@@ -169,11 +169,29 @@ function LoginFormWithParams() {
     toast.info('Credenciais de teste preenchidas');
   };
 
-  const handleForgotPasswordRedirect = () => {
-    console.log('🔄 Redirecionando para página de recuperação');
-    // Redirecionar para página dedicada de recuperação
-    const emailParam = email ? `?email=${encodeURIComponent(email)}` : '';
-    router.push(`/forgot-password${emailParam}`);
+  const handleForgotPasswordClick = () => {
+    console.log('🔄 CLIQUE DETECTADO - Esqueci minha senha');
+    alert('Clique detectado! Redirecionando...');
+    
+    try {
+      const emailParam = email ? `?email=${encodeURIComponent(email)}` : '';
+      const url = `/forgot-password${emailParam}`;
+      
+      console.log('🔄 Navegando para:', url);
+      
+      // Tentar múltiplas formas de navegação
+      if (router && router.push) {
+        console.log('🔄 Usando router.push');
+        router.push(url);
+      } else {
+        console.log('🔄 Usando window.location.href');
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('❌ Erro na navegação:', error);
+      // Fallback para navegação direta
+      window.location.href = `/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`;
+    }
   };
 
   return (
@@ -314,20 +332,21 @@ function LoginFormWithParams() {
             </Button>
           </form>
 
-          {/* Link "Esqueci minha senha" que redireciona */}
+          {/* Botão "Esqueci minha senha" ULTRA SIMPLIFICADO */}
           {!isSignUp && (
             <div className="mt-6 text-center">
-              <a
-                href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleForgotPasswordRedirect();
+              <div
+                onClick={handleForgotPasswordClick}
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight cursor-pointer"
+                style={{
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  pointerEvents: 'auto'
                 }}
               >
                 <Mail className="h-4 w-4" />
                 Esqueci minha senha
-              </a>
+              </div>
             </div>
           )}
 
