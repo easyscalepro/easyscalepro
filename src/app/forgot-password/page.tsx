@@ -251,6 +251,7 @@ function ForgotPasswordPageWithParams() {
               Lembrou da senha?{' '}
               <button
                 onClick={() => window.location.href = '/login'}
+                onMouseDown={() => window.location.href = '/login'}
                 style={{
                   color: '#2563EB',
                   fontWeight: '500',
@@ -258,13 +259,21 @@ function ForgotPasswordPageWithParams() {
                   border: 'none',
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  padding: '2px 4px',
+                  borderRadius: '2px',
+                  transition: 'all 0.2s',
+                  zIndex: 9999,
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#1d4ed8';
+                  e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = '#2563EB';
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 Fazer login
