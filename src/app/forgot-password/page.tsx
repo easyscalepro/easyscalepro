@@ -92,6 +92,11 @@ function ForgotPasswordPageWithParams() {
     }
   };
 
+  const handleBackToLogin = () => {
+    console.log('🔄 Voltando para login');
+    window.location.href = '/login';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       {/* Theme Toggle */}
@@ -101,14 +106,31 @@ function ForgotPasswordPageWithParams() {
 
       {/* Back to Login */}
       <div className="absolute top-4 left-4">
-        <Button
-          onClick={() => router.push('/login')}
-          variant="ghost"
-          className="text-white hover:bg-white/10"
+        <button
+          onClick={handleBackToLogin}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: 'white',
+            cursor: 'pointer',
+            borderRadius: '6px',
+            fontSize: '14px',
+            transition: 'background-color 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft style={{ width: '16px', height: '16px' }} />
           Voltar ao Login
-        </Button>
+        </button>
       </div>
 
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white dark:bg-gray-800">
@@ -159,36 +181,84 @@ function ForgotPasswordPageWithParams() {
               </div>
             </div>
 
-            <Button
+            <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#0F1115] font-semibold text-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              style={{
+                width: '100%',
+                height: '48px',
+                backgroundColor: loading ? '#F3F4F6' : '#FBBF24',
+                color: '#0F1115',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '18px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                opacity: loading ? 0.5 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#F59E0B';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#FBBF24';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
             >
               {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-[#0F1115] border-t-transparent rounded-full animate-spin"></div>
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #0F1115',
+                    borderTop: '2px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
                   Enviando...
-                </div>
+                </>
               ) : emailSent ? (
                 <>
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                  <RotateCcw style={{ width: '16px', height: '16px' }} />
                   Reenviar Email
                 </>
               ) : (
                 <>
-                  <Mail className="h-4 w-4 mr-2" />
+                  <Mail style={{ width: '16px', height: '16px' }} />
                   Enviar Link de Recuperação
                 </>
               )}
-            </Button>
+            </button>
           </form>
 
           <div className="text-center mt-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Lembrou da senha?{' '}
               <button
-                onClick={() => router.push('/login')}
-                className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium"
+                onClick={handleBackToLogin}
+                style={{
+                  color: '#2563EB',
+                  fontWeight: '500',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#1d4ed8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#2563EB';
+                }}
               >
                 Fazer login
               </button>
@@ -196,6 +266,13 @@ function ForgotPasswordPageWithParams() {
           </div>
         </CardContent>
       </Card>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
