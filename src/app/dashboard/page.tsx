@@ -39,8 +39,8 @@ import { toast } from 'sonner';
 const DashboardPage: React.FC = () => {
   const { user, profile } = useAuth();
   const { 
-    commands, 
-    categories, 
+    commands = [], // Valor padrão para evitar undefined
+    categories = [], // Valor padrão para evitar undefined
     loading, 
     searchTerm, 
     setSearchTerm,
@@ -48,7 +48,7 @@ const DashboardPage: React.FC = () => {
     setSelectedCategory,
     selectedLevel,
     setSelectedLevel,
-    filteredCommands,
+    filteredCommands = [], // Valor padrão para evitar undefined
     loadCommands
   } = useCommands();
   
@@ -59,8 +59,10 @@ const DashboardPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'alphabetical'>('popular');
 
   useEffect(() => {
-    loadCommands();
-  }, []);
+    if (loadCommands) {
+      loadCommands();
+    }
+  }, [loadCommands]);
 
   const handleViewDetails = (commandId: string) => {
     setSelectedCommand(commandId);
@@ -71,32 +73,37 @@ const DashboardPage: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-    setSelectedLevel('all');
+    if (setSearchTerm) setSearchTerm('');
+    if (setSelectedCategory) setSelectedCategory('all');
+    if (setSelectedLevel) setSelectedLevel('all');
     setShowFilters(false);
   };
 
   const hasActiveFilters = searchTerm || selectedCategory !== 'all' || selectedLevel !== 'all';
 
+  // Verificações de segurança para evitar erros de undefined
+  const safeCommands = Array.isArray(commands) ? commands : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeFilteredCommands = Array.isArray(filteredCommands) ? filteredCommands : [];
+
   const stats = [
     {
       title: 'Total de Comandos',
-      value: commands.length.toString(),
+      value: safeCommands.length.toString(),
       icon: BookOpen,
       color: 'from-blue-500 to-blue-600',
       description: 'Comandos disponíveis'
     },
     {
       title: 'Categorias',
-      value: categories.length.toString(),
+      value: safeCategories.length.toString(),
       icon: Target,
       color: 'from-green-500 to-emerald-600',
       description: 'Áreas de negócio'
     },
     {
       title: 'Mais Popular',
-      value: filteredCommands.length > 0 ? '95%' : '0%',
+      value: safeFilteredCommands.length > 0 ? '95%' : '0%',
       icon: TrendingUp,
       color: 'from-purple-500 to-violet-600',
       description: 'Taxa de satisfação'
@@ -167,8 +174,8 @@ const DashboardPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar comandos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm || ''}
+                onChange={(e) => setSearchTerm && setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 h-10 sm:h-12 text-sm sm:text-base border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 rounded-xl"
               />
             </div>
@@ -235,12 +242,12 @@ const DashboardPage: React.FC = () => {
                       Categoria
                     </label>
                     <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      value={selectedCategory || 'all'}
+                      onChange={(e) => setSelectedCategory && setSelectedCategory(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="all">Todas as categorias</option>
-                      {categories.map(category => (
+                      {safeCategories.map(category => (
                         <option key={category.id} value={category.name}>
                           {category.name}
                         </option>
@@ -254,8 +261,8 @@ const DashboardPage: React.FC = () => {
                       Nível
                     </label>
                     <select
-                      value={selectedLevel}
-                      onChange={(e) => setSelectedLevel(e.target.value)}
+                      value={selectedLevel || 'all'}
+                      onChange={(e) => setSelectedLevel && setSelectedLevel(e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="all">Todos os níveis</option>
@@ -292,13 +299,13 @@ const DashboardPage: React.FC = () => {
                 Comandos Disponíveis
               </h2>
               <Badge variant="secondary" className="text-xs sm:text-sm">
-                {filteredCommands.length}
+                {safeFilteredCommands.length}
               </Badge>
             </div>
             
-            {filteredCommands.length > 0 && (
+            {safeFilteredCommands.length > 0 && (
               <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                {filteredCommands.length} de {commands.length} comandos
+                {safeFilteredCommands.length} de {safeCommands.length} comandos
               </div>
             )}
           </div>
@@ -322,7 +329,7 @@ const DashboardPage: React.FC = () => {
                 </Card>
               ))}
             </div>
-          ) : filteredCommands.length === 0 ? (
+          ) : safeFilteredCommands.length === 0 ? (
             <div className="text-center py-8 sm:py-12 lg:py-16">
               <div className="max-w-md mx-auto space-y-4">
                 <div className="p-4 sm:p-6 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mx-auto">
@@ -348,18 +355,18 @@ const DashboardPage: React.FC = () => {
                 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" 
                 : "space-y-3 sm:space-y-4"
             }>
-              {filteredCommands.map((command) => (
+              {safeFilteredCommands.map((command) => (
                 <ModernCommandCard
                   key={command.id}
                   id={command.id}
                   title={command.title}
                   description={command.description}
-                  category={command.category_name}
+                  category={command.category_name || command.category}
                   level={command.level as 'iniciante' | 'intermediário' | 'avançado'}
                   prompt={command.prompt}
                   tags={command.tags || []}
                   popularity={command.popularity}
-                  estimatedTime={command.estimated_time}
+                  estimatedTime={command.estimated_time || command.estimatedTime}
                   onViewDetails={handleViewDetails}
                 />
               ))}

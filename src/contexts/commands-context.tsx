@@ -58,8 +58,16 @@ const createErrorFromSupabase = (error: any, defaultMessage: string): Error => {
 
 const CommandsContext = createContext<{
   commands: Command[]
+  categories: Array<{ id: string; name: string }>
   favorites: string[]
   loading: boolean
+  searchTerm: string
+  setSearchTerm: (term: string) => void
+  selectedCategory: string
+  setSelectedCategory: (category: string) => void
+  selectedLevel: string
+  setSelectedLevel: (level: string) => void
+  filteredCommands: Command[]
   addCommand: (command: NewCommand) => Promise<void>
   updateCommand: (id: string, command: Partial<NewCommand>) => Promise<void>
   deleteCommand: (id: string) => Promise<void>
@@ -79,8 +87,16 @@ const CommandsContext = createContext<{
   incrementCopies: (commandId: string) => Promise<void>
 }>({ 
   commands: [], 
+  categories: [],
   favorites: [],
   loading: false,
+  searchTerm: '',
+  setSearchTerm: () => {},
+  selectedCategory: 'all',
+  setSelectedCategory: () => {},
+  selectedLevel: 'all',
+  setSelectedLevel: () => {},
+  filteredCommands: [],
   addCommand: async () => {}, 
   updateCommand: async () => {},
   deleteCommand: async () => {},
@@ -97,14 +113,20 @@ const CommandsContext = createContext<{
 
 export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   const [commands, setCommands] = useState<Command[]>([])
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([])
   const [favorites, setFavorites] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedLevel, setSelectedLevel] = useState('all')
+  const [filteredCommands, setFilteredCommands] = useState<Command[]>([])
   const { user, profile } = useAuth()
 
   // Função helper para encontrar comando por ID (estável)
   const getCommandById = useCallback((id: string): Command | undefined => {
-    const command = commands.find(cmd => cmd.id === id);
-    console.log('🔍 Buscando comando por ID:', { id, found: !!command, totalCommands: commands.length });
+    const safeCommands = Array.isArray(commands) ? commands : [];
+    const command = safeCommands.find(cmd => cmd.id === id);
+    console.log('🔍 Buscando comando por ID:', { id, found: !!command, totalCommands: safeCommands.length });
     return command;
   }, [commands])
 
@@ -159,13 +181,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const getRelatedCommands = useCallback((commandId: string) => {
-    const currentCommand = commands.find(cmd => cmd.id === commandId);
+    const safeCommands = Array.isArray(commands) ? commands : [];
+    const currentCommand = safeCommands.find(cmd => cmd.id === commandId);
     if (!currentCommand) {
       return []
     }
 
     // Buscar comandos relacionados baseados na categoria e tags
-    const relatedCommands = commands
+    const relatedCommands = safeCommands
       .filter(cmd => {
         // Excluir o comando atual
         if (cmd.id === commandId) return false
@@ -174,8 +197,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         if (cmd.category === currentCommand.category) return true
         
         // Ou comandos que compartilham tags
-        const sharedTags = cmd.tags.some(tag => 
-          currentCommand.tags.includes(tag)
+        const currentTags = Array.isArray(currentCommand.tags) ? currentCommand.tags : [];
+        const cmdTags = Array.isArray(cmd.tags) ? cmd.tags : [];
+        const sharedTags = cmdTags.some(tag => 
+          currentTags.includes(tag)
         )
         return sharedTags
       })
@@ -189,7 +214,7 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // Depois por popularidade
-        return b.popularity - a.popularity
+        return (b.popularity || 0) - (a.popularity || 0)
       })
       .slice(0, 4) // Limitar a 4 comandos relacionados
       .map(cmd => ({
@@ -202,6 +227,35 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     console.log('🔗 Comandos relacionados encontrados:', relatedCommands.length)
     return relatedCommands
   }, [commands])
+
+  // Filtrar comandos baseado nos critérios
+  useEffect(() => {
+    const safeCommands = Array.isArray(commands) ? commands : [];
+    let filtered = [...safeCommands];
+
+    // Filtrar por busca
+    if (searchTerm && searchTerm.trim()) {
+      filtered = filtered.filter(cmd => 
+        cmd.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cmd.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (Array.isArray(cmd.tags) && cmd.tags.some(tag => 
+          tag?.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
+      );
+    }
+
+    // Filtrar por categoria
+    if (selectedCategory && selectedCategory !== 'all') {
+      filtered = filtered.filter(cmd => cmd.category === selectedCategory);
+    }
+
+    // Filtrar por nível
+    if (selectedLevel && selectedLevel !== 'all') {
+      filtered = filtered.filter(cmd => cmd.level === selectedLevel);
+    }
+
+    setFilteredCommands(filtered);
+  }, [commands, searchTerm, selectedCategory, selectedLevel]);
 
   const incrementViews = useCallback(async (commandId: string) => {
     try {
@@ -219,11 +273,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Atualizar localmente
-      setCommands(prev => prev.map(cmd => 
-        cmd.id === commandId 
-          ? { ...cmd, views: cmd.views + 1 }
-          : cmd
-      ))
+      setCommands(prev => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.map(cmd => 
+          cmd.id ===  commandId 
+            ? { ...cmd, views: (cmd.views || 0) + 1 }
+            : cmd
+        );
+      });
     } catch (err: any) {
       console.error('💥 Erro ao incrementar visualizações:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao incrementar visualizações');
@@ -247,11 +304,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Atualizar localmente
-      setCommands(prev => prev.map(cmd => 
-        cmd.id === commandId 
-          ? { ...cmd, copies: cmd.copies + 1 }
-          : cmd
-      ))
+      setCommands(prev => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        return safePrev.map(cmd => 
+          cmd.id === commandId 
+            ? { ...cmd, copies: (cmd.copies || 0) + 1 }
+            : cmd
+        );
+      });
 
       // Log da atividade do usuário se estiver logado
       if (user) {
@@ -292,18 +352,18 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         throw errorInstance;
       }
 
-      if (data) {
+      if (data && Array.isArray(data)) {
         console.log('✅ Comandos carregados:', data.length)
         // Mapear os dados do banco para o formato esperado pelo frontend
         const mappedCommands = data.map(cmd => ({
           id: cmd.id,
-          title: cmd.title,
-          description: cmd.description,
-          category: cmd.category_name, // Mapear category_name para category
-          level: cmd.level,
-          prompt: cmd.prompt,
+          title: cmd.title || '',
+          description: cmd.description || '',
+          category: cmd.category_name || '', // Mapear category_name para category
+          level: cmd.level || 'iniciante',
+          prompt: cmd.prompt || '',
           usage: cmd.usage_instructions, // Mapear usage_instructions para usage
-          tags: cmd.tags || [],
+          tags: Array.isArray(cmd.tags) ? cmd.tags : [],
           estimatedTime: cmd.estimated_time || '10 min', // Mapear estimated_time para estimatedTime
           views: cmd.views || 0,
           copies: cmd.copies || 0,
@@ -315,7 +375,12 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         }))
         setCommands(mappedCommands)
         console.log('📊 Comandos mapeados e salvos no estado:', mappedCommands.length);
+      } else {
+        setCommands([]);
       }
+
+      // Carregar categorias
+      await loadCategories();
     } catch (err: any) {
       console.error('💥 Erro ao carregar comandos:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao carregar comandos');
@@ -325,6 +390,29 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false)
     }
   }, [])
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('❌ Erro ao carregar categorias:', error);
+        return;
+      }
+
+      if (data && Array.isArray(data)) {
+        setCategories(data);
+      } else {
+        setCategories([]);
+      }
+    } catch (err) {
+      console.error('💥 Erro ao carregar categorias:', err);
+      setCategories([]);
+    }
+  }, []);
 
   const loadFavorites = useCallback(async () => {
     if (!user) {
@@ -348,15 +436,18 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
         return
       }
 
-      if (data) {
+      if (data && Array.isArray(data)) {
         const favoriteIds = data.map(fav => fav.command_id)
         console.log('✅ Favoritos carregados:', favoriteIds.length)
         setFavorites(favoriteIds)
+      } else {
+        setFavorites([]);
       }
     } catch (err: any) {
       console.error('💥 Erro ao carregar favoritos:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao carregar favoritos');
       console.warn('⚠️ Favoritos não carregados:', errorInstance.message);
+      setFavorites([]);
     }
   }, [user])
 
@@ -367,7 +458,8 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const isFavorite = favorites.includes(commandId)
+      const safeFavorites = Array.isArray(favorites) ? favorites : [];
+      const isFavorite = safeFavorites.includes(commandId)
       
       if (isFavorite) {
         // Remover dos favoritos
@@ -384,7 +476,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           throw errorInstance;
         }
 
-        setFavorites(prev => prev.filter(id => id !== commandId))
+        setFavorites(prev => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.filter(id => id !== commandId);
+        });
         toast.success('Removido dos favoritos')
       } else {
         // Adicionar aos favoritos
@@ -402,7 +497,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           throw errorInstance;
         }
 
-        setFavorites(prev => [...prev, commandId])
+        setFavorites(prev => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return [...safePrev, commandId];
+        });
         toast.success('Adicionado aos favoritos')
       }
     } catch (err: any) {
@@ -520,7 +618,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           updatedAt: data.updated_at
         }
         
-        setCommands(prev => [mappedCommand, ...prev])
+        setCommands(prev => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return [mappedCommand, ...safePrev];
+        });
         toast.success('Comando adicionado com sucesso!')
       }
     } catch (err: any) {
@@ -623,11 +724,14 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
           updatedAt: data.updated_at
         }
         
-        setCommands(prev => prev.map(cmd => cmd.id === id ? mappedCommand : cmd))
+        setCommands(prev => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.map(cmd => cmd.id === id ? mappedCommand : cmd);
+        });
         toast.success('Comando atualizado com sucesso!')
       }
     } catch (err: any) {
-      console.error('💥 Erro ao at ualizar comando:', err)
+      console.error('💥 Erro ao atualizar comando:', err)
       const errorInstance = err instanceof Error ? err : createErrorFromSupabase(err, 'Erro inesperado ao atualizar comando');
       toast.error(errorInstance.message)
       throw errorInstance;
@@ -672,7 +776,10 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
       if (data && typeof data === 'object') {
         if (data.success) {
           console.log('✅ Comando deletado com sucesso via RPC')
-          setCommands(prev => prev.filter(cmd => cmd.id !== id))
+          setCommands(prev => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            return safePrev.filter(cmd => cmd.id !== id);
+          });
           toast.success(data.message || 'Comando deletado com sucesso!')
         } else {
           console.error('❌ Erro retornado pela função:', data.error)
@@ -708,9 +815,17 @@ export const CommandsProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <CommandsContext.Provider value={{ 
-      commands, 
-      favorites,
+      commands: Array.isArray(commands) ? commands : [], 
+      categories: Array.isArray(categories) ? categories : [],
+      favorites: Array.isArray(favorites) ? favorites : [],
       loading,
+      searchTerm,
+      setSearchTerm,
+      selectedCategory,
+      setSelectedCategory,
+      selectedLevel,
+      setSelectedLevel,
+      filteredCommands: Array.isArray(filteredCommands) ? filteredCommands : [],
       addCommand, 
       updateCommand,
       deleteCommand,
