@@ -163,85 +163,17 @@ function LoginFormWithParams() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    console.log('🔄 CLIQUE DETECTADO - Botão "Esqueci minha senha"');
-    alert('Botão clicado! Verificando email...');
-    
-    // Validar se o email foi preenchido
-    if (!email.trim()) {
-      toast.error('Digite seu email primeiro para recuperar a senha', {
-        description: 'Preencha o campo de email acima e tente novamente.'
-      });
-      return;
-    }
-
-    // Validar formato do email
-    if (!validateEmail(email)) {
-      toast.error('Por favor, insira um email válido', {
-        description: 'Verifique se o email está no formato correto (exemplo@dominio.com)'
-      });
-      return;
-    }
-
-    setForgotPasswordLoading(true);
-
-    try {
-      console.log('🔄 Enviando email de recuperação para:', email);
-      
-      toast.loading('Enviando email de recuperação...', { id: 'forgot-password' });
-
-      // Enviar email de recuperação
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        console.error('❌ Erro ao enviar email de recuperação:', error);
-        throw error;
-      }
-
-      toast.dismiss('forgot-password');
-      toast.success('Email de recuperação enviado!', {
-        description: 'Verifique sua caixa de entrada e spam. O link expira em 1 hora.',
-        duration: 8000
-      });
-
-      setEmailSent(true);
-      
-      console.log('✅ Email de recuperação enviado com sucesso');
-
-    } catch (error: any) {
-      console.error('💥 Erro ao enviar email de recuperação:', error);
-      
-      toast.dismiss('forgot-password');
-      
-      // Tratamento específico de erros
-      if (error.message?.includes('User not found') || error.message?.includes('user_not_found')) {
-        toast.error('Email não encontrado', {
-          description: 'Este email não está cadastrado em nosso sistema. Verifique o email ou crie uma conta.'
-        });
-      } else if (error.message?.includes('Email rate limit exceeded') || error.message?.includes('rate_limit')) {
-        toast.error('Muitas tentativas', {
-          description: 'Aguarde alguns minutos antes de tentar novamente.'
-        });
-      } else if (error.message?.includes('Invalid email')) {
-        toast.error('Email inválido', {
-          description: 'Verifique se o email está no formato correto.'
-        });
-      } else {
-        toast.error('Erro ao enviar email', {
-          description: 'Tente novamente em alguns minutos. Se o problema persistir, entre em contato com o suporte.'
-        });
-      }
-    } finally {
-      setForgotPasswordLoading(false);
-    }
-  };
-
   const handleTestLogin = () => {
     setEmail('teste@gmail.com');
     setPassword('123456');
     toast.info('Credenciais de teste preenchidas');
+  };
+
+  const handleForgotPasswordRedirect = () => {
+    console.log('🔄 Redirecionando para página de recuperação');
+    // Redirecionar para página dedicada de recuperação
+    const emailParam = email ? `?email=${encodeURIComponent(email)}` : '';
+    router.push(`/forgot-password${emailParam}`);
   };
 
   return (
@@ -278,17 +210,6 @@ function LoginFormWithParams() {
                 {error === 'account_suspended' && 'Conta suspensa'}
                 {error === 'access_denied' && 'Acesso negado'}
               </span>
-            </div>
-          )}
-
-          {/* Aviso de email enviado */}
-          {emailSent && !isSignUp && (
-            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <div className="text-sm text-green-700 dark:text-green-300">
-                <p className="font-medium">Email enviado!</p>
-                <p>Verifique sua caixa de entrada e spam.</p>
-              </div>
             </div>
           )}
 
@@ -338,8 +259,6 @@ function LoginFormWithParams() {
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    // Reset email sent status when email changes
-                    if (emailSent) setEmailSent(false);
                   }}
                   placeholder="seu@email.com"
                   className="pl-10 h-12 border-gray-200 dark:border-gray-700 focus:border-[#2563EB] dark:focus:border-blue-400 focus:ring-[#2563EB] dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -395,59 +314,20 @@ function LoginFormWithParams() {
             </Button>
           </form>
 
-          {/* Botão "Esqueci minha senha" SIMPLIFICADO */}
+          {/* Link "Esqueci minha senha" que redireciona */}
           {!isSignUp && (
-            <div className="mt-6">
-              <button
-                onClick={handleForgotPassword}
-                disabled={forgotPasswordLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: '#2563EB',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  pointerEvents: 'auto'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#eff6ff';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
+            <div className="mt-6 text-center">
+              <a
+                href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                className="w-full text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 text-sm font-medium transition-colors flex items-center justify-center gap-2 p-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 lasy-highlight"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleForgotPasswordRedirect();
                 }}
               >
-                {forgotPasswordLoading ? (
-                  <>
-                    <div style={{
-                      width: '12px',
-                      height: '12px',
-                      border: '2px solid #2563EB',
-                      borderTop: '2px solid transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    Enviando email...
-                  </>
-                ) : emailSent ? (
-                  <>
-                    <RotateCcw style={{ width: '16px', height: '16px' }} />
-                    Reenviar email de recuperação
-                  </>
-                ) : (
-                  <>
-                    <Mail style={{ width: '16px', height: '16px' }} />
-                    Esqueci minha senha
-                  </>
-                )}
-              </button>
+                <Mail className="h-4 w-4" />
+                Esqueci minha senha
+              </a>
             </div>
           )}
 
@@ -460,7 +340,6 @@ function LoginFormWithParams() {
                 setEmail('');
                 setPassword('');
                 setLoginAttempts(0);
-                setEmailSent(false);
               }}
               className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
             >
@@ -472,13 +351,6 @@ function LoginFormWithParams() {
           </div>
         </CardContent>
       </Card>
-
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
