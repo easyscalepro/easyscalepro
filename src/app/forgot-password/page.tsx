@@ -92,11 +92,6 @@ function ForgotPasswordPageWithParams() {
     }
   };
 
-  const handleBackToLogin = () => {
-    console.log('🔄 Voltando para login');
-    window.location.href = '/login';
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F1115] via-[#1a1f2e] to-[#2563EB] dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       {/* Theme Toggle */}
@@ -104,10 +99,18 @@ function ForgotPasswordPageWithParams() {
         <ThemeToggle />
       </div>
 
-      {/* Back to Login */}
-      <div className="absolute top-4 left-4">
+      {/* Back to Login - BOTÃO SIMPLIFICADO */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          zIndex: 9999
+        }}
+      >
         <button
-          onClick={handleBackToLogin}
+          onClick={() => window.location.href = '/login'}
+          onMouseDown={() => window.location.href = '/login'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -119,7 +122,9 @@ function ForgotPasswordPageWithParams() {
             cursor: 'pointer',
             borderRadius: '6px',
             fontSize: '14px',
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
+            fontFamily: 'inherit',
+            outline: 'none'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -199,7 +204,8 @@ function ForgotPasswordPageWithParams() {
                 justifyContent: 'center',
                 gap: '8px',
                 transition: 'all 0.2s',
-                opacity: loading ? 0.5 : 1
+                opacity: loading ? 0.5 : 1,
+                fontFamily: 'inherit'
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
@@ -244,14 +250,15 @@ function ForgotPasswordPageWithParams() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Lembrou da senha?{' '}
               <button
-                onClick={handleBackToLogin}
+                onClick={() => window.location.href = '/login'}
                 style={{
                   color: '#2563EB',
                   fontWeight: '500',
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  textDecoration: 'underline'
+                  textDecoration: 'underline',
+                  fontFamily: 'inherit'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#1d4ed8';
