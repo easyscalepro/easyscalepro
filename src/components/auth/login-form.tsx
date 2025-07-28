@@ -357,14 +357,30 @@ function LoginFormWithParams() {
           <div className="text-center mt-4">
             <button
               type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setName('');
-                setEmail('');
-                setPassword('');
-                setLoginAttempts(0);
+              onClick={() => window.location.href = '/signup'}
+              onMouseDown={() => window.location.href = '/signup'}
+              style={{
+                color: '#2563EB',
+                fontWeight: '500',
+                backgroundColor: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit',
+                outline: 'none',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                zIndex: 9999,
+                position: 'relative'
               }}
-              className="text-[#2563EB] dark:text-blue-400 hover:text-[#1d4ed8] dark:hover:text-blue-300 font-medium transition-colors"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#1d4ed8';
+                e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#2563EB';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               {isSignUp 
                 ? 'Já tem uma conta? Faça login'
