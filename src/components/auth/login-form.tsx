@@ -163,6 +163,12 @@ function LoginFormWithParams() {
     }
   };
 
+  const handleTestLogin = () => {
+    setEmail('teste@gmail.com');
+    setPassword('123456');
+    toast.info('Credenciais de teste preenchidas');
+  };
+
   const handleForgotPassword = () => {
     console.log('Clique detectado!');
     alert('Redirecionando para recuperação de senha...');
@@ -203,6 +209,22 @@ function LoginFormWithParams() {
                 {error === 'account_suspended' && 'Conta suspensa'}
                 {error === 'access_denied' && 'Acesso negado'}
               </span>
+            </div>
+          )}
+
+          {/* Botão de teste (apenas em desenvolvimento) */}
+          {!isSignUp && (
+            <div className="mb-4">
+              <Button
+                type="button"
+                onClick={handleTestLogin}
+                variant="outline"
+                size="sm"
+                className="w-full border-green-300 text-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Usar Credenciais de Teste
+              </Button>
             </div>
           )}
 
