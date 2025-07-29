@@ -134,70 +134,171 @@ export default function CommandDetailPage() {
     }
   };
 
-  // Função robusta de cópia com fallbacks
-  const copyToClipboard = async (text: string): Promise<boolean> => {
+  // Função super robusta de cópia com múltiplos fallbacks
+  const copyToClipboard = async (text: string): Promise<{ success: boolean; method?: string; error?: string }> => {
     // Verificar se o texto existe
-    if (!text || text.trim() === '') {
-      console.error('❌ Texto vazio para copiar');
-      return false;
+    if (!text || typeof text !== 'string' || text.trim() === '') {
+      console.error('❌ Texto inválido para copiar');
+      return { success: false, error: 'Texto vazio ou inválido' };
     }
 
-    console.log('📋 Iniciando cópia do texto:', text.substring(0, 50) + '...');
+    const textToCopy = text.trim();
+    console.log('📋 Iniciando cópia. Tamanho:', textToCopy.length);
 
-    // Método 1: Tentar navigator.clipboard (moderno)
-    if (navigator.clipboard && window.isSecureContext) {
+    // Método 1: navigator.clipboard (moderno e seguro)
+    if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
       try {
-        console.log('📋 Tentando navigator.clipboard');
-        await navigator.clipboard.writeText(text);
-        console.log('✅ Texto copiado usando navigator.clipboard');
-        return true;
+        console.log('📋 Tentativa 1: navigator.clipboard');
+        await navigator.clipboard.writeText(textToCopy);
+        console.log('✅ Sucesso com navigator.clipboard');
+        return { success: true, method: 'navigator.clipboard' };
       } catch (err: any) {
         console.log('❌ navigator.clipboard falhou:', err.message);
       }
     }
 
-    // Método 2: Fallback com execCommand
-    try {
-      console.log('📋 Usando método fallback (execCommand)');
-      
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      
-      // Posicionar fora da tela mas ainda acessível
-      textArea.style.position = 'fixed';
-      textArea.style.top = '0';
-      textArea.style.left = '0';
-      textArea.style.width = '2em';
-      textArea.style.height = '2em';
-      textArea.style.padding = '0';
-      textArea.style.border = 'none';
-      textArea.style.outline = 'none';
-      textArea.style.boxShadow = 'none';
-      textArea.style.background = 'transparent';
-      textArea.style.opacity = '0';
-      textArea.style.pointerEvents = 'none';
-      
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      
-      // Para iOS Safari
-      textArea.setSelectionRange(0, 99999);
-      
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      if (successful) {
-        console.log('✅ Texto copiado usando execCommand');
-        return true;
-      } else {
-        console.error('❌ execCommand retornou false');
-        return false;
+    // Método 2: execCommand com textarea otimizada
+    if (typeof document !== 'undefined') {
+      try {
+        console.log('📋 Tentativa 2: execCommand com textarea');
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        
+        // Configuração otimizada para máxima compatibilidade
+        Object.assign(textArea.style, {
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+          background: 'transparent',
+          fontSize: '12px',
+          opacity: '0',
+          pointerEvents: 'none',
+          zIndex: '-1'
+        });
+        
+        document.body.appendChild(textArea);
+        
+        // Focar e selecionar
+        textArea.focus();
+        textArea.select();
+        
+        // Para dispositivos iOS
+        if (textArea.setSelectionRange) {
+          textArea.setSelectionRange(0, textToCopy.length);
+        }
+        
+        // Tentar copiar
+        const successful = document.execCommand('copy');
+        
+        // Limpar
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          console.log('✅ Sucesso com execCommand');
+          return { success: true, method: 'execCommand' };
+        } else {
+          console.log('❌ execCommand retornou false');
+        }
+      } catch (err: any) {
+        console.error('❌ Erro no execCommand:', err.message);
       }
-    } catch (err) {
-      console.error('❌ Erro no fallback execCommand:', err);
-      return false;
     }
+
+    // Método 3: Fallback com prompt (última tentativa)
+    if (typeof window !== 'undefined') {
+      try {
+        console.log('📋 Tentativa 3: Fallback manual');
+        
+        // Criar modal personalizado para mostrar o texto
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        
+        const content = document.createElement('div');
+        content.style.cssText = `
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          max-width: 90%;
+          max-height: 80%;
+          overflow: auto;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Copie o texto abaixo:';
+        title.style.cssText = 'margin: 0 0 15px 0; color: #333;';
+        
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.cssText = `
+          width: 100%;
+          height: 200px;
+          font-family: monospace;
+          font-size: 12px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          padding: 10px;
+          resize: vertical;
+        `;
+        textarea.readOnly = true;
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'margin-top: 15px; text-align: right;';
+        
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Fechar';
+        closeButton.style.cssText = `
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+        `;
+        
+        closeButton.onclick = () => {
+          document.body.removeChild(modal);
+        };
+        
+        buttonContainer.appendChild(closeButton);
+        content.appendChild(title);
+        content.appendChild(textarea);
+        content.appendChild(buttonContainer);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+        
+        // Selecionar o texto automaticamente
+        textarea.select();
+        textarea.focus();
+        
+        console.log('✅ Modal de fallback criado');
+        return { success: true, method: 'manual' };
+        
+      } catch (err: any) {
+        console.error('❌ Erro no fallback manual:', err.message);
+      }
+    }
+
+    console.error('❌ Todos os métodos falharam');
+    return { success: false, error: 'Nenhum método de cópia disponível' };
   };
 
   const copyPrompt = async () => {
@@ -208,31 +309,35 @@ export default function CommandDetailPage() {
     
     try {
       setCopyLoading(true);
-      console.log('📋 Iniciando cópia do prompt para comando:', command.id);
-      console.log('📋 Tamanho do prompt:', command.prompt.length);
+      console.log('📋 Iniciando processo de cópia para comando:', command.id);
       
-      const success = await copyToClipboard(command.prompt);
+      const result = await copyToClipboard(command.prompt);
       
-      if (success) {
-        // Incrementar contador de cópias
+      if (result.success) {
+        // Incrementar contador apenas se copiou com sucesso
         await incrementCopies(command.id);
         
-        toast.success('Prompt copiado!', {
-          description: 'O comando foi copiado para sua área de transferência'
-        });
-        console.log('✅ Prompt copiado com sucesso');
+        if (result.method === 'manual') {
+          toast.success('Texto selecionado para cópia!', {
+            description: 'Use Ctrl+C (ou Cmd+C no Mac) para copiar'
+          });
+        } else {
+          toast.success('Prompt copiado com sucesso!', {
+            description: `Copiado usando ${result.method}`
+          });
+        }
+        
+        console.log('✅ Processo de cópia concluído com sucesso');
       } else {
-        // Se todos os métodos falharam, mostrar mensagem informativa
-        console.log('❌ Todos os métodos de cópia falharam');
+        console.log('❌ Falha na cópia:', result.error);
         toast.error('Não foi possível copiar automaticamente', {
-          description: 'Selecione e copie o texto manualmente (Ctrl+C)',
-          duration: 5000
+          description: 'Tente selecionar o texto manualmente e usar Ctrl+C'
         });
       }
-    } catch (error) {
-      console.error('💥 Erro inesperado ao copiar prompt:', error);
-      toast.error('Erro ao copiar prompt', {
-        description: 'Tente selecionar e copiar o texto manualmente'
+    } catch (error: any) {
+      console.error('💥 Erro inesperado no processo de cópia:', error);
+      toast.error('Erro no sistema de cópia', {
+        description: 'Tente recarregar a página e tentar novamente'
       });
     } finally {
       setCopyLoading(false);
