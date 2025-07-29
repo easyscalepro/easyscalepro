@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { EasyScaleLogo } from '@/components/easyscale-logo';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
@@ -17,7 +17,9 @@ import {
   Crown,
   Zap,
   Star,
-  Shield
+  Shield,
+  Menu,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, usePathname } from 'next/navigation';
@@ -26,6 +28,7 @@ export const DashboardHeader: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,6 +79,7 @@ export const DashboardHeader: React.FC = () => {
   const handleNavigation = (path: string, label: string) => {
     try {
       router.push(path);
+      setMobileMenuOpen(false); // Fechar menu mobile após navegação
     } catch (error) {
       console.error('Erro na navegação:', error);
       toast.error(`Erro ao navegar para ${label}`);
@@ -125,17 +129,17 @@ export const DashboardHeader: React.FC = () => {
         <div className="absolute top-0 right-1/4 w-24 h-24 bg-gradient-to-br from-emerald-400/5 to-teal-400/5 rounded-full blur-xl"></div>
       </div>
 
-      <div className="container mx-auto px-6 py-4 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 relative z-10">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
             {/* Enhanced Logo */}
             <div className="relative group">
               <EasyScaleLogo />
               <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
             </div>
             
-            {/* Enhanced Navigation */}
-            <nav className="hidden md:flex items-center gap-2">
+            {/* Desktop Navigation - Hidden on mobile */}
+            <nav className="hidden lg:flex items-center gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.path;
@@ -182,17 +186,31 @@ export const DashboardHeader: React.FC = () => {
                 );
               })}
             </nav>
+
+            {/* Mobile Menu Button - Visible only on mobile */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </Button>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Enhanced Theme Toggle */}
             <div className="relative group z-50">
               <ThemeToggle />
               <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm -z-10"></div>
             </div>
 
-            {/* Enhanced Notifications */}
-            <div className="relative group">
+            {/* Enhanced Notifications - Hidden on small mobile */}
+            <div className="hidden sm:block relative group">
               <Button
                 variant="ghost"
                 size="sm"
@@ -216,42 +234,103 @@ export const DashboardHeader: React.FC = () => {
               <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
             </div>
 
-            {/* Enhanced User Info */}
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+            {/* Enhanced User Info - Hidden on mobile */}
+            <div className="hidden md:flex items-center gap-3 px-3 sm:px-4 py-2 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition-all duration-300 group">
               <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <User className="h-4 w-4  text-white" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <User className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
                 
                 {/* Status indicator */}
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm">
+                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm">
                   <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
                 </div>
               </div>
               
               <div className="text-sm">
                 <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1">
-                  Olá, {profile?.name || user?.email?.split('@')[0] || 'Usuário'}!
-                  {profile?.role === 'admin' && <Crown className="h-3 w-3 text-amber-500" />}
+                  <span className="truncate max-w-24 sm:max-w-none">
+                    Olá, {profile?.name || user?.email?.split('@')[0] || 'Usuário'}!
+                  </span>
+                  {profile?.role === 'admin' && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
                 </div>
                 <div className="text-gray-500 dark:text-gray-400 text-xs flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-blue-500" />
-                  {user?.email}
+                  <Zap className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                  <span className="truncate max-w-32">{user?.email}</span>
                 </div>
               </div>
             </div>
             
-            {/* BOTÃO DE LOGOUT SIMPLIFICADO */}
+            {/* BOTÃO DE LOGOUT - Responsivo */}
             <button
               onClick={handleLogout}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
               type="button"
             >
-              <LogOut className="h-4 w-4" />
-              Sair
+              <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-lg z-50">
+            <div className="px-4 py-3 space-y-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.path;
+                
+                return (
+                  <Button
+                    key={item.path}
+                    onClick={() => handleNavigation(item.path, item.label)}
+                    variant="ghost"
+                    className={`w-full justify-start gap-3 py-3 px-4 rounded-lg transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50' 
+                        : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${isActive ? `bg-gradient-to-r ${item.color}` : 'bg-gray-100 dark:bg-gray-800'} transition-all duration-300`}>
+                      <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold">{item.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{item.description}</div>
+                    </div>
+                    {isActive && (
+                      <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                    )}
+                  </Button>
+                );
+              })}
+              
+              {/* Mobile User Info */}
+              <div className="md:hidden mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-lg">
+                  <div className="relative">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                      <User className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1 text-sm">
+                      <span className="truncate">
+                        {profile?.name || user?.email?.split('@')[0] || 'Usuário'}
+                      </span>
+                      {profile?.role === 'admin' && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
+                    </div>
+                    <div className="text-gray-500 dark:text-gray-400 text-xs truncate">
+                      {user?.email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom gradient line */}
