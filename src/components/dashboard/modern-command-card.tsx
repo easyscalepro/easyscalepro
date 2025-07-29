@@ -4,7 +4,6 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   Copy, 
   Eye, 
@@ -68,7 +67,6 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 }) => {
   const { favorites = [], toggleFavorite, incrementCopies } = useCommands();
   const isFavorite = favorites.includes(id);
-  const isMobile = useIsMobile();
 
   const fallbackCopyTextToClipboard = (text: string): boolean => {
     try {
@@ -248,11 +246,11 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
   const CategoryIcon = getCategoryIcon(category);
 
   return (
-    <Card className="group cursor-pointer border-0 shadow-md hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-1 hover:scale-[1.02] overflow-hidden relative">
+    <Card className="group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 hover:-translate-y-2 hover:scale-[1.02] overflow-hidden relative">
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradient overlay */}
-        <div className={`absolute top-0 right-0 w-20 sm:w-32 h-20 sm:h-32 bg-gradient-to-br ${getCategoryColor(category)} opacity-5 dark:opacity-10 rounded-full blur-2xl`}></div>
+        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${getCategoryColor(category)} opacity-5 dark:opacity-10 rounded-full blur-2xl`}></div>
         
         {/* Animated shine effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent dark:via-gray-300/5 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -260,44 +258,44 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 
       <CardContent className="p-0 relative">
         {/* Enhanced Header Section */}
-        <div className="flex flex-col space-y-3 sm:space-y-4 p-4 sm:p-6 relative bg-gradient-to-br from-gray-50/50 via-white/30 to-transparent dark:from-gray-700/30 dark:via-gray-800/20 dark:to-transparent border-b border-gray-100/50 dark:border-gray-700/50">
+        <div className="flex flex-col space-y-4 p-6 relative bg-gradient-to-br from-gray-50/50 via-white/30 to-transparent dark:from-gray-700/30 dark:via-gray-800/20 dark:to-transparent border-b border-gray-100/50 dark:border-gray-700/50">
           {/* Decorative elements for header */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gray-200/50 dark:via-gray-600/50 to-transparent"></div>
           <div className="absolute top-2 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
-            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 dark:text-gray-500 animate-pulse" />
+            <Sparkles className="h-4 w-4 text-gray-400 dark:text-gray-500 animate-pulse" />
           </div>
 
           {/* Top row with enhanced icon and actions */}
           <div className="flex items-start justify-between">
-            <div className={`relative p-2 sm:p-3 lg:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+            <div className={`relative p-4 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3`}>
               {/* Main category icon */}
-              <CategoryIcon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white drop-shadow-lg relative z-10" />
+              <CategoryIcon className="h-6 w-6 text-white drop-shadow-lg relative z-10" />
               
               {/* Decorative elements */}
-              <div className="absolute top-1 right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/40 rounded-full"></div>
-              <div className="absolute bottom-1 left-1 w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white/30 rounded-full"></div>
+              <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full"></div>
+              <div className="absolute bottom-1 left-1 w-1.5 h-1.5 bg-white/30 rounded-full"></div>
               
               {/* Glow effect */}
-              <div className={`absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300`}></div>
+              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${getCategoryColor(category)} opacity-0 group-hover:opacity-50 blur-xl transition-opacity duration-300`}></div>
               
               {/* Pulse ring */}
-              <div className={`absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-white/20 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`}></div>
+              <div className={`absolute inset-0 rounded-2xl border-2 border-white/20 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300`}></div>
             </div>
             
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-2">
               {/* Popularity indicator */}
               {popularity > 80 && (
-                <div className="flex items-center gap-1 px-2 sm:px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold border border-amber-200/50 dark:border-amber-700/50 shadow-sm">
-                  <Star className="h-2 w-2 sm:h-3 sm:w-3 fill-current" />
-                  <span className="hidden sm:inline">Popular</span>
+                <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold border border-amber-200/50 dark:border-amber-700/50 shadow-sm">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span>Popular</span>
                 </div>
               )}
               
               <button
                 onClick={handleFavorite}
-                className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:scale-110 relative"
+                className="opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full hover:scale-110 relative"
               >
-                <Heart className={`h-3 w-3 sm:h-4 sm:w-4 transition-colors ${
+                <Heart className={`h-4 w-4 transition-colors ${
                   isFavorite 
                     ? 'text-red-500 fill-current' 
                     : 'text-gray-400 dark:text-gray-500 hover:text-red-500'
@@ -310,19 +308,19 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
           </div>
 
           {/* Title and description with enhanced typography */}
-          <div className="space-y-2 sm:space-y-3">
-            <h3 className="text-base sm:text-lg lg:text-xl font-black text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight tracking-tight relative">
+          <div className="space-y-3">
+            <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight tracking-tight relative">
               {title}
               {/* Subtle underline decoration */}
               <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 group-hover:w-full transition-all duration-500"></div>
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 leading-relaxed font-medium">
+            <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 leading-relaxed font-medium">
               {description}
             </p>
           </div>
 
           {/* Category and level badges */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-3">
             <Badge variant="outline" className={`text-xs font-bold border-2 text-white bg-gradient-to-r ${getCategoryColor(category)} shadow-sm hover:shadow-md transition-shadow duration-300`}>
               {category}
             </Badge>
@@ -333,21 +331,21 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
         </div>
 
         {/* Content Section */}
-        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+        <div className="p-6 space-y-4">
           {/* Enhanced tags section */}
           {safeTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 sm:gap-2">
-              {safeTags.slice(0, isMobile ? 2 : 3).map((tag, index) => (
+            <div className="flex flex-wrap gap-2">
+              {safeTags.slice(0, 3).map((tag, index) => (
                 <span
                   key={index}
-                  className="px-2 sm:px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded-full font-semibold border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300 hover:scale-105"
+                  className="px-3 py-1 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded-full font-semibold border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300 hover:scale-105"
                 >
                   #{tag}
                 </span>
               ))}
-              {safeTags.length > (isMobile ? 2 : 3) && (
-                <span className="px-2 sm:px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full font-semibold border border-blue-200/50 dark:border-blue-700/50">
-                  +{safeTags.length - (isMobile ? 2 : 3)} mais
+              {safeTags.length > 3 && (
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-600 dark:text-blue-400 text-xs rounded-full font-semibold border border-blue-200/50 dark:border-blue-700/50">
+                  +{safeTags.length - 3} mais
                 </span>
               )}
             </div>
@@ -355,35 +353,35 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
 
           {/* Enhanced meta info */}
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-full">
-                <Clock className="h-2 w-2 sm:h-3 sm:w-3" />
-                <span className="font-medium text-xs">{estimatedTime}</span>
+                <Clock className="h-3 w-3" />
+                <span className="font-medium">{estimatedTime}</span>
               </div>
               {popularity > 0 && (
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-gray-800 rounded-full">
-                  <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" />
-                  <span className="font-medium text-xs">{popularity}%</span>
+                  <TrendingUp className="h-3 w-3" />
+                  <span className="font-medium">{popularity}%</span>
                 </div>
               )}
             </div>
             
             <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-full border border-amber-200/50 dark:border-amber-700/50">
-              <Zap className="h-2 w-2 sm:h-3 sm:w-3 text-amber-500" />
-              <span className="font-medium text-amber-600 dark:text-amber-400 text-xs">IA Ready</span>
+              <Zap className="h-3 w-3 text-amber-500" />
+              <span className="font-medium text-amber-600 dark:text-amber-400">IA Ready</span>
             </div>
           </div>
 
           {/* Enhanced action buttons */}
-          <div className="flex gap-2 sm:gap-3 pt-2">
+          <div className="flex gap-3 pt-2">
             <Button
               onClick={handleCopyPrompt}
               size="sm"
-              className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 hover:from-blue-700 hover:via-blue-800 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden h-8 sm:h-9 text-xs sm:text-sm"
+              className="flex-1 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-700 hover:from-blue-700 hover:via-blue-800 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden"
             >
               {/* Button shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
-              <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:rotate-12 transition-transform duration-300 relative z-10" />
+              <Copy className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform duration-300 relative z-10" />
               <span className="relative z-10">Copiar</span>
             </Button>
             
@@ -391,9 +389,9 @@ export const ModernCommandCard: React.FC<ModernCommandCardProps> = ({
               onClick={() => onViewDetails(id)}
               size="sm"
               variant="outline"
-              className="border-2 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-800 dark:hover:text-blue-200 hover:border-blue-400 dark:hover:border-blue-500 font-bold transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden h-8 sm:h-9 text-xs sm:text-sm"
+              className="border-2 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-800 dark:hover:text-blue-200 hover:border-blue-400 dark:hover:border-blue-500 font-bold transition-all duration-300 hover:scale-105 group/btn relative overflow-hidden"
             >
-              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
+              <Eye className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
               Ver
             </Button>
           </div>
